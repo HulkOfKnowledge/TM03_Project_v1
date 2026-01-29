@@ -132,10 +132,10 @@ export default function SignupPage() {
     try {
       // Validate all form data
       const validatedData = signupSchema.parse({
-        fullName,
+        full_name: fullName,
         email,
         password,
-        language,
+        preferred_language: language,
       });
 
       const supabase = createClient();
@@ -143,7 +143,7 @@ export default function SignupPage() {
       // Check if email already exists
       const { data: existingUser } = await supabase
         .from('user_profiles')
-        .select('user_id')
+        .select('id')
         .eq('email', validatedData.email)
         .single();
 

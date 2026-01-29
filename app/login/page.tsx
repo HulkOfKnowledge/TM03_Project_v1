@@ -7,8 +7,9 @@
  * Success modal with routing to dashboard
  */
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { AuthCarousel } from '@/components/auth/AuthCarousel';
 import { SocialAuthButtons } from '@/components/auth/SocialAuthButtons';
@@ -20,6 +21,7 @@ import { loginSchema } from '@/lib/validations';
 import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +29,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [redirectTo, setRedirectTo] = useState<string>('');
+
+  // Check for OAuth errors from callback
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      setErrors({ general: `Authentication failed: ${decodeURIComponent(error)}` });
+    }
+  }, [searchParams]);
 
   const handleSocialAuth = async (provider: 'google' | 'facebook') => {
     try {
@@ -79,7 +89,7 @@ export default function LoginPage() {
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('preferred_dashboard, onboarding_completed')
-        .eq('user_id', authData.user.id)
+        .eq('id', authData.user.id)
         .single();
 
       if (profileError) throw profileError;

@@ -6,16 +6,71 @@
  */
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { Menu, X, Moon, Sun } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Menu, X, Moon, Sun, LogOut, LayoutDashboard } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export function Navigation() {
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [user, setUser] = useState<{ id: string; email?: string; full_name?: string } | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Get initial user
+    const getUser = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        // Get user profile for full name
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('full_name')
+          .eq('id', authUser.id)
+          .single();
+
+        setUser({
+          id: authUser.id,
+          email: authUser.email,
+          full_name: profile?.full_name || undefined,
+        });
+      }
+    };
+
+    getUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          full_name: session.user.user_metadata?.full_name || undefined,
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle('dark');
+  };
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setUser(null);
+    setShowUserMenu(false);
+    router.push('/');
   };
 
   const navItems = [
@@ -61,19 +116,74 @@ export function Navigation() {
               )}
             </button>
 
-            <Link
-              href="/login"
-              className="hidden md:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Log In
-            </Link>
+            {user ? (
+              // Logged in user menu
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="hidden md:flex items-center space-x-2 rounded-lg px-3 py-2 hover:bg-accent transition-colors"
+                >
+                  <div className="h-8 w-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium">
+                    {user.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-sm font-medium">
+                    {user.full_name || user.email?.split('@')[0] || 'User'}
+                  </span>
+                </button>
 
-            <Link
-              href="/signup"
-              className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
-            >
-              Get Started
-            </Link>
+                {/* Desktop User Dropdown */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-lg border bg-background shadow-lg">
+                    <div className="p-3 border-b">
+                      <p className="text-sm font-medium">{user.full_name || 'User'}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                    <div className="p-2">
+                      <Link
+                        href="/learn-dashboard"
+                        className="flex items-center space-x-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span>Dashboard</span>
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="flex w-full items-center space-x-2 rounded-md px-3 py-2 text-sm hover:bg-accent text-red-600 dark:text-red-400"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Log Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mobile User Button */}
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="md:hidden h-8 w-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium"
+                >
+                  {user.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                </button>
+              </div>
+            ) : (
+              // Logged out buttons
+              <>
+                <Link
+                  href="/login"
+                  className="hidden md:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Log In
+                </Link>
+
+                <Link
+                  href="/signup"
+                  className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
 
             {/* Mobile Menu Button */}
             <button
@@ -105,13 +215,34 @@ export function Navigation() {
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="/login"
-              className="block text-base font-medium text-muted-foreground hover:text-foreground"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Log In
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/learn-dashboard"
+                  className="block text-base font-medium text-muted-foreground hover:text-foreground"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left text-base font-medium text-red-600 dark:text-red-400"
+                >
+                  Log Out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="block text-base font-medium text-muted-foreground hover:text-foreground"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Log In
+              </Link>
+            )}
           </div>
         </div>
       )}

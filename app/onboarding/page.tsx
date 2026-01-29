@@ -51,7 +51,7 @@ export default function OnboardingPage() {
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('onboarding_completed, onboarding_step, preferred_dashboard')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (profile?.onboarding_completed) {
@@ -78,7 +78,7 @@ export default function OnboardingPage() {
     await supabase
       .from('user_profiles')
       .update({ onboarding_step: step })
-      .eq('user_id', userId);
+      .eq('id', userId);
   };
 
   const handleNext = async () => {
@@ -115,7 +115,7 @@ export default function OnboardingPage() {
           onboarding_step: 4,
           preferred_dashboard: selectedGoal === 'learn' ? 'learning' : 'card',
         })
-        .eq('user_id', userId);
+        .eq('id', userId);
 
       setShowSuccessModal(true);
     } catch (error) {
