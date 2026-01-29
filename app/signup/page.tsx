@@ -50,8 +50,9 @@ export default function SignupPage() {
       });
 
       if (error) throw error;
-    } catch (error: any) {
-      setErrors({ general: error.message || 'Social authentication failed' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Social authentication failed';
+      setErrors({ general: message });
       setIsLoading(false);
     }
   };
@@ -173,19 +174,18 @@ export default function SignupPage() {
 
       // Success - show modal and redirect to onboarding
       setShowSuccessModal(true);
-    } catch (error: any) {
-      if (error.errors) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errors' in error && Array.isArray(error.errors)) {
         // Zod validation errors
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err: any) => {
+        error.errors.forEach((err: { path: (string | number)[]; message: string }) => {
           fieldErrors[err.path[0]] = err.message;
         });
         setErrors(fieldErrors);
         setStage(1); // Go back to first stage if validation fails
       } else {
-        setErrors({
-          general: error.message || 'Signup failed. Please try again.',
-        });
+        const message = error instanceof Error ? error.message : 'Signup failed. Please try again.';
+        setErrors({ general: message });
       }
       setIsLoading(false);
     }

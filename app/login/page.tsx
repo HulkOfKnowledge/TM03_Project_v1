@@ -44,8 +44,9 @@ export default function LoginPage() {
       if (error) throw error;
 
       // OAuth redirects to provider, so no success modal here
-    } catch (error: any) {
-      setErrors({ general: error.message || 'Social authentication failed' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Social authentication failed';
+      setErrors({ general: message });
       setIsLoading(false);
     }
   };
@@ -94,18 +95,17 @@ export default function LoginPage() {
 
       setRedirectTo(destination);
       setShowSuccessModal(true);
-    } catch (error: any) {
-      if (error.errors) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errors' in error && Array.isArray(error.errors)) {
         // Zod validation errors
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err: any) => {
+        error.errors.forEach((err: { path: (string | number)[]; message: string }) => {
           fieldErrors[err.path[0]] = err.message;
         });
         setErrors(fieldErrors);
       } else {
-        setErrors({
-          general: error.message || 'Login failed. Please check your credentials.',
-        });
+        const message = error instanceof Error ? error.message : 'Login failed. Please check your credentials.';
+        setErrors({ general: message });
       }
       setIsLoading(false);
     }
