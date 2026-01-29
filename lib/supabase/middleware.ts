@@ -7,15 +7,14 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({
-    request,
-  });
+  let response = NextResponse.next();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables');
+    console.error('Missing Supabase environment variables');
+    return response;
   }
 
   const supabase = createServerClient(
@@ -27,14 +26,6 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request,
-          });
           response.cookies.set({
             name,
             value,
@@ -42,14 +33,6 @@ export async function updateSession(request: NextRequest) {
           });
         },
         remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request,
-          });
           response.cookies.set({
             name,
             value: '',
@@ -60,7 +43,7 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh session if expired
+ // Refresh session if expired
   const {
     data: { user },
   } = await supabase.auth.getUser();
