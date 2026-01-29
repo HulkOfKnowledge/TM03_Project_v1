@@ -10,19 +10,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { signupSchema } from '@/lib/validations';
-import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
+    // TODO: Implement signup endpoint
     // TODO: Parse and validate request body
-    // const body = await request.json();
-    // const validatedData = signupSchema.parse(body);
-
-    // TODO: Call Supabase auth.signUp
-    // const supabase = await createClient();
-    // const { data, error } = await supabase.auth.signUp({
+    // TODO: Validate with signupSchema from @/lib/validations
+    // TODO: Call Supabase auth.signUp using createClient from @/lib/supabase/server
+    // TODO: Return response using createSuccessResponse or createErrorResponse from @/types/api.types
     //   email: validatedData.email,
     //   password: validatedData.password,
     //   options: {
@@ -36,12 +31,12 @@ export async function POST(request: NextRequest) {
     // TODO: Handle errors and return response
 
     return NextResponse.json(
-      createErrorResponse('NOT_IMPLEMENTED', 'Signup not implemented yet'),
+      { success: false, error: { code: 'NOT_IMPLEMENTED', message: 'Signup not implemented yet' } },
       { status: 501 }
     );
   } catch (error) {
     return NextResponse.json(
-      createErrorResponse('INTERNAL_ERROR', 'An error occurred'),
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'An error occurred' } },
       { status: 500 }
     );
   }
