@@ -43,7 +43,7 @@ export default function SignupPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
         },
       });
 
@@ -116,12 +116,12 @@ export default function SignupPage() {
         return;
       }
 
-      // Sign up the user
+      // Sign up the user with PKCE flow for cross-device email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: validatedData.email,
         password: validatedData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
           data: {
             first_name: validatedData.first_name,
             surname: validatedData.surname,
@@ -136,8 +136,27 @@ export default function SignupPage() {
         throw new Error('Signup failed - no user returned');
       }
 
-      // Success - always redirect to onboarding
-      // Email confirmation status will be handled by a persistent banner
+      // Create user profile immediately
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: authData.user.id,
+          email: validatedData.email,
+          first_name: validatedData.first_name,
+          surname: validatedData.surname,
+          mobile_number: validatedData.mobile_number,
+          preferred_language: 'en',
+          onboarding_completed: false,
+          preferred_dashboard: 'learn',
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        // Continue anyway - profile can be created via trigger or callback
+      }
+
+      // Success - redirect to onboarding immediately
+      // Email confirmation modal will be shown if email is not confirmed
       setShowSuccessModal(true);
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errors' in error && Array.isArray(error.errors)) {

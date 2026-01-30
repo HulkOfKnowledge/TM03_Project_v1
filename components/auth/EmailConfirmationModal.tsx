@@ -68,7 +68,7 @@ export function EmailConfirmationModal() {
         type: 'signup',
         email: userEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
         },
       });
 
