@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { EmailConfirmationModal } from '@/components/auth/EmailConfirmationModal';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { ThemeScript } from '@/components/ThemeScript';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,10 +21,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body className={inter.className}>
-        {children}
-        <EmailConfirmationModal />
+        <ThemeProvider defaultTheme="system">
+          {children}
+          <EmailConfirmationModal />
+        </ThemeProvider>
       </body>
     </html>
   );

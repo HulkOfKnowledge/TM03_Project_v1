@@ -9,15 +9,34 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Moon, Sun, LogOut, LayoutDashboard } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export function Navigation() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [user, setUser] = useState<{ id: string; email?: string; full_name?: string } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  // Monitor theme changes
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkTheme();
+    
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -61,11 +80,6 @@ export function Navigation() {
     };
   }, []);
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
-  };
-
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -87,7 +101,7 @@ export function Navigation() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image 
-              src={darkMode ? "/Logo.svg" : "/Logo-dark.svg"}
+              src={isDark ? "/Logo.svg" : "/Logo-dark.svg"}
               alt="Creduman Logo" 
               width={120} 
               height={32}
@@ -110,17 +124,7 @@ export function Navigation() {
 
           {/* CTA Buttons */}
           <div className="flex items-center space-x-4">
-            <button
-              onClick={toggleDarkMode}
-              className="rounded-lg p-2 hover:bg-accent"
-              aria-label="Toggle dark mode"
-            >
-              {darkMode ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </button>
+            <ThemeToggle />
 
             {user ? (
               // Logged in user menu

@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root,
+  .light {
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
     --card: 0 0% 100%;
@@ -53,6 +54,11 @@
   * {
     @apply border-border;
   }
+  
+  html {
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  
   body {
     @apply bg-background text-foreground;
   }
