@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Creduman - Credit Education for Canadian Newcomers',
   description: 'Learn about credit and manage your credit cards effectively',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

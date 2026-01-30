@@ -6,6 +6,7 @@
  */
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, X, Moon, Sun, LogOut, LayoutDashboard } from 'lucide-react';
@@ -84,9 +85,14 @@ export function Navigation() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700" />
-            <span className="text-xl font-bold">Creduman</span>
+          <Link href="/" className="flex items-center">
+            <Image 
+              src={darkMode ? "/Logo-dark.svg" : "/Logo.svg"}
+              alt="Creduman Logo" 
+              width={120} 
+              height={32}
+              className="h-8 w-auto"
+            />
           </Link>
 
           {/* Desktop Navigation */}
