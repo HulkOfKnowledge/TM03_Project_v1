@@ -43,18 +43,19 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
- // Refresh session if expired
+ // Refresh session if expired - Allow users even with unconfirmed emails
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected routes
-  const protectedRoutes = ['/learn-dashboard', '/card-dashboard'];
+  // Protected routes - require authentication (but NOT email confirmation)
+  const protectedRoutes = ['/learn-dashboard', '/card-dashboard', '/onboarding'];
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
 
   // Redirect to login if accessing protected route without authentication
+  // Note: We allow unconfirmed users to access protected routes - the modal will handle email confirmation
   if (isProtectedRoute && !user) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
@@ -66,7 +67,21 @@ export async function updateSession(request: NextRequest) {
   );
 
   if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL('/card-dashboard', request.url));
+    // Redirect to onboarding if not completed, otherwise to dashboard
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('onboarding_completed, preferred_dashboard')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.onboarding_completed) {
+      return NextResponse.redirect(new URL('/onboarding', request.url));
+    }
+
+    const destination = profile?.preferred_dashboard === 'card' 
+      ? '/card-dashboard' 
+      : '/learn-dashboard';
+    return NextResponse.redirect(new URL(destination, request.url));
   }
 
   return response;

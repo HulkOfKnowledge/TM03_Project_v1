@@ -29,6 +29,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [redirectTo, setRedirectTo] = useState<string>('');
+  const [showResendButton, setShowResendButton] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   // Check for OAuth errors from callback
   useEffect(() => {
@@ -79,7 +81,18 @@ export default function LoginPage() {
           password: validatedData.password,
         });
 
-      if (authError) throw authError;
+      if (authError) {
+        // Special handling for unconfirmed email
+        if (authError.message.includes('Email not confirmed') || authError.message.includes('email_not_confirmed')) {
+          setErrors({ 
+            general: 'Your email address has not been confirmed yet. Please check your inbox for the confirmation email.'
+          });
+          setShowResendButton(true);
+          setIsLoading(false);
+          return;
+        }
+        throw authError;
+      }
 
       if (!authData.user) {
         throw new Error('Login failed - no user returned');
@@ -121,6 +134,30 @@ export default function LoginPage() {
     }
   };
 
+  const handleResendConfirmation = async () => {
+    try {
+      setIsLoading(true);
+      const supabase = createClient();
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        },
+      });
+
+      if (error) throw error;
+      
+      setResendSuccess(true);
+      setErrors({ general: '✓ Confirmation email sent! Please check your inbox.' });
+      setShowResendButton(false);
+    } catch (error) {
+      setErrors({ general: 'Failed to resend email. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <AuthLayout carousel={<AuthCarousel />}>
       <div className="space-y-6">
@@ -153,8 +190,24 @@ export default function LoginPage() {
 
         {/* General Error */}
         {errors.general && (
-          <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-600 dark:text-red-400">
-            {errors.general}
+          <div className={`rounded-lg p-3 text-sm ${
+            resendSuccess 
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+              : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+          }`}>
+            <div className="space-y-2">
+              <p>{errors.general}</p>
+              {showResendButton && (
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={isLoading}
+                  className="text-sm font-medium underline hover:no-underline disabled:opacity-50"
+                >
+                  Resend Confirmation Email
+                </button>
+              )}
+            </div>
           </div>
         )}
 

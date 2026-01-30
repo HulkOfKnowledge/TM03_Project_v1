@@ -121,6 +121,7 @@ export default function SignupPage() {
         email: validatedData.email,
         password: validatedData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
           data: {
             first_name: validatedData.first_name,
             surname: validatedData.surname,
@@ -135,19 +136,8 @@ export default function SignupPage() {
         throw new Error('Signup failed - no user returned');
       }
 
-      // Check if email confirmation is required
-      const emailConfirmationRequired = authData.user.identities && authData.user.identities.length === 0;
-
-      if (emailConfirmationRequired) {
-        // Email confirmation is required
-        setErrors({ 
-          general: 'Account created! Please check your email and click the confirmation link to activate your account.' 
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Success - show modal and redirect to onboarding
+      // Success - always redirect to onboarding
+      // Email confirmation status will be handled by a persistent banner
       setShowSuccessModal(true);
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errors' in error && Array.isArray(error.errors)) {
