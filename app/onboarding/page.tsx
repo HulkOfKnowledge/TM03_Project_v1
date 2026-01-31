@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * Onboarding Page
- * Multi-step onboarding flow with progress tracking
- * Steps: Welcome → Goal Selection → Dashboard Setup → Complete
+ * Onboarding Page - Multi-stage Form
+ * Flow: Personal Details → Account Setup → Finish
+ * Collects comprehensive user information for personalized experience
  */
 
 import { useState, useEffect } from 'react';
@@ -11,155 +11,190 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { SuccessModal } from '@/components/auth/SuccessModal';
-import {
-  GraduationCap,
-  CreditCard,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
-  Check,
-} from 'lucide-react';
+import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 
-type OnboardingStep = 1 | 2 | 3 | 4 | 5;
+type OnboardingStage = 'personal' | 'account' | 'finish';
+
+interface PersonalDetails {
+  surname: string;
+  firstName: string;
+  mobileNumber: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+interface AccountSetup {
+  statusInCanada: 'new_immigrant' | 'permanent_resident' | 'canadian_citizen' | '';
+  province: string;
+  primaryGoal: 'build_credit' | 'manage_debt' | 'learn_credit' | 'improve_score' | '';
+  creditProducts: string[]; // Array of: 'no_credit', 'secured_card', 'regular_card', 'phone_plan', 'auto_loan'
+  immigrationStatus?: 'new_immigrant' | 'permanent_resident' | 'canadian_citizen' | '';
+  creditKnowledge?: 'no_knowledge' | 'beginner' | 'intermediate' | 'advanced' | '';
+  currentSituation?: string[]; // Array of current credit situations
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
-  const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'fr' | 'ar'>('en');
-  const [selectedGoal, setSelectedGoal] = useState<'learn' | 'manage' | null>(
-    null
-  );
+  const [currentStage, setCurrentStage] = useState<OnboardingStage>('personal');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Form data
+  const [personalDetails, setPersonalDetails] = useState<PersonalDetails>({
+    surname: '',
+    firstName: '',
+    mobileNumber: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  const [accountSetup, setAccountSetup] = useState<AccountSetup>({
+    statusInCanada: '',
+    province: '',
+    primaryGoal: '',
+    creditProducts: [],
+    immigrationStatus: '',
+    creditKnowledge: '',
+    currentSituation: [],
+  });
 
   useEffect(() => {
-    // Get current user
+    // Get current user and check if onboarding is already completed
     const getUser = async () => {
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login');
-        return;
-      }
+      if (user) {
+        setUserId(user.id);
+        setPersonalDetails((prev) => ({ ...prev, email: user.email || '' }));
 
-      setUserId(user.id);
+        // Check if onboarding already completed
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('onboarding_completed, preferred_dashboard')
+          .eq('id', user.id)
+          .single();
 
-      // Check if onboarding already completed
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('onboarding_completed, onboarding_step, preferred_dashboard, preferred_language')
-        .eq('id', user.id)
-        .single();
-
-      // Set language from profile if available
-      if (profile?.preferred_language) {
-        setSelectedLanguage(profile.preferred_language as 'en' | 'fr' | 'ar');
-      }
-
-      if (profile?.onboarding_completed) {
-        router.push(
-          profile.preferred_dashboard === 'card'
-            ? '/card-dashboard'
-            : '/learn-dashboard'
-        );
-        return;
-      }
-
-      if (profile?.onboarding_step) {
-        setCurrentStep(profile.onboarding_step as OnboardingStep);
+        if (profile?.onboarding_completed) {
+          router.push(
+            profile.preferred_dashboard === 'card'
+              ? '/card-dashboard'
+              : '/learn-dashboard'
+          );
+        }
       }
     };
 
     getUser();
   }, [router]);
 
-  const updateOnboardingStep = async (step: OnboardingStep) => {
-    if (!userId) return;
+  const validatePersonalDetails = (): boolean => {
+    const newErrors: Record<string, string> = {};
 
-    const supabase = createClient();
-    await supabase
-      .from('user_profiles')
-      .update({ onboarding_step: step })
-      .eq('id', userId);
+    if (!personalDetails.surname.trim()) {
+      newErrors.surname = 'Surname is required';
+    }
+    if (!personalDetails.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+    if (!personalDetails.mobileNumber.trim()) {
+      newErrors.mobileNumber = 'Mobile number is required';
+    } else if (!/^\+?[1-9]\d{9,14}$/.test(personalDetails.mobileNumber.replace(/\s/g, ''))) {
+      newErrors.mobileNumber = 'Please enter a valid mobile number';
+    }
+    if (!personalDetails.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalDetails.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+    if (personalDetails.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+    if (personalDetails.password !== personalDetails.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = async () => {
-    const nextStep = (currentStep + 1) as OnboardingStep;
-    setCurrentStep(nextStep);
-    await updateOnboardingStep(nextStep);
+  const validateAccountSetup = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!accountSetup.statusInCanada) {
+      newErrors.statusInCanada = 'Please select your status in Canada';
+    }
+    if (!accountSetup.province) {
+      newErrors.province = 'Please select your province';
+    }
+    if (!accountSetup.primaryGoal) {
+      newErrors.primaryGoal = 'Please select your primary goal';
+    }
+    if (accountSetup.creditProducts.length === 0) {
+      newErrors.creditProducts = 'Please select at least one option';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (currentStage === 'personal') {
+      if (validatePersonalDetails()) {
+        setCurrentStage('account');
+        setErrors({});
+      }
+    } else if (currentStage === 'account') {
+      if (validateAccountSetup()) {
+        setCurrentStage('finish');
+        setErrors({});
+      }
+    }
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
-      const prevStep = (currentStep - 1) as OnboardingStep;
-      setCurrentStep(prevStep);
-      updateOnboardingStep(prevStep);
+    if (currentStage === 'account') {
+      setCurrentStage('personal');
+    } else if (currentStage === 'finish') {
+      setCurrentStage('account');
     }
-  };
-
-  const handleSkip = async () => {
-    // If on the last steps or user wants to skip entirely, complete with defaults
-    if (currentStep >= 4 || currentStep === 3) {
-      await handleCompleteWithDefaults();
-    } else {
-      handleNext();
-    }
-  };
-
-  const handleCompleteWithDefaults = async () => {
-    if (!userId) return;
-
-    setIsLoading(true);
-
-    try {
-      const supabase = createClient();
-
-      // Use defaults if user skipped selections
-      const finalLanguage = selectedLanguage || 'en';
-      const finalDashboard = selectedGoal === 'learn' ? 'learn' : (selectedGoal === 'manage' ? 'card' : 'learn');
-
-      // Update user profile with completion status
-      await supabase
-        .from('user_profiles')
-        .update({
-          onboarding_completed: true,
-          onboarding_step: 5,
-          preferred_language: finalLanguage,
-          preferred_dashboard: finalDashboard,
-        })
-        .eq('id', userId);
-
-      // Redirect to appropriate dashboard
-      router.push(finalDashboard === 'card' ? '/card-dashboard' : '/learn-dashboard');
-    } catch (error) {
-      console.error('Failed to complete onboarding:', error);
-      setIsLoading(false);
-    }
+    setErrors({});
   };
 
   const handleComplete = async () => {
-    if (!userId) return;
-
     setIsLoading(true);
 
     try {
       const supabase = createClient();
 
-      // Use defaults if user didn't select a goal
-      const finalDashboard = selectedGoal === 'learn' ? 'learn' : (selectedGoal === 'manage' ? 'card' : 'learn');
+      // Determine preferred dashboard based on primary goal
+      const preferredDashboard =
+        accountSetup.primaryGoal === 'learn_credit' ? 'learn' : 'card';
 
-      // Update user profile with completion status, language, and preferred dashboard
+      // Update user profile with all collected data
       await supabase
         .from('user_profiles')
         .update({
           onboarding_completed: true,
-          onboarding_step: 5,
-          preferred_language: selectedLanguage,
-          preferred_dashboard: finalDashboard,
+          first_name: personalDetails.firstName,
+          last_name: personalDetails.surname,
+          mobile_number: personalDetails.mobileNumber,
+          status_in_canada: accountSetup.statusInCanada,
+          province: accountSetup.province,
+          primary_goal: accountSetup.primaryGoal,
+          credit_products: accountSetup.creditProducts,
+          immigration_status: accountSetup.immigrationStatus,
+          credit_knowledge: accountSetup.creditKnowledge,
+          current_situation: accountSetup.currentSituation,
+          preferred_dashboard: preferredDashboard,
         })
         .eq('id', userId);
 
@@ -170,302 +205,471 @@ export default function OnboardingPage() {
     }
   };
 
-  const steps = [
-    {
-      number: 1,
-      title: 'Welcome to Creduman',
-      subtitle: "Let's get you started on your credit journey",
-    },
-    {
-      number: 2,
-      title: 'Choose Your Language',
-      subtitle: 'Select your preferred language',
-    },
-    {
-      number: 3,
-      title: 'What brings you here?',
-      subtitle: 'Choose your primary goal',
-    },
-    {
-      number: 4,
-      title: 'Your Dashboard Awaits',
-      subtitle: 'Here\'s what you can expect',
-    },
-    {
-      number: 5,
-      title: 'All Set!',
-      subtitle: "You're ready to begin",
-    },
+  const canadianProvinces = [
+    'Alberta',
+    'British Columbia',
+    'Manitoba',
+    'New Brunswick',
+    'Newfoundland and Labrador',
+    'Northwest Territories',
+    'Nova Scotia',
+    'Nunavut',
+    'Ontario',
+    'Prince Edward Island',
+    'Quebec',
+    'Saskatchewan',
+    'Yukon',
   ];
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="text-center space-y-6">
-            <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-brand/10">
-              <Sparkles className="h-10 w-10 text-brand" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold">Welcome to Creduman!</h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                We're excited to help you master credit management and build a
-                strong financial future in Canada.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4 max-w-2xl mx-auto pt-6">
-              <div className="p-4 rounded-lg border bg-card">
-                <GraduationCap className="h-8 w-8 text-brand mx-auto mb-2" />
-                <h3 className="font-semibold mb-1">Learn</h3>
-                <p className="text-sm text-muted-foreground">
-                  Interactive credit education
-                </p>
-              </div>
-              <div className="p-4 rounded-lg border bg-card">
-                <CreditCard className="h-8 w-8 text-brand mx-auto mb-2" />
-                <h3 className="font-semibold mb-1">Manage</h3>
-                <p className="text-sm text-muted-foreground">
-                  Track all your cards
-                </p>
-              </div>
-              <div className="p-4 rounded-lg border bg-card">
-                <Sparkles className="h-8 w-8 text-brand mx-auto mb-2" />
-                <h3 className="font-semibold mb-1">Grow</h3>
-                <p className="text-sm text-muted-foreground">
-                  AI-powered insights
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 2:
+  const renderStageContent = () => {
+    switch (currentStage) {
+      case 'personal':
         return (
           <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">Choose Your Language</h2>
-              <p className="text-muted-foreground">
-                Select your preferred language for the app
-              </p>
+            {/* Surname */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                Surname
+              </label>
+              <input
+                type="text"
+                value={personalDetails.surname}
+                onChange={(e) =>
+                  setPersonalDetails({ ...personalDetails, surname: e.target.value })
+                }
+                placeholder="e.g Doe"
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  errors.surname ? 'border-red-500' : 'border-border'
+                } bg-background focus:outline-none focus:ring-2 focus:ring-brand`}
+              />
+              {errors.surname && (
+                <p className="text-red-500 text-sm mt-1">{errors.surname}</p>
+              )}
             </div>
 
-            <div className="grid md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-              {[
-                { value: 'en', label: 'English', flag: '🇨🇦' },
-                { value: 'fr', label: 'Français', flag: '🇫🇷' },
-                { value: 'ar', label: 'العربية', flag: '🇸🇦' },
-              ].map((lang) => (
+            {/* First Name */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                First Name
+              </label>
+              <input
+                type="text"
+                value={personalDetails.firstName}
+                onChange={(e) =>
+                  setPersonalDetails({ ...personalDetails, firstName: e.target.value })
+                }
+                placeholder="e.g John"
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  errors.firstName ? 'border-red-500' : 'border-border'
+                } bg-background focus:outline-none focus:ring-2 focus:ring-brand`}
+              />
+              {errors.firstName && (
+                <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
+              )}
+            </div>
+
+            {/* Mobile Number */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                Mobile Number
+              </label>
+              <input
+                type="tel"
+                value={personalDetails.mobileNumber}
+                onChange={(e) =>
+                  setPersonalDetails({
+                    ...personalDetails,
+                    mobileNumber: e.target.value,
+                  })
+                }
+                placeholder="e.g +1xxxxxxxxx"
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  errors.mobileNumber ? 'border-red-500' : 'border-border'
+                } bg-background focus:outline-none focus:ring-2 focus:ring-brand`}
+              />
+              {errors.mobileNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>
+              )}
+            </div>
+
+            {/* Email Address */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={personalDetails.email}
+                onChange={(e) =>
+                  setPersonalDetails({ ...personalDetails, email: e.target.value })
+                }
+                placeholder="e.g johndoe@gmail.com"
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  errors.email ? 'border-red-500' : 'border-border'
+                } bg-background focus:outline-none focus:ring-2 focus:ring-brand`}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              )}
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={personalDetails.password}
+                  onChange={(e) =>
+                    setPersonalDetails({ ...personalDetails, password: e.target.value })
+                  }
+                  placeholder="8 or more characters"
+                  className={`w-full px-4 py-3 rounded-lg border ${
+                    errors.password ? 'border-red-500' : 'border-border'
+                  } bg-background focus:outline-none focus:ring-2 focus:ring-brand pr-12`}
+                />
                 <button
-                  key={lang.value}
-                  onClick={() => setSelectedLanguage(lang.value as 'en' | 'fr' | 'ar')}
-                  className={`p-6 rounded-lg border-2 text-center transition-all ${
-                    selectedLanguage === lang.value
-                      ? 'border-brand bg-brand/5'
-                      : 'border-border hover:border-brand/50'
-                  }`}
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-4xl">{lang.flag}</span>
-                    {selectedLanguage === lang.value && (
-                      <Check className="h-6 w-6 text-brand" />
-                    )}
-                  </div>
-                  <h3 className="text-xl font-semibold">{lang.label}</h3>
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
-              ))}
+              </div>
+              {errors.password && (
+                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+              )}
             </div>
+
+            {/* Retype Password */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                Retype Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={personalDetails.confirmPassword}
+                  onChange={(e) =>
+                    setPersonalDetails({
+                      ...personalDetails,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  placeholder="8 or more characters"
+                  className={`w-full px-4 py-3 rounded-lg border ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-border'
+                  } bg-background focus:outline-none focus:ring-2 focus:ring-brand pr-12`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+              )}
+            </div>
+
+            <Button onClick={handleNext} className="w-full" size="lg">
+              Next
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              I have an account?{' '}
+              <a href="/login" className="text-brand hover:underline">
+                Login
+              </a>
+            </p>
           </div>
         );
 
-      case 3:
+      case 'account':
         return (
           <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">What's your main goal?</h2>
-              <p className="text-muted-foreground">
-                Don't worry, you can access everything later
-              </p>
+            {/* Status in Canada */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                Status in Canada
+              </label>
+              <select
+                value={accountSetup.statusInCanada}
+                onChange={(e) =>
+                  setAccountSetup({
+                    ...accountSetup,
+                    statusInCanada: e.target.value as any,
+                  })
+                }
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  errors.statusInCanada ? 'border-red-500' : 'border-border'
+                } bg-background focus:outline-none focus:ring-2 focus:ring-brand appearance-none`}
+              >
+                <option value="">Select one</option>
+                <option value="new_immigrant">New Immigrant</option>
+                <option value="permanent_resident">Permanent Resident</option>
+                <option value="canadian_citizen">Canadian Citizen</option>
+              </select>
+              {errors.statusInCanada && (
+                <p className="text-red-500 text-sm mt-1">{errors.statusInCanada}</p>
+              )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              <button
-                onClick={() => setSelectedGoal('learn')}
-                className={`p-6 rounded-lg border-2 text-left transition-all ${
-                  selectedGoal === 'learn'
-                    ? 'border-brand bg-brand/5'
-                    : 'border-border hover:border-brand/50'
-                }`}
+            {/* Province */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                Which province do you live in?
+              </label>
+              <select
+                value={accountSetup.province}
+                onChange={(e) =>
+                  setAccountSetup({ ...accountSetup, province: e.target.value })
+                }
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  errors.province ? 'border-red-500' : 'border-border'
+                } bg-background focus:outline-none focus:ring-2 focus:ring-brand appearance-none`}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-brand/10">
-                    <GraduationCap className="h-6 w-6 text-brand" />
-                  </div>
-                  {selectedGoal === 'learn' && (
-                    <Check className="h-6 w-6 text-brand" />
-                  )}
-                </div>
-                <h3 className="text-xl font-semibold mb-2">
-                  Learn About Credit
-                </h3>
-                <p className="text-muted-foreground">
-                  I'm new to credit and want to understand how it works in
-                  Canada
-                </p>
-              </button>
-
-              <button
-                onClick={() => setSelectedGoal('manage')}
-                className={`p-6 rounded-lg border-2 text-left transition-all ${
-                  selectedGoal === 'manage'
-                    ? 'border-brand bg-brand/5'
-                    : 'border-border hover:border-brand/50'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-brand/10">
-                    <CreditCard className="h-6 w-6 text-brand" />
-                  </div>
-                  {selectedGoal === 'manage' && (
-                    <Check className="h-6 w-6 text-brand" />
-                  )}
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Manage My Cards</h3>
-                <p className="text-muted-foreground">
-                  I have credit cards and want to track them in one place
-                </p>
-              </button>
+                <option value="">Choose province</option>
+                {canadianProvinces.map((province) => (
+                  <option key={province} value={province}>
+                    {province}
+                  </option>
+                ))}
+              </select>
+              {errors.province && (
+                <p className="text-red-500 text-sm mt-1">{errors.province}</p>
+              )}
             </div>
+
+            {/* Primary Goal */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                What's your primary goal?
+              </label>
+              <select
+                value={accountSetup.primaryGoal}
+                onChange={(e) =>
+                  setAccountSetup({
+                    ...accountSetup,
+                    primaryGoal: e.target.value as any,
+                  })
+                }
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  errors.primaryGoal ? 'border-red-500' : 'border-border'
+                } bg-background focus:outline-none focus:ring-2 focus:ring-brand appearance-none`}
+              >
+                <option value="">Choose one</option>
+                <option value="build_credit">Build credit from scratch</option>
+                <option value="manage_debt">Manage existing debt</option>
+                <option value="learn_credit">Learn about credit</option>
+                <option value="improve_score">Improve credit score</option>
+              </select>
+              {errors.primaryGoal && (
+                <p className="text-red-500 text-sm mt-1">{errors.primaryGoal}</p>
+              )}
+            </div>
+
+            {/* Credit Products */}
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">
+                Which credit products do you own?
+              </label>
+              <div className="space-y-3">
+                {[
+                  { value: 'no_credit', label: 'No credit yet' },
+                  { value: 'secured_card', label: 'Secured credit card' },
+                  { value: 'regular_card', label: 'Regular credit card' },
+                  { value: 'phone_plan', label: 'Phone plan on contract' },
+                  { value: 'auto_loan', label: 'Auto loan' },
+                ].map((product) => (
+                  <label
+                    key={product.value}
+                    className="flex items-center space-x-3 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={accountSetup.creditProducts.includes(product.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAccountSetup({
+                            ...accountSetup,
+                            creditProducts: [
+                              ...accountSetup.creditProducts,
+                              product.value,
+                            ],
+                          });
+                        } else {
+                          setAccountSetup({
+                            ...accountSetup,
+                            creditProducts: accountSetup.creditProducts.filter(
+                              (p) => p !== product.value
+                            ),
+                          });
+                        }
+                      }}
+                      className="h-5 w-5 rounded border-border text-brand focus:ring-brand"
+                    />
+                    <span className="text-foreground">{product.label}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.creditProducts && (
+                <p className="text-red-500 text-sm mt-1">{errors.creditProducts}</p>
+              )}
+            </div>
+
+            <Button onClick={handleNext} className="w-full" size="lg">
+              Next
+            </Button>
           </div>
         );
 
-      case 4:
+      case 'finish':
         return (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">
-                {selectedGoal === 'learn'
-                  ? 'Your Learning Dashboard'
-                  : 'Your Card Management Dashboard'}
-              </h2>
-              <p className="text-muted-foreground">
-                Here's what you'll find in your dashboard
-              </p>
-            </div>
-
-            {selectedGoal === 'learn' ? (
-              <div className="space-y-4 max-w-2xl mx-auto">
-                <div className="flex items-start space-x-4 p-4 rounded-lg border bg-card">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand/10 flex items-center justify-center">
-                    <span className="text-brand font-bold">1</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">
-                      Interactive Learning Modules
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Step-by-step lessons covering credit basics, building
-                      credit, and smart card usage
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4 p-4 rounded-lg border bg-card">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand/10 flex items-center justify-center">
-                    <span className="text-brand font-bold">2</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Track Your Progress</h3>
-                    <p className="text-sm text-muted-foreground">
-                      See how far you've come and what's next on your learning
-                      journey
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4 p-4 rounded-lg border bg-card">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand/10 flex items-center justify-center">
-                    <span className="text-brand font-bold">3</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">
-                      Multilingual Support
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Learn in English, French, or Arabic - switch anytime
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4 max-w-2xl mx-auto">
-                <div className="flex items-start space-x-4 p-4 rounded-lg border bg-card">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand/10 flex items-center justify-center">
-                    <span className="text-brand font-bold">1</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">
-                      Connect Your Credit Cards
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Securely link cards from any Canadian bank with
-                      bank-level encryption
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4 p-4 rounded-lg border bg-card">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand/10 flex items-center justify-center">
-                    <span className="text-brand font-bold">2</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">
-                      Real-Time Insights
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      See balances, utilization, and payment due dates all in
-                      one place
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4 p-4 rounded-lg border bg-card">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand/10 flex items-center justify-center">
-                    <span className="text-brand font-bold">3</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">
-                      AI-Powered Recommendations
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Get personalized tips to optimize payments and improve
-                      your credit score
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="text-center space-y-6">
-            <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-              <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold">You're All Set!</h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Your account is ready. Let's start building your financial
-                future together.
-              </p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-6 max-w-md mx-auto">
+          <div className="space-y-8">
+            {/* Immigration Status */}
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Immigration Status</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Quick Tip: You can always switch between learning and card
-                management dashboards from the navigation menu.
+                What best describes your status in Canada?
               </p>
+              <div className="space-y-3">
+                {[
+                  { value: 'new_immigrant', label: 'New Immigrant' },
+                  { value: 'permanent_resident', label: 'Permanent Resident' },
+                  { value: 'canadian_citizen', label: 'Canadian Citizen' },
+                ].map((status) => (
+                  <button
+                    key={status.value}
+                    onClick={() =>
+                      setAccountSetup({
+                        ...accountSetup,
+                        immigrationStatus: status.value as any,
+                      })
+                    }
+                    className={`w-full px-6 py-4 rounded-lg border-2 text-left transition-all ${
+                      accountSetup.immigrationStatus === status.value
+                        ? 'border-brand bg-brand/5 text-brand'
+                        : 'border-border hover:border-brand/50'
+                    }`}
+                  >
+                    {status.label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Credit Knowledge Level */}
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Credit Knowledge Level</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                How familiar are you with the Canadian credit system?
+              </p>
+              <div className="space-y-3">
+                {[
+                  { value: 'no_knowledge', label: "What's a credit score? (No knowledge)" },
+                  {
+                    value: 'beginner',
+                    label: "I've heard about it but don't really understand (Beginner)",
+                  },
+                  {
+                    value: 'intermediate',
+                    label: 'I understand the basics (Intermediate)',
+                  },
+                  {
+                    value: 'advanced',
+                    label: "I'm pretty knowledgeable (Advanced)",
+                  },
+                ].map((level) => (
+                  <button
+                    key={level.value}
+                    onClick={() =>
+                      setAccountSetup({
+                        ...accountSetup,
+                        creditKnowledge: level.value as any,
+                      })
+                    }
+                    className={`w-full px-6 py-4 rounded-lg border-2 text-left transition-all ${
+                      accountSetup.creditKnowledge === level.value
+                        ? 'border-brand bg-brand/5 text-brand'
+                        : 'border-border hover:border-brand/50'
+                    }`}
+                  >
+                    {level.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Current Credit Situation */}
+            <div>
+              <h3 className="text-xl font-semibold mb-2">
+                What's your current credit situation
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                This helps us understand where you are on your credit journey so we can
+                give you the right guidance. You can select all the options that apply to
+                you.
+              </p>
+              <div className="space-y-3">
+                {[
+                  'No credit history in Canada yet',
+                  'I have 1 credit card',
+                  'I have more than 1 credit card',
+                  'I have credit cards, loans, line of credit',
+                  "I'm currently in debt and struggling",
+                  "I've had credit problems (missed payments, collections, bankruptcy)",
+                  'I have good credit but want to improve',
+                ].map((situation) => (
+                  <label
+                    key={situation}
+                    className="flex items-center space-x-3 cursor-pointer p-4 rounded-lg border border-border hover:border-brand/50 transition-all"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={accountSetup.currentSituation?.includes(situation)}
+                      onChange={(e) => {
+                        const current = accountSetup.currentSituation || [];
+                        if (e.target.checked) {
+                          setAccountSetup({
+                            ...accountSetup,
+                            currentSituation: [...current, situation],
+                          });
+                        } else {
+                          setAccountSetup({
+                            ...accountSetup,
+                            currentSituation: current.filter((s) => s !== situation),
+                          });
+                        }
+                      }}
+                      className="h-5 w-5 rounded border-border text-brand focus:ring-brand"
+                    />
+                    <span className="text-foreground flex-1">{situation}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Button
+              onClick={handleComplete}
+              isLoading={isLoading}
+              className="w-full"
+              size="lg"
+            >
+              Next
+            </Button>
           </div>
         );
 
@@ -474,97 +678,100 @@ export default function OnboardingPage() {
     }
   };
 
+  const stages: Array<{ stage: OnboardingStage; label: string; step: number }> = [
+    { stage: 'personal', label: 'Personal details', step: 1 },
+    { stage: 'account', label: 'Account setup', step: 2 },
+    { stage: 'finish', label: 'Finish', step: 3 },
+  ];
+
+  const currentStepNumber = stages.find((s) => s.stage === currentStage)?.step || 1;
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with Logo */}
-      <div className="border-b">
+      {/* Header */}
+      <div className="border-b bg-[#1a1a1a] dark:bg-[#1a1a1a]">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700" />
-            <span className="text-xl font-bold">Creduman</span>
+            <span className="text-xl font-bold text-white">Creduman</span>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
-          {/* Progress Bar */}
-          <div className="mb-12">
-            <div className="flex items-center justify-between mb-4">
-              {steps.map((step, index) => (
-                <div key={step.number} className="flex items-center flex-1">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
-                        currentStep >= step.number
-                          ? 'border-brand bg-brand text-white'
-                          : 'border-border bg-background text-muted-foreground'
-                      }`}
-                    >
-                      {currentStep > step.number ? (
-                        <Check className="h-5 w-5" />
-                      ) : (
-                        <span className="text-sm font-bold">
-                          {step.number}
-                        </span>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid lg:grid-cols-[300px,1fr] gap-8">
+            {/* Left Sidebar */}
+            <div className="space-y-8">
+              {/* Back Button - Only show if not on first step */}
+              {currentStage !== 'personal' && (
+                <button
+                  onClick={handleBack}
+                  className="flex items-center justify-center h-12 w-12 rounded-full border border-border hover:border-brand transition-colors"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+              )}
+
+              {/* Title */}
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-brand">
+                  Let's get Started!
+                </h1>
+                <p className="text-muted-foreground">
+                  We are glad to have you, fill out the information
+                </p>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="relative">
+                {stages.map((step, index) => {
+                  const isActive = currentStage === step.stage;
+                  const isCompleted = currentStepNumber > step.step;
+                  
+                  // Line should be purple only if current step is beyond this one
+                  const shouldLineBeColored = currentStepNumber > step.step;
+
+                  return (
+                    <div key={step.stage} className="relative flex items-start pb-8 last:pb-0">
+                      {/* Vertical Line - Only show if not the last item */}
+                      {index < stages.length - 1 && (
+                        <div
+                          className={`absolute left-[3px] top-2 bottom-0 w-0.5 ${
+                            shouldLineBeColored ? 'bg-brand' : 'bg-muted'
+                          }`}
+                        />
                       )}
+
+                      {/* Step Indicator */}
+                      <div className="relative z-10 flex items-center space-x-3">
+                        <div
+                          className={`h-2 w-2 rounded-full flex-shrink-0 ${
+                            isActive || isCompleted
+                              ? 'bg-brand'
+                              : 'bg-muted'
+                          }`}
+                        />
+                        <span
+                          className={`text-base ${
+                            isActive || isCompleted
+                              ? 'text-foreground'
+                              : 'text-muted-foreground'
+                          }`}
+                        >
+                          {step.label}
+                        </span>
+                      </div>
                     </div>
-                    <p className="mt-2 text-xs text-center hidden sm:block">
-                      {step.title}
-                    </p>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div
-                      className={`h-0.5 flex-1 mx-2 transition-colors ${
-                        currentStep > step.number ? 'bg-brand' : 'bg-border'
-                      }`}
-                    />
-                  )}
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Step Content */}
-          <div className="mb-12 min-h-[400px]">{renderStepContent()}</div>
-
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between max-w-2xl mx-auto">
-            <Button
-              onClick={handleBack}
-              variant="outline"
-              disabled={currentStep === 1}
-              className="min-w-[100px]"
-            >
-              <ChevronLeft className="mr-2 h-5 w-5" />
-              Back
-            </Button>
-
-            <div className="flex space-x-3">
-              {currentStep < 5 && currentStep !== 3 && (
-                <Button onClick={handleSkip} variant="ghost">
-                  Skip
-                </Button>
-              )}
-
-              {currentStep < 5 ? (
-                <Button
-                  onClick={handleNext}
-                  className="min-w-[100px]"
-                >
-                  Next
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleComplete}
-                  isLoading={isLoading}
-                  className="min-w-[120px]"
-                >
-                  Get Started
-                </Button>
-              )}
+            {/* Right Content Area */}
+            <div className="bg-card rounded-2xl border border-border p-8 lg:p-12">
+              {renderStageContent()}
             </div>
           </div>
         </div>
@@ -575,9 +782,11 @@ export default function OnboardingPage() {
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         title="Welcome to Creduman!"
-        message="Taking you to your dashboard..."
+        message="Your account is all set up. Taking you to your dashboard..."
         redirectTo={
-          selectedGoal === 'learn' ? '/learn-dashboard' : (selectedGoal === 'manage' ? '/card-dashboard' : '/learn-dashboard')
+          accountSetup.primaryGoal === 'learn_credit'
+            ? '/learn-dashboard'
+            : '/card-dashboard'
         }
       />
     </div>
