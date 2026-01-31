@@ -2,7 +2,7 @@
 
 /**
  * Navigation Component
- * Responsive navbar with light/dark mode toggle
+ * Responsive navbar with improved mobile behavior and unified dropdown menus
  */
 
 import Link from 'next/link';
@@ -12,12 +12,19 @@ import { useRouter } from 'next/navigation';
 import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuHeader,
+  DropdownMenuSection,
+} from '@/components/ui/DropdownMenu';
 
 export function Navigation() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email?: string; first_name?: string; surname?: string } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
   // Monitor theme changes
@@ -82,6 +89,17 @@ export function Navigation() {
     };
   }, []);
 
+  // Close one menu when opening another
+  const handleUserMenuToggle = () => {
+    setShowUserMenu(!showUserMenu);
+    setShowThemeMenu(false);
+  };
+
+  const handleThemeMenuToggle = () => {
+    setShowThemeMenu(!showThemeMenu);
+    setShowUserMenu(false);
+  };
+
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -107,12 +125,13 @@ export function Navigation() {
               alt="Creduman Logo" 
               width={120} 
               height={32}
-              className="h-8 w-auto"
+              className="h-6 w-auto sm:h-8"
+              priority
             />
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:space-x-8">
+          <div className="hidden lg:flex lg:items-center lg:space-x-8">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -124,70 +143,66 @@ export function Navigation() {
             ))}
           </div>
 
-          {/* CTA Buttons */}
-          <div className="flex items-center space-x-4">
-            <ThemeToggle />
+          {/* Desktop CTA & Actions */}
+          <div className="hidden lg:flex items-center gap-3">
+            <ThemeToggle
+              isOpen={showThemeMenu}
+              onToggle={handleThemeMenuToggle}
+            />
 
             {user ? (
               // Logged in user menu
-              <div className="relative">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="hidden md:flex items-center space-x-2 rounded-lg px-3 py-2 hover:bg-accent transition-colors"
-                >
-                  <div className="h-8 w-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium">
-                    {user.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                  </div>
-                  <span className="text-sm font-medium">
-                    {user.first_name || user.email?.split('@')[0] || 'User'}
-                  </span>
-                </button>
-
-                {/* Desktop User Dropdown */}
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-lg border bg-background shadow-lg">
-                    <div className="p-3 border-b">
-                      <p className="text-sm font-medium">{user.first_name ? `${user.first_name} ${user.surname || ''}`.trim() : 'User'}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
+              <DropdownMenu
+                isOpen={showUserMenu}
+                onClose={() => setShowUserMenu(false)}
+                trigger={
+                  <button
+                    onClick={handleUserMenuToggle}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-accent transition-colors"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium">
+                      {user.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                     </div>
-                    <div className="p-2">
-                      <Link
-                        href="/learn-dashboard"
-                        className="flex items-center space-x-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        <span>Dashboard</span>
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="flex w-full items-center space-x-2 rounded-md px-3 py-2 text-sm hover:bg-accent text-red-600 dark:text-red-400"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span>Log Out</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Mobile User Button */}
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="md:hidden h-8 w-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium"
-                >
-                  {user.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                </button>
-              </div>
+                    <span className="text-sm font-medium">
+                      {user.first_name || user.email?.split('@')[0] || 'User'}
+                    </span>
+                  </button>
+                }
+              >
+                <DropdownMenuHeader>
+                  <p className="text-sm font-medium">
+                    {user.first_name ? `${user.first_name} ${user.surname || ''}`.trim() : 'User'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </DropdownMenuHeader>
+                <DropdownMenuSection>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      router.push('/learn-dashboard');
+                      setShowUserMenu(false);
+                    }}
+                    icon={<LayoutDashboard className="h-4 w-4" />}
+                  >
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    icon={<LogOut className="h-4 w-4" />}
+                    variant="danger"
+                  >
+                    Log Out
+                  </DropdownMenuItem>
+                </DropdownMenuSection>
+              </DropdownMenu>
             ) : (
               // Logged out buttons
               <>
                 <Link
                   href="/login"
-                  className="hidden md:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
                 >
                   Log In
                 </Link>
-
                 <Link
                   href="/signup"
                   className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
@@ -196,11 +211,21 @@ export function Navigation() {
                 </Link>
               </>
             )}
+          </div>
 
-            {/* Mobile Menu Button */}
+          {/* Mobile Actions */}
+          <div className="flex lg:hidden items-center gap-2">
+            {user && (
+              <button
+                onClick={handleUserMenuToggle}
+                className="h-9 w-9 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium"
+              >
+                {user.first_name?.[0]?.toUpperCase() || 'U'}
+              </button>
+            )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden rounded-lg p-2 hover:bg-accent"
+              className="rounded-lg p-2 hover:bg-accent"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -215,25 +240,38 @@ export function Navigation() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t bg-background">
-          <div className="container mx-auto px-4 py-4 space-y-4">
+        <div className="lg:hidden border-t bg-background">
+          <div className="container mx-auto px-4 py-4 space-y-3">
+            {/* Navigation Items */}
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="block text-base font-medium text-muted-foreground hover:text-foreground"
+                className="block text-base font-medium text-muted-foreground hover:text-foreground py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {item.label}
               </Link>
             ))}
+
+            {/* Divider */}
+            <div className="border-t my-2" />
+
+            {/* Theme Toggle for Mobile */}
+            <ThemeToggle
+              isOpen={showThemeMenu}
+              onToggle={handleThemeMenuToggle}
+              mobile
+            />
+
             {user ? (
               <>
                 <Link
                   href="/learn-dashboard"
-                  className="block text-base font-medium text-muted-foreground hover:text-foreground"
+                  className="flex items-center gap-2 text-base font-medium text-muted-foreground hover:text-foreground py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
+                  <LayoutDashboard className="h-5 w-5" />
                   Dashboard
                 </Link>
                 <button
@@ -241,19 +279,29 @@ export function Navigation() {
                     handleLogout();
                     setMobileMenuOpen(false);
                   }}
-                  className="block w-full text-left text-base font-medium text-red-600 dark:text-red-400"
+                  className="flex items-center gap-2 w-full text-left text-base font-medium text-red-600 dark:text-red-400 py-2"
                 >
+                  <LogOut className="h-5 w-5" />
                   Log Out
                 </button>
               </>
             ) : (
-              <Link
-                href="/login"
-                className="block text-base font-medium text-muted-foreground hover:text-foreground"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Log In
-              </Link>
+              <>
+                <Link
+                  href="/login"
+                  className="block text-base font-medium text-muted-foreground hover:text-foreground py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="block w-full text-center rounded-lg bg-brand px-4 py-3 text-base font-medium text-white hover:bg-brand-600 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Get Started
+                </Link>
+              </>
             )}
           </div>
         </div>
