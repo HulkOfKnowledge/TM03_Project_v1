@@ -14,6 +14,7 @@ import { SuccessModal } from '@/components/auth/SuccessModal';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 
 type OnboardingStage = 'personal' | 'account' | 'finish';
+type FinishSubStep = 'immigration' | 'knowledge' | 'situation';
 
 interface PersonalDetails {
   surname: string;
@@ -37,6 +38,7 @@ interface AccountSetup {
 export default function OnboardingPage() {
   const router = useRouter();
   const [currentStage, setCurrentStage] = useState<OnboardingStage>('personal');
+  const [finishSubStep, setFinishSubStep] = useState<FinishSubStep>('immigration');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -155,7 +157,18 @@ export default function OnboardingPage() {
     } else if (currentStage === 'account') {
       if (validateAccountSetup()) {
         setCurrentStage('finish');
+        setFinishSubStep('immigration');
         setErrors({});
+      }
+    } else if (currentStage === 'finish') {
+      // Navigate through finish substeps
+      if (finishSubStep === 'immigration') {
+        setFinishSubStep('knowledge');
+      } else if (finishSubStep === 'knowledge') {
+        setFinishSubStep('situation');
+      } else if (finishSubStep === 'situation') {
+        // Last substep - submit
+        handleComplete();
       }
     }
   };
@@ -164,9 +177,22 @@ export default function OnboardingPage() {
     if (currentStage === 'account') {
       setCurrentStage('personal');
     } else if (currentStage === 'finish') {
-      setCurrentStage('account');
+      // Navigate back through finish substeps
+      if (finishSubStep === 'immigration') {
+        setCurrentStage('account');
+      } else if (finishSubStep === 'knowledge') {
+        setFinishSubStep('immigration');
+      } else if (finishSubStep === 'situation') {
+        setFinishSubStep('knowledge');
+      }
     }
     setErrors({});
+  };
+
+  const handleDotNavigation = (subStep: FinishSubStep) => {
+    if (currentStage === 'finish') {
+      setFinishSubStep(subStep);
+    }
   };
 
   const handleComplete = async () => {
@@ -486,7 +512,7 @@ export default function OnboardingPage() {
               <label className="block text-sm text-muted-foreground mb-2">
                 Which credit products do you own?
               </label>
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {[
                   { value: 'no_credit', label: 'No credit yet' },
                   { value: 'secured_card', label: 'Secured credit card' },
@@ -496,8 +522,13 @@ export default function OnboardingPage() {
                 ].map((product) => (
                   <label
                     key={product.value}
-                    className="flex items-center space-x-3 cursor-pointer"
+                    className={`relative flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      accountSetup.creditProducts.includes(product.value)
+                        ? 'border-brand bg-brand/5'
+                        : 'border-border hover:border-brand/50'
+                    }`}
                   >
+                    <span className="text-sm text-foreground pr-2">{product.label}</span>
                     <input
                       type="checkbox"
                       checked={accountSetup.creditProducts.includes(product.value)}
@@ -519,9 +550,31 @@ export default function OnboardingPage() {
                           });
                         }
                       }}
-                      className="h-5 w-5 rounded border-border text-brand focus:ring-brand"
+                      className="sr-only"
                     />
-                    <span className="text-foreground">{product.label}</span>
+                    <div
+                      className={`flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center ${
+                        accountSetup.creditProducts.includes(product.value)
+                          ? 'border-brand bg-brand'
+                          : 'border-border bg-background'
+                      }`}
+                    >
+                      {accountSetup.creditProducts.includes(product.value) && (
+                        <svg
+                          className="h-3 w-3 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      )}
+                    </div>
                   </label>
                 ))}
               </div>
@@ -537,138 +590,234 @@ export default function OnboardingPage() {
         );
 
       case 'finish':
+        const finishSubSteps: FinishSubStep[] = ['immigration', 'knowledge', 'situation'];
+        const currentSubStepIndex = finishSubSteps.indexOf(finishSubStep);
+
         return (
           <div className="space-y-8">
             {/* Immigration Status */}
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Immigration Status</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                What best describes your status in Canada?
-              </p>
-              <div className="space-y-3">
-                {[
-                  { value: 'new_immigrant', label: 'New Immigrant' },
-                  { value: 'permanent_resident', label: 'Permanent Resident' },
-                  { value: 'canadian_citizen', label: 'Canadian Citizen' },
-                ].map((status) => (
-                  <button
-                    key={status.value}
-                    onClick={() =>
-                      setAccountSetup({
-                        ...accountSetup,
-                        immigrationStatus: status.value as any,
-                      })
-                    }
-                    className={`w-full px-6 py-4 rounded-lg border-2 text-left transition-all ${
-                      accountSetup.immigrationStatus === status.value
-                        ? 'border-brand bg-brand/5 text-brand'
-                        : 'border-border hover:border-brand/50'
-                    }`}
-                  >
-                    {status.label}
-                  </button>
-                ))}
+            {finishSubStep === 'immigration' && (
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Immigration Status</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  What best describes your status in Canada?
+                </p>
+                <div className="space-y-3">
+                  {[
+                    { value: 'new_immigrant', label: 'New Immigrant' },
+                    { value: 'permanent_resident', label: 'Permanent Resident' },
+                    { value: 'canadian_citizen', label: 'Canadian Citizen' },
+                  ].map((status) => (
+                    <button
+                      key={status.value}
+                      onClick={() =>
+                        setAccountSetup({
+                          ...accountSetup,
+                          immigrationStatus: status.value as any,
+                        })
+                      }
+                      className={`w-full px-6 py-4 rounded-lg border-2 flex items-center justify-between text-left transition-all ${
+                        accountSetup.immigrationStatus === status.value
+                          ? 'border-brand bg-brand/5 text-brand'
+                          : 'border-border hover:border-brand/50'
+                      }`}
+                    >
+                      <span>{status.label}</span>
+                      <div
+                        className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
+                          accountSetup.immigrationStatus === status.value
+                            ? 'border-brand bg-brand'
+                            : 'border-border bg-background'
+                        }`}
+                      >
+                        {accountSetup.immigrationStatus === status.value && (
+                          <svg
+                            className="h-3 w-3 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={3}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Credit Knowledge Level */}
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Credit Knowledge Level</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                How familiar are you with the Canadian credit system?
-              </p>
-              <div className="space-y-3">
-                {[
-                  { value: 'no_knowledge', label: "What's a credit score? (No knowledge)" },
-                  {
-                    value: 'beginner',
-                    label: "I've heard about it but don't really understand (Beginner)",
-                  },
-                  {
-                    value: 'intermediate',
-                    label: 'I understand the basics (Intermediate)',
-                  },
-                  {
-                    value: 'advanced',
-                    label: "I'm pretty knowledgeable (Advanced)",
-                  },
-                ].map((level) => (
-                  <button
-                    key={level.value}
-                    onClick={() =>
-                      setAccountSetup({
-                        ...accountSetup,
-                        creditKnowledge: level.value as any,
-                      })
-                    }
-                    className={`w-full px-6 py-4 rounded-lg border-2 text-left transition-all ${
-                      accountSetup.creditKnowledge === level.value
-                        ? 'border-brand bg-brand/5 text-brand'
-                        : 'border-border hover:border-brand/50'
-                    }`}
-                  >
-                    {level.label}
-                  </button>
-                ))}
+            {finishSubStep === 'knowledge' && (
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Credit Knowledge Level</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  How familiar are you with the Canadian credit system?
+                </p>
+                <div className="space-y-3">
+                  {[
+                    { value: 'no_knowledge', label: "What's a credit score? (No knowledge)" },
+                    {
+                      value: 'beginner',
+                      label: "I've heard about it but don't really understand (Beginner)",
+                    },
+                    {
+                      value: 'intermediate',
+                      label: 'I understand the basics (Intermediate)',
+                    },
+                    {
+                      value: 'advanced',
+                      label: "I'm pretty knowledgeable (Advanced)",
+                    },
+                  ].map((level) => (
+                    <button
+                      key={level.value}
+                      onClick={() =>
+                        setAccountSetup({
+                          ...accountSetup,
+                          creditKnowledge: level.value as any,
+                        })
+                      }
+                      className={`w-full px-6 py-4 rounded-lg border-2 flex items-center justify-between text-left transition-all ${
+                        accountSetup.creditKnowledge === level.value
+                          ? 'border-brand bg-brand/5 text-brand'
+                          : 'border-border hover:border-brand/50'
+                      }`}
+                    >
+                      <span className="flex-1 pr-4">{level.label}</span>
+                      <div
+                        className={`flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center ${
+                          accountSetup.creditKnowledge === level.value
+                            ? 'border-brand bg-brand'
+                            : 'border-border bg-background'
+                        }`}
+                      >
+                        {accountSetup.creditKnowledge === level.value && (
+                          <svg
+                            className="h-3 w-3 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={3}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Current Credit Situation */}
-            <div>
-              <h3 className="text-xl font-semibold mb-2">
-                What's your current credit situation
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                This helps us understand where you are on your credit journey so we can
-                give you the right guidance. You can select all the options that apply to
-                you.
-              </p>
-              <div className="space-y-3">
-                {[
-                  'No credit history in Canada yet',
-                  'I have 1 credit card',
-                  'I have more than 1 credit card',
-                  'I have credit cards, loans, line of credit',
-                  "I'm currently in debt and struggling",
-                  "I've had credit problems (missed payments, collections, bankruptcy)",
-                  'I have good credit but want to improve',
-                ].map((situation) => (
-                  <label
-                    key={situation}
-                    className="flex items-center space-x-3 cursor-pointer p-4 rounded-lg border border-border hover:border-brand/50 transition-all"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={accountSetup.currentSituation?.includes(situation)}
-                      onChange={(e) => {
-                        const current = accountSetup.currentSituation || [];
-                        if (e.target.checked) {
-                          setAccountSetup({
-                            ...accountSetup,
-                            currentSituation: [...current, situation],
-                          });
-                        } else {
-                          setAccountSetup({
-                            ...accountSetup,
-                            currentSituation: current.filter((s) => s !== situation),
-                          });
-                        }
-                      }}
-                      className="h-5 w-5 rounded border-border text-brand focus:ring-brand"
-                    />
-                    <span className="text-foreground flex-1">{situation}</span>
-                  </label>
-                ))}
+            {finishSubStep === 'situation' && (
+              <div>
+                <h3 className="text-xl font-semibold mb-2">
+                  What's your current credit situation
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  This helps us understand where you are on your credit journey so we can
+                  give you the right guidance. You can select all the options that apply to
+                  you.
+                </p>
+                <div className="space-y-3">
+                  {[
+                    'No credit history in Canada yet',
+                    'I have 1 credit card',
+                    'I have more than 1 credit card',
+                    'I have credit cards, loans, line of credit',
+                    "I'm currently in debt and struggling",
+                    "I've had credit problems (missed payments, collections, bankruptcy)",
+                    'I have good credit but want to improve',
+                  ].map((situation) => (
+                    <label
+                      key={situation}
+                      className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        accountSetup.currentSituation?.includes(situation)
+                          ? 'border-brand bg-brand/5'
+                          : 'border-border hover:border-brand/50'
+                      }`}
+                    >
+                      <span className="text-foreground flex-1 pr-4">{situation}</span>
+                      <input
+                        type="checkbox"
+                        checked={accountSetup.currentSituation?.includes(situation)}
+                        onChange={(e) => {
+                          const current = accountSetup.currentSituation || [];
+                          if (e.target.checked) {
+                            setAccountSetup({
+                              ...accountSetup,
+                              currentSituation: [...current, situation],
+                            });
+                          } else {
+                            setAccountSetup({
+                              ...accountSetup,
+                              currentSituation: current.filter((s) => s !== situation),
+                            });
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      <div
+                        className={`flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center ${
+                          accountSetup.currentSituation?.includes(situation)
+                            ? 'border-brand bg-brand'
+                            : 'border-border bg-background'
+                        }`}
+                      >
+                        {accountSetup.currentSituation?.includes(situation) && (
+                          <svg
+                            className="h-3 w-3 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={3}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Carousel Navigation Dots */}
+            <div className="flex justify-center items-center space-x-2">
+              {finishSubSteps.map((step, index) => (
+                <button
+                  key={step}
+                  onClick={() => handleDotNavigation(step)}
+                  className={`h-2 w-2 rounded-full transition-colors ${
+                    index === currentSubStepIndex ? 'bg-brand' : 'bg-muted'
+                  }`}
+                  aria-label={`Go to ${step} step`}
+                />
+              ))}
             </div>
 
             <Button
-              onClick={handleComplete}
-              isLoading={isLoading}
+              onClick={handleNext}
+              isLoading={isLoading && finishSubStep === 'situation'}
               className="w-full"
               size="lg"
             >
-              Next
+              {finishSubStep === 'situation' ? 'Submit' : 'Next'}
             </Button>
           </div>
         );
