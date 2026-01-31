@@ -22,9 +22,9 @@ interface FormHeaderProps {
 export function FormHeader({ title, subtitle }: FormHeaderProps) {
   return (
     <div className="space-y-2 mb-8">
-      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{title}</h1>
+      <h1 className="text-2xl sm:text-3xl tracking-tight text-primary">{title}</h1>
       {subtitle && (
-        <p className="text-sm sm:text-base text-muted-foreground">{subtitle}</p>
+        <p className="text-lg font-medium text-muted-foreground">{subtitle}</p>
       )}
     </div>
   );
@@ -53,7 +53,7 @@ interface FormFooterProps {
 
 export function FormFooter({ text, linkText, linkHref }: FormFooterProps) {
   return (
-    <p className="text-center text-sm text-muted-foreground mt-6">
+    <p className="text-left text-sm text-muted-foreground mt-2">
       {text}{' '}
       <a href={linkHref} className="text-brand font-medium hover:underline">
         {linkText}

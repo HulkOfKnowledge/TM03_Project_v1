@@ -160,7 +160,7 @@ function LoginForm() {
 
   return (
     <AuthLayout>
-      <div className="space-y-6">
+      <div className="space-y-10">
         <FormHeader
           title="Hello Again!"
           subtitle="Welcome back to Creduman, login to continue"
@@ -206,7 +206,7 @@ function LoginForm() {
             <Input
               label="Email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="Enter email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={errors.email}

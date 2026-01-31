@@ -57,8 +57,8 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         </div>
 
         {/* Form Content */}
-        <div className="flex-1 flex items-center justify-center px-6 sm:px-8 md:px-12 pb-12">
-          <div className="w-full max-w-md">
+        <div className="flex-1 flex items-center justify-center sm:px-8 md:px-12 pb-12">
+          <div className="w-[82%]">
             {children}
           </div>
         </div>
