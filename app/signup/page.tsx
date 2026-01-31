@@ -201,6 +201,7 @@ export default function SignupPage() {
                 onGoogleClick={() => handleSocialAuth('google')}
                 onFacebookClick={() => handleSocialAuth('facebook')}
                 isLoading={isLoading}
+                actionText="Sign up with"
               />
             </FormSection>
 
@@ -213,7 +214,7 @@ export default function SignupPage() {
               className="w-full"
               size="lg"
             >
-              <span className="text-sm sm:text-base">Sign up with Email</span>
+              <span className="text-muted-foreground text-sm">Sign up with Email</span>
             </Button>
 
             <FormFooter

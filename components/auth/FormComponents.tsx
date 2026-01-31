@@ -37,7 +37,7 @@ interface FormDividerProps {
 export function FormDivider({ text }: FormDividerProps) {
   return (
     <div className="relative flex justify-center text-xs sm:text-sm my-6">
-      <span className="bg-background px-2 text-muted-foreground">{text}</span>
+      <span className="relative z-10 bg-background px-2 text-muted-foreground">{text}</span>
       <div className="absolute inset-0 flex items-center">
         <div className="w-full border-t"></div>
       </div>

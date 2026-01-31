@@ -4,62 +4,94 @@
  * Supports light/dark mode
  */
 
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
 }
 
 export function AuthLayout({ children }: AuthLayoutProps) {
+  const [isDark, setIsDark] = useState(false);
+
+  // Monitor theme changes
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkTheme();
+    
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Left Section - Image with Logo */}
-      <div className="hidden lg:flex relative overflow-hidden">
-        <Image
-          src="/auth.svg"
-          alt="Creduman Authentication"
-          width={1200}
-          height={1200}
-          className="w-full h-full object-cover"
-          priority
-        />
-        {/* Logo Overlay */}
-        <div className="absolute top-8 left-8">
-          <Link href="/" className="inline-block">
-            <Image
-              src={"Logo-dark.svg"}
-              alt="Creduman Logo"
-              width={140}
-              height={40}
-              className="h-10 w-auto"
-              priority
-            />
-          </Link>
-        </div>
-      </div>
+    <div className="h-screen flex flex-col">
+      {/* Navigation Bar - Consistent with Landing Page */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-transparent">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="flex h-16 items-center justify-between">
+            {/* Logo - Visible on all screen sizes */}
+            <Link href="/" className="flex items-center">
+              <Image 
+                src={isDark ? "/Logo.svg" : "/Logo-dark.svg"}
+                alt="Creduman Logo" 
+                width={120} 
+                height={32}
+                className="h-6 w-auto sm:h-8"
+                priority
+              />
+            </Link>
 
-      {/* Right Section - Form with Logo */}
-      <div className="flex flex-col min-h-screen bg-background">
-        {/* Logo Header - Mobile Only */}
-        <div className="p-6 sm:p-8 lg:hidden">
-          <Link href="/" className="inline-block">
-            <Image
-              src={"Logo-dark.svg"}
-              alt="Creduman Logo"
-              width={140}
-              height={40}
-              className="h-8 w-auto sm:h-10"
-              priority
-            />
-          </Link>
+            {/* Back Button */}
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Home</span>
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="flex-1 grid lg:grid-cols-2">
+        {/* Left Section - Full Image */}
+        <div className="hidden lg:flex relative overflow-hidden">
+          <Image
+            src="/auth.svg"
+            alt="Creduman Authentication"
+            width={1200}
+            height={1200}
+            className="w-full h-full object-cover"
+            priority
+          />
         </div>
 
-        {/* Form Content */}
-        <div className="flex-1 flex items-center justify-center sm:px-8 md:px-12 pb-12">
-          <div className="w-[82%]">
-            {children}
+        {/* Right Section - Form */}
+        <div className="flex flex-col h-full bg-background overflow-y-auto pt-16">
+          {/* Form Content with Modern Mobile Styling */}
+          <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-12 py-8 sm:py-12">
+            <div className="w-full max-w-md">
+              {/* Mobile: Add subtle card effect */}
+              <div className="lg:contents">
+                <div className="lg:contents bg-card/50 lg:bg-transparent rounded-2xl lg:rounded-none p-6 sm:p-8 lg:p-0 shadow-lg lg:shadow-none border lg:border-0">
+                  {children}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
