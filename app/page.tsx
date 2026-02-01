@@ -19,6 +19,7 @@ import { Navigation } from '@/components/landing/Navigation';
 import { Section, SectionHeader } from '@/components/landing/Section';
 import { FeatureCard } from '@/components/landing/FeatureCard';
 import { GradientText } from '@/components/landing/GradientText';
+import { Footer } from '@/components/landing/Footer';
 
 export default function HomePage() {
   return (
@@ -261,19 +262,7 @@ export default function HomePage() {
       </Section>
 
       {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="h-6 w-6 rounded bg-gradient-to-br from-brand-500 to-brand-700" />
-              <span className="font-semibold">Creduman</span>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              © 2026 Creduman. Empowering newcomers to build credit confidence.
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

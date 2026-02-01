@@ -21,6 +21,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useIsDarkMode } from '@/hooks/useTheme';
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -45,25 +46,8 @@ export function Navigation() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const isDark = useIsDarkMode();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-
-  // Monitor theme changes
-  useEffect(() => {
-    const checkTheme = () => {
-      setIsDark(document.documentElement.classList.contains('dark'));
-    };
-    
-    checkTheme();
-    
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-    
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     const supabase = createClient();

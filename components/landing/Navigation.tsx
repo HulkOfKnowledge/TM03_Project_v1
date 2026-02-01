@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { useIsDarkMode } from '@/hooks/useTheme';
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -25,25 +26,7 @@ export function Navigation() {
   const [user, setUser] = useState<{ id: string; email?: string; first_name?: string; surname?: string } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-
-  // Monitor theme changes
-  useEffect(() => {
-    const checkTheme = () => {
-      setIsDark(document.documentElement.classList.contains('dark'));
-    };
-    
-    checkTheme();
-    
-    // Watch for theme changes
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-    
-    return () => observer.disconnect();
-  }, []);
+  const isDark = useIsDarkMode();
 
   useEffect(() => {
     const supabase = createClient();
@@ -164,7 +147,7 @@ export function Navigation() {
                       {user.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <span className="text-sm font-medium">
-                      {user.first_name || user.email?.split('@')[0] || 'User'}
+                      {user.first_name || 'User'}
                     </span>
                   </button>
                 }
