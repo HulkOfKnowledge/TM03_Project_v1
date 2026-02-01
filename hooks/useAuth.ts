@@ -84,7 +84,23 @@ export function useUser(): UseUserReturn {
           setLoading(true);
           const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
           
-          if (authError) throw authError;
+          // Handle missing session gracefully - this is expected when user is not logged in
+          if (authError) {
+            if (authError.message === 'Auth session missing!' || authError.name === 'AuthSessionMissingError') {
+              // No session is a normal state, not an error
+              if (mounted) {
+                cachedUser = null;
+                setUser(null);
+                cachedProfile = null;
+                setProfile(null);
+                isInitialized = true;
+                setLoading(false);
+              }
+              return;
+            }
+            // For other auth errors, throw
+            throw authError;
+          }
 
           if (mounted) {
             cachedUser = authUser;
@@ -110,7 +126,7 @@ export function useUser(): UseUserReturn {
     initializeUser();
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
 
       const newUser = session?.user ?? null;

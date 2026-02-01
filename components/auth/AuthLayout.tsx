@@ -9,14 +9,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { useIsDarkMode } from '@/hooks/useTheme';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
 }
 
 export function AuthLayout({ children }: AuthLayoutProps) {
-  const isDark = useIsDarkMode();
 
   return (
     <div className="h-screen flex flex-col">
@@ -27,7 +25,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             {/* Logo - Visible on all screen sizes */}
             <Link href="/" className="flex items-center">
               <Image 
-                src={isDark ? "/Logo.svg" : "/Logo-dark.svg"}
+                src="/Logo-dark.svg"
                 alt="Creduman Logo" 
                 width={120} 
                 height={32}

@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { handleLogout } from '@/lib/auth';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useIsDarkMode } from '@/hooks/useTheme';
 import { useUser } from '@/hooks/useAuth';
@@ -40,11 +40,9 @@ export function Navigation() {
     setShowUserMenu(false);
   };
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+  const onLogout = async () => {
     setShowUserMenu(false);
-    router.push('/');
+    await handleLogout(router);
   };
 
   const navItems = [
@@ -125,7 +123,7 @@ export function Navigation() {
                     Dashboard
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={handleLogout}
+                    onClick={onLogout}
                     icon={<LogOut className="h-4 w-4" />}
                     variant="danger"
                   >
@@ -215,8 +213,8 @@ export function Navigation() {
                 </Link>
                 <button
                   onClick={() => {
-                    handleLogout();
                     setMobileMenuOpen(false);
+                    onLogout();
                   }}
                   className="flex items-center gap-2 w-full text-left text-base font-medium text-red-600 dark:text-red-400 py-2"
                 >
