@@ -18,13 +18,10 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
 import { loginSchema } from '@/lib/validations';
-import { Eye, EyeOff } from 'lucide-react';
-
 function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -213,29 +210,16 @@ function LoginForm() {
               required
             />
 
-            <div className="relative">
-              <Input
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="8 or more characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                error={errors.password}
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-[51%] translate-y-[10%] text-muted-foreground hover:text-foreground flex items-center justify-center"
-                tabIndex={-1}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
-                ) : (
-                  <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
-                )}
-              </button>
-            </div>
+            <Input
+              label="Password"
+              type="password"
+              placeholder="8 or more characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={errors.password}
+              showPasswordToggle
+              required
+            />
           </FormSection>
 
           <div className="flex items-center justify-end">

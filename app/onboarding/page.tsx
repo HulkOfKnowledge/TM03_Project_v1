@@ -17,7 +17,6 @@ import { SelectInput } from '@/components/onboarding/SelectInput';
 import { CheckboxGrid } from '@/components/onboarding/CheckboxGrid';
 import { RadioList } from '@/components/onboarding/RadioList';
 import { CheckboxList } from '@/components/onboarding/CheckboxList';
-import { Eye, EyeOff } from 'lucide-react';
 import { Navigation } from '@/components/dashboard/Navigation';
 
 type OnboardingStage = 'personal' | 'account' | 'finish';
@@ -46,8 +45,6 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [currentStage, setCurrentStage] = useState<OnboardingStage>('personal');
   const [finishSubStep, setFinishSubStep] = useState<FinishSubStep>('immigration');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -313,58 +310,32 @@ export default function OnboardingPage() {
 
             {/* Password Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="relative">
-                <Input
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={personalDetails.password}
-                  onChange={(e) =>
-                    setPersonalDetails({ ...personalDetails, password: e.target.value })
-                  }
-                  placeholder="8 or more characters"
-                  error={errors.password}
-                  className="pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-[50%] translate-y-[10%] flex items-center justify-center text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
+              <Input
+                label="Password"
+                type="password"
+                value={personalDetails.password}
+                onChange={(e) =>
+                  setPersonalDetails({ ...personalDetails, password: e.target.value })
+                }
+                placeholder="8 or more characters"
+                error={errors.password}
+                showPasswordToggle
+              />
 
-              <div className="relative">
-                <Input
-                  label="Retype Password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={personalDetails.confirmPassword}
-                  onChange={(e) =>
-                    setPersonalDetails({
-                      ...personalDetails,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  placeholder="8 or more characters"
-                  error={errors.confirmPassword}
-                  className="pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-[50%] translate-y-[10%] flex items-center justify-center text-muted-foreground hover:text-foreground"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
+              <Input
+                label="Retype Password"
+                type="password"
+                value={personalDetails.confirmPassword}
+                onChange={(e) =>
+                  setPersonalDetails({
+                    ...personalDetails,
+                    confirmPassword: e.target.value,
+                  })
+                }
+                placeholder="8 or more characters"
+                error={errors.confirmPassword}
+                showPasswordToggle
+              />
             </div>
 
             <Button onClick={handleNext} className="w-full" size="lg">

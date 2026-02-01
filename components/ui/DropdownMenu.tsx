@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, ReactNode, useState } from 'react';
+import { useRef, useEffect, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 
