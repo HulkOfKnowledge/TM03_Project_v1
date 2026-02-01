@@ -18,6 +18,7 @@ import { CheckboxGrid } from '@/components/onboarding/CheckboxGrid';
 import { RadioList } from '@/components/onboarding/RadioList';
 import { CheckboxList } from '@/components/onboarding/CheckboxList';
 import { Navigation } from '@/components/dashboard/Navigation';
+import { FormSkeleton } from '@/components/ui/Skeleton';
 
 type OnboardingStage = 'personal' | 'account' | 'finish';
 type FinishSubStep = 'immigration' | 'knowledge' | 'situation';
@@ -46,6 +47,7 @@ export default function OnboardingPage() {
   const [currentStage, setCurrentStage] = useState<OnboardingStage>('personal');
   const [finishSubStep, setFinishSubStep] = useState<FinishSubStep>('immigration');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -71,79 +73,113 @@ export default function OnboardingPage() {
     currentSituation: [],
   });
 
+  // Utility function to parse full name into first and last name
+  const parseFullName = (fullName: string): { firstName: string; surname: string } => {
+    if (!fullName) return { firstName: '', surname: '' };
+    
+    const nameParts = fullName.trim().split(/\s+/);
+    if (nameParts.length === 1) {
+      return { firstName: nameParts[0], surname: '' };
+    }
+    
+    // Last part is surname, everything else is first name
+    const surname = nameParts[nameParts.length - 1];
+    const firstName = nameParts.slice(0, -1).join(' ');
+    return { firstName, surname };
+  };
+
   useEffect(() => {
     // Get current user and check if onboarding is already completed
     const getUser = async () => {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        setIsLoadingUserData(true);
+        const supabase = createClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      const user = session?.user;
-      if (user) {
-        setUserId(user.id);
+        const user = session?.user;
+        if (user) {
+          setUserId(user.id);
 
-        // Check if onboarding already completed and fetch profile data
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('onboarding_completed, preferred_dashboard, first_name, surname, mobile_number, onboarding_stage, onboarding_substep, onboarding_data')
-          .eq('id', user.id)
-          .single();
+          // Check if onboarding already completed and fetch profile data
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('onboarding_completed, preferred_dashboard, first_name, surname, mobile_number, onboarding_stage, onboarding_substep, onboarding_data')
+            .eq('id', user.id)
+            .single();
 
-        if (profile?.onboarding_completed) {
-          router.push(
-            profile.preferred_dashboard === 'card'
-              ? '/card-dashboard'
-              : '/learn-dashboard'
-          );
-          return;
-        }
-
-        // Prefill form with available data from profile or user metadata
-        const restoredPersonalDetails = {
-          email: user.email || '',
-          firstName: profile?.first_name || user.user_metadata?.first_name || '',
-          surname: profile?.surname || user.user_metadata?.surname || '',
-          mobileNumber: profile?.mobile_number || user.user_metadata?.mobile_number || '',
-          password: '',
-          confirmPassword: '',
-        };
-
-        // Restore saved onboarding progress if available
-        let restoredAccountSetup = {
-          statusInCanada: '',
-          province: '',
-          primaryGoal: '',
-          creditProducts: [],
-          immigrationStatus: '',
-          creditKnowledge: '',
-          currentSituation: [],
-        } as AccountSetup;
-
-        if (profile?.onboarding_data) {
-          const savedData = profile.onboarding_data as any;
-          if (savedData.personalDetails) {
-            Object.assign(restoredPersonalDetails, savedData.personalDetails, {
-              password: '', // Don't restore password for security
-              confirmPassword: '',
-            });
+          if (profile?.onboarding_completed) {
+            router.push(
+              profile.preferred_dashboard === 'card'
+                ? '/card-dashboard'
+                : '/learn-dashboard'
+            );
+            return;
           }
-          if (savedData.accountSetup) {
-            restoredAccountSetup = savedData.accountSetup;
+
+          // Parse Google OAuth name data
+          let firstName = '';
+          let surname = '';
+          
+          // Check for Google OAuth data (full_name or name)
+          const googleFullName = user.user_metadata?.full_name || user.user_metadata?.name;
+          if (googleFullName) {
+            const parsedName = parseFullName(googleFullName);
+            firstName = parsedName.firstName;
+            surname = parsedName.surname;
+          }
+
+          // Prefill form with available data from profile or user metadata
+          const restoredPersonalDetails = {
+            email: user.email || '',
+            firstName: profile?.first_name || firstName || user.user_metadata?.first_name || '',
+            surname: profile?.surname || surname || user.user_metadata?.surname || '',
+            mobileNumber: profile?.mobile_number || user.user_metadata?.phone || user.user_metadata?.mobile_number || '',
+            password: '',
+            confirmPassword: '',
+          };
+
+          // Restore saved onboarding progress if available
+          let restoredAccountSetup = {
+            statusInCanada: '',
+            province: '',
+            primaryGoal: '',
+            creditProducts: [],
+            immigrationStatus: '',
+            creditKnowledge: '',
+            currentSituation: [],
+          } as AccountSetup;
+
+          if (profile?.onboarding_data) {
+            const savedData = profile.onboarding_data as any;
+            if (savedData.personalDetails) {
+              Object.assign(restoredPersonalDetails, savedData.personalDetails, {
+                password: '', // Don't restore password for security
+                confirmPassword: '',
+              });
+            }
+            if (savedData.accountSetup) {
+              restoredAccountSetup = savedData.accountSetup;
+            }
+          }
+
+          // Set all state at once
+          setPersonalDetails(restoredPersonalDetails);
+          setAccountSetup(restoredAccountSetup);
+
+          // Restore stage and substep
+          if (profile?.onboarding_stage) {
+            setCurrentStage(profile.onboarding_stage as OnboardingStage);
+          }
+          if (profile?.onboarding_substep) {
+            setFinishSubStep(profile.onboarding_substep as FinishSubStep);
           }
         }
-
-        // Set all state at once
-        setPersonalDetails(restoredPersonalDetails);
-        setAccountSetup(restoredAccountSetup);
-
-        // Restore stage and substep
-        if (profile?.onboarding_stage) {
-          setCurrentStage(profile.onboarding_stage as OnboardingStage);
-        }
-        if (profile?.onboarding_substep) {
-          setFinishSubStep(profile.onboarding_substep as FinishSubStep);
-        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setIsLoadingUserData(false);
       }
     };
 
@@ -692,6 +728,26 @@ export default function OnboardingPage() {
     currentStage === 'finish' && finishSubStep !== 'situation' 
       ? 'account' 
       : currentStage;
+
+  // Show loading state while fetching user data
+  if (isLoadingUserData) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="pt-24 pb-8 px-4">
+          <OnboardingLayout
+            currentStage="personal"
+            stages={stages}
+            onBack={handleBack}
+            showBack={false}
+          >
+            <FormSkeleton />
+            <p className="text-sm text-center text-muted-foreground mt-4">Prefilling your info...</p>
+          </OnboardingLayout>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
