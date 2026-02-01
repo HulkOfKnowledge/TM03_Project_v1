@@ -7,21 +7,30 @@
  */
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export function EmailConfirmationModal() {
+  const pathname = usePathname();
   const [show, setShow] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
   const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
+    // Don't check on public auth pages (login, signup, landing)
+    const publicPages = ['/login', '/signup', '/'];
+    if (publicPages.includes(pathname)) {
+      return;
+    }
+
     const checkEmailConfirmation = async () => {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
 
+      const user = session?.user;
       if (!user) {
         setShow(false);
         return;
@@ -56,7 +65,7 @@ export function EmailConfirmationModal() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [pathname]);
 
   const handleResendEmail = async () => {
     setIsResending(true);

@@ -24,7 +24,7 @@ import {
 export function Navigation() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, profile } = useUser();
+  const { user, profile, loading } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const isDark = useIsDarkMode();
@@ -87,7 +87,7 @@ export function Navigation() {
               onToggle={handleThemeMenuToggle}
             />
 
-            {user ? (
+            {!loading && user ? (
               // Logged in user menu
               <DropdownMenu
                 isOpen={showUserMenu}
@@ -152,7 +152,7 @@ export function Navigation() {
 
           {/* Mobile Actions */}
           <div className="flex lg:hidden items-center gap-2">
-            {user && (
+            {!loading && user && (
               <button
                 onClick={handleUserMenuToggle}
                 className="h-9 w-9 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium"
@@ -201,7 +201,7 @@ export function Navigation() {
               mobile
             />
 
-            {user ? (
+            {!loading && user ? (
               <>
                 <Link
                   href="/learn-dashboard"
