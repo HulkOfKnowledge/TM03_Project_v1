@@ -6,10 +6,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CreditCard, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CreditCard, X } from 'lucide-react';
 import { Footer } from '@/components/landing/Footer';
 import { Navigation } from '@/components/dashboard/Navigation';
-import { LearningCard } from '@/components/learn/LearningCard';
+import { LearningCarousel } from '@/components/learn/LearningCarousel';
 import { ChecklistItem } from '@/components/learn/ChecklistItem';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { learnService } from '@/services/learn.service';
@@ -29,10 +29,6 @@ export default function LearnDashboard() {
   const [checklistItems, setChecklistItems] = useState<ChecklistItemType[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentRecommendedPage, setCurrentRecommendedPage] = useState(0);
-  const [currentLearningPage, setCurrentLearningPage] = useState(0);
-  const itemsPerPage = 3;
-  const slideBy = 1; // Slide one item at a time
 
   useEffect(() => {
     loadDashboardData();
@@ -69,48 +65,6 @@ export default function LearnDashboard() {
 
   const userName = profile?.first_name || user?.email?.split('@')[0] || 'there';
 
-  const displayedLearningPath = learningPath.slice(
-    currentLearningPage,
-    currentLearningPage + itemsPerPage
-  );
-
-  const displayedRecommendations = recommendedContent.slice(
-    currentRecommendedPage,
-    currentRecommendedPage + itemsPerPage
-  );
-
-  const nextLearningPage = () => {
-    setCurrentLearningPage((prev) =>
-      prev + slideBy >= learningPath.length - itemsPerPage + 1 
-        ? 0 
-        : prev + slideBy
-    );
-  };
-
-  const prevLearningPage = () => {
-    setCurrentLearningPage((prev) =>
-      prev === 0 
-        ? learningPath.length - itemsPerPage 
-        : prev - slideBy
-    );
-  };
-
-  const nextRecommendedPage = () => {
-    setCurrentRecommendedPage((prev) =>
-      prev + slideBy >= recommendedContent.length - itemsPerPage + 1 
-        ? 0 
-        : prev + slideBy
-    );
-  };
-
-  const prevRecommendedPage = () => {
-    setCurrentRecommendedPage((prev) =>
-      prev === 0 
-        ? recommendedContent.length - itemsPerPage 
-        : prev - slideBy
-    );
-  };
-
   return (
     <div className="min-h-screen bg-white dark:bg-black">
       <Navigation />
@@ -138,35 +92,10 @@ export default function LearnDashboard() {
               {learningPath.length > 0 && (
                 <section className="mb-16">
                   <div className="bg-gradient-to-b from-gray-100 to-white dark:from-white/5 dark:to-transparent rounded-[32px] p-8 md:p-12">
-                    <div className="grid md:grid-cols-3 gap-6 mb-8">
-                      {displayedLearningPath.map((content) => (
-                        <LearningCard
-                          key={content.id}
-                          content={content}
-                          onClick={() => handleContentClick(content)}
-                        />
-                      ))}
-                    </div>
-                    
-                    {/* Carousel Navigation */}
-                    {learningPath.length > itemsPerPage && (
-                      <div className="flex items-center justify-end gap-4">
-                        <button
-                          onClick={prevLearningPage}
-                          className="h-14 w-14 rounded-full bg-brand text-white hover:bg-[#5558E3] transition-colors flex items-center justify-center"
-                          aria-label="Previous"
-                        >
-                          <ChevronLeft className="h-6 w-6" />
-                        </button>
-                        <button
-                          onClick={nextLearningPage}
-                          className="h-14 w-14 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
-                          aria-label="Next"
-                        >
-                          <ChevronRight className="h-6 w-6" />
-                        </button>
-                      </div>
-                    )}
+                    <LearningCarousel
+                      items={learningPath}
+                      onItemClick={handleContentClick}
+                    />
                   </div>
                 </section>
               )}
@@ -262,37 +191,10 @@ export default function LearnDashboard() {
                     </Link>
                   </div>
 
-                  <div className="relative">
-                    <div className="grid md:grid-cols-3 gap-6 mb-8">
-                      {displayedRecommendations.map((content) => (
-                        <LearningCard
-                          key={content.id}
-                          content={content}
-                          onClick={() => handleContentClick(content)}
-                        />
-                      ))}
-                    </div>
-
-                    {/* Carousel Navigation */}
-                    {recommendedContent.length > itemsPerPage && (
-                      <div className="flex items-center justify-end gap-4">
-                        <button
-                          onClick={prevRecommendedPage}
-                          className="h-14 w-14 rounded-full bg-brand text-white hover:bg-[#5558E3] transition-colors flex items-center justify-center"
-                          aria-label="Previous"
-                        >
-                          <ChevronLeft className="h-6 w-6" />
-                        </button>
-                        <button
-                          onClick={nextRecommendedPage}
-                          className="h-14 w-14 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
-                          aria-label="Next"
-                        >
-                          <ChevronRight className="h-6 w-6" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <LearningCarousel
+                    items={recommendedContent}
+                    onItemClick={handleContentClick}
+                  />
                 </section>
               )}
 
