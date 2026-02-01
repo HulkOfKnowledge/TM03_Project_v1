@@ -49,6 +49,7 @@ export default function OnboardingPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isEditingPassword, setIsEditingPassword] = useState(false);
 
   // Form data
   const [personalDetails, setPersonalDetails] = useState<PersonalDetails>({
@@ -80,12 +81,11 @@ export default function OnboardingPage() {
 
       if (user) {
         setUserId(user.id);
-        setPersonalDetails((prev) => ({ ...prev, email: user.email || '' }));
 
-        // Check if onboarding already completed
+        // Check if onboarding already completed and fetch profile data
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('onboarding_completed, preferred_dashboard')
+          .select('onboarding_completed, preferred_dashboard, first_name, surname, mobile_number')
           .eq('id', user.id)
           .single();
 
@@ -95,7 +95,17 @@ export default function OnboardingPage() {
               ? '/card-dashboard'
               : '/learn-dashboard'
           );
+          return;
         }
+
+        // Prefill form with available data from profile or user metadata
+        setPersonalDetails((prev) => ({
+          ...prev,
+          email: user.email || '',
+          firstName: profile?.first_name || user.user_metadata?.first_name || '',
+          surname: profile?.surname || user.user_metadata?.surname || '',
+          mobileNumber: profile?.mobile_number || user.user_metadata?.mobile_number || '',
+        }));
       }
     };
 
@@ -121,11 +131,15 @@ export default function OnboardingPage() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalDetails.email)) {
       newErrors.email = 'Please enter a valid email';
     }
-    if (personalDetails.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
-    if (personalDetails.password !== personalDetails.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+    
+    // Only validate password if user is editing it
+    if (isEditingPassword) {
+      if (personalDetails.password.length < 8) {
+        newErrors.password = 'Password must be at least 8 characters';
+      }
+      if (personalDetails.password !== personalDetails.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
     }
 
     setErrors(newErrors);
@@ -208,6 +222,16 @@ export default function OnboardingPage() {
       // Determine preferred dashboard based on primary goal
       const preferredDashboard =
         accountSetup.primaryGoal === 'learn_credit' ? 'learn' : 'card';
+
+      // Update password if user edited it
+      if (isEditingPassword && personalDetails.password) {
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: personalDetails.password,
+        });
+        if (passwordError) {
+          console.error('Password update error:', passwordError);
+        }
+      }
 
       // Update user profile with all collected data
       await supabase
@@ -308,35 +332,65 @@ export default function OnboardingPage() {
               error={errors.email}
             />
 
-            {/* Password Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Password"
-                type="password"
-                value={personalDetails.password}
-                onChange={(e) =>
-                  setPersonalDetails({ ...personalDetails, password: e.target.value })
-                }
-                placeholder="8 or more characters"
-                error={errors.password}
-                showPasswordToggle
-              />
+            {/* Password Section */}
+            {!isEditingPassword ? (
+              <button
+                type="button"
+                onClick={() => setIsEditingPassword(true)}
+                className="w-full px-4 py-3 text-sm font-medium text-brand bg-brand/10 hover:bg-brand/20 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                Edit Password
+              </button>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Password"
+                    type="password"
+                    value={personalDetails.password}
+                    onChange={(e) =>
+                      setPersonalDetails({ ...personalDetails, password: e.target.value })
+                    }
+                    placeholder="8 or more characters"
+                    error={errors.password}
+                    showPasswordToggle
+                  />
 
-              <Input
-                label="Retype Password"
-                type="password"
-                value={personalDetails.confirmPassword}
-                onChange={(e) =>
-                  setPersonalDetails({
-                    ...personalDetails,
-                    confirmPassword: e.target.value,
-                  })
-                }
-                placeholder="8 or more characters"
-                error={errors.confirmPassword}
-                showPasswordToggle
-              />
-            </div>
+                  <Input
+                    label="Retype Password"
+                    type="password"
+                    value={personalDetails.confirmPassword}
+                    onChange={(e) =>
+                      setPersonalDetails({
+                        ...personalDetails,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                    placeholder="8 or more characters"
+                    error={errors.confirmPassword}
+                    showPasswordToggle
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingPassword(false);
+                    setPersonalDetails({
+                      ...personalDetails,
+                      password: '',
+                      confirmPassword: '',
+                    });
+                    setErrors({ ...errors, password: '', confirmPassword: '' });
+                  }}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel password change
+                </button>
+              </div>
+            )}
 
             <Button onClick={handleNext} className="w-full" size="lg">
               Next
