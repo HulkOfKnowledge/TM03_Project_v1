@@ -10,8 +10,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { SuccessModal } from '@/components/auth/SuccessModal';
-import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
+import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout';
+import { SelectInput } from '@/components/onboarding/SelectInput';
+import { CheckboxGrid } from '@/components/onboarding/CheckboxGrid';
+import { RadioList } from '@/components/onboarding/RadioList';
+import { CheckboxList } from '@/components/onboarding/CheckboxList';
+import { Eye, EyeOff } from 'lucide-react';
+import { Navigation } from '@/components/dashboard/Navigation';
 
 type OnboardingStage = 'personal' | 'account' | 'finish';
 type FinishSubStep = 'immigration' | 'knowledge' | 'situation';
@@ -252,114 +259,76 @@ export default function OnboardingPage() {
       case 'personal':
         return (
           <div className="space-y-6">
-            {/* Surname */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                Surname
-              </label>
-              <input
+            {/* Name Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Surname"
                 type="text"
                 value={personalDetails.surname}
                 onChange={(e) =>
                   setPersonalDetails({ ...personalDetails, surname: e.target.value })
                 }
                 placeholder="e.g Doe"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.surname ? 'border-red-500' : 'border-border'
-                } bg-background focus:outline-none focus:ring-2 focus:ring-brand`}
+                error={errors.surname}
               />
-              {errors.surname && (
-                <p className="text-red-500 text-sm mt-1">{errors.surname}</p>
-              )}
-            </div>
 
-            {/* First Name */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                First Name
-              </label>
-              <input
+              <Input
+                label="First Name"
                 type="text"
                 value={personalDetails.firstName}
                 onChange={(e) =>
                   setPersonalDetails({ ...personalDetails, firstName: e.target.value })
                 }
                 placeholder="e.g John"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.firstName ? 'border-red-500' : 'border-border'
-                } bg-background focus:outline-none focus:ring-2 focus:ring-brand`}
+                error={errors.firstName}
               />
-              {errors.firstName && (
-                <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
-              )}
             </div>
 
             {/* Mobile Number */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                Mobile Number
-              </label>
-              <input
-                type="tel"
-                value={personalDetails.mobileNumber}
-                onChange={(e) =>
-                  setPersonalDetails({
-                    ...personalDetails,
-                    mobileNumber: e.target.value,
-                  })
-                }
-                placeholder="e.g +1xxxxxxxxx"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.mobileNumber ? 'border-red-500' : 'border-border'
-                } bg-background focus:outline-none focus:ring-2 focus:ring-brand`}
-              />
-              {errors.mobileNumber && (
-                <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>
-              )}
-            </div>
+            <Input
+              label="Mobile Number"
+              type="tel"
+              value={personalDetails.mobileNumber}
+              onChange={(e) =>
+                setPersonalDetails({
+                  ...personalDetails,
+                  mobileNumber: e.target.value,
+                })
+              }
+              placeholder="e.g +1xxxxxxxxx"
+              error={errors.mobileNumber}
+            />
 
             {/* Email Address */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={personalDetails.email}
-                onChange={(e) =>
-                  setPersonalDetails({ ...personalDetails, email: e.target.value })
-                }
-                placeholder="e.g johndoe@gmail.com"
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.email ? 'border-red-500' : 'border-border'
-                } bg-background focus:outline-none focus:ring-2 focus:ring-brand`}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-              )}
-            </div>
+            <Input
+              label="Email Address"
+              type="email"
+              value={personalDetails.email}
+              onChange={(e) =>
+                setPersonalDetails({ ...personalDetails, email: e.target.value })
+              }
+              placeholder="e.g johndoe@gmail.com"
+              error={errors.email}
+            />
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                Password
-              </label>
+            {/* Password Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="relative">
-                <input
+                <Input
+                  label="Password"
                   type={showPassword ? 'text' : 'password'}
                   value={personalDetails.password}
                   onChange={(e) =>
                     setPersonalDetails({ ...personalDetails, password: e.target.value })
                   }
                   placeholder="8 or more characters"
-                  className={`w-full px-4 py-3 rounded-lg border ${
-                    errors.password ? 'border-red-500' : 'border-border'
-                  } bg-background focus:outline-none focus:ring-2 focus:ring-brand pr-12`}
+                  error={errors.password}
+                  className="pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-[50%] translate-y-[10%] flex items-center justify-center text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
@@ -368,18 +337,10 @@ export default function OnboardingPage() {
                   )}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-              )}
-            </div>
 
-            {/* Retype Password */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                Retype Password
-              </label>
               <div className="relative">
-                <input
+                <Input
+                  label="Retype Password"
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={personalDetails.confirmPassword}
                   onChange={(e) =>
@@ -389,14 +350,13 @@ export default function OnboardingPage() {
                     })
                   }
                   placeholder="8 or more characters"
-                  className={`w-full px-4 py-3 rounded-lg border ${
-                    errors.confirmPassword ? 'border-red-500' : 'border-border'
-                  } bg-background focus:outline-none focus:ring-2 focus:ring-brand pr-12`}
+                  error={errors.confirmPassword}
+                  className="pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-[50%] translate-y-[10%] flex items-center justify-center text-muted-foreground hover:text-foreground"
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="h-5 w-5" />
@@ -405,21 +365,11 @@ export default function OnboardingPage() {
                   )}
                 </button>
               </div>
-              {errors.confirmPassword && (
-                <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
-              )}
             </div>
 
             <Button onClick={handleNext} className="w-full" size="lg">
               Next
             </Button>
-
-            <p className="text-center text-sm text-muted-foreground">
-              I have an account?{' '}
-              <a href="/login" className="text-brand hover:underline">
-                Login
-              </a>
-            </p>
           </div>
         );
 
@@ -427,161 +377,75 @@ export default function OnboardingPage() {
         return (
           <div className="space-y-6">
             {/* Status in Canada */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                Status in Canada
-              </label>
-              <select
-                value={accountSetup.statusInCanada}
-                onChange={(e) =>
-                  setAccountSetup({
-                    ...accountSetup,
-                    statusInCanada: e.target.value as any,
-                  })
-                }
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.statusInCanada ? 'border-red-500' : 'border-border'
-                } bg-background focus:outline-none focus:ring-2 focus:ring-brand appearance-none`}
-              >
-                <option value="">Select one</option>
-                <option value="new_immigrant">New Immigrant</option>
-                <option value="permanent_resident">Permanent Resident</option>
-                <option value="canadian_citizen">Canadian Citizen</option>
-              </select>
-              {errors.statusInCanada && (
-                <p className="text-red-500 text-sm mt-1">{errors.statusInCanada}</p>
-              )}
-            </div>
+            <SelectInput
+              label="Status in Canada"
+              value={accountSetup.statusInCanada}
+              onChange={(value) =>
+                setAccountSetup({
+                  ...accountSetup,
+                  statusInCanada: value as any,
+                })
+              }
+              options={[
+                { value: 'new_immigrant', label: 'New Immigrant' },
+                { value: 'permanent_resident', label: 'Permanent Resident' },
+                { value: 'canadian_citizen', label: 'Canadian Citizen' },
+              ]}
+              error={errors.statusInCanada}
+            />
 
             {/* Province */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                Which province do you live in?
-              </label>
-              <select
-                value={accountSetup.province}
-                onChange={(e) =>
-                  setAccountSetup({ ...accountSetup, province: e.target.value })
-                }
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.province ? 'border-red-500' : 'border-border'
-                } bg-background focus:outline-none focus:ring-2 focus:ring-brand appearance-none`}
-              >
-                <option value="">Choose province</option>
-                {canadianProvinces.map((province) => (
-                  <option key={province} value={province}>
-                    {province}
-                  </option>
-                ))}
-              </select>
-              {errors.province && (
-                <p className="text-red-500 text-sm mt-1">{errors.province}</p>
-              )}
-            </div>
+            <SelectInput
+              label="Which province do you live in?"
+              value={accountSetup.province}
+              onChange={(value) =>
+                setAccountSetup({ ...accountSetup, province: value })
+              }
+              options={canadianProvinces.map((province) => ({
+                value: province,
+                label: province,
+              }))}
+              placeholder="Choose province"
+              error={errors.province}
+            />
 
             {/* Primary Goal */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                What's your primary goal?
-              </label>
-              <select
-                value={accountSetup.primaryGoal}
-                onChange={(e) =>
-                  setAccountSetup({
-                    ...accountSetup,
-                    primaryGoal: e.target.value as any,
-                  })
-                }
-                className={`w-full px-4 py-3 rounded-lg border ${
-                  errors.primaryGoal ? 'border-red-500' : 'border-border'
-                } bg-background focus:outline-none focus:ring-2 focus:ring-brand appearance-none`}
-              >
-                <option value="">Choose one</option>
-                <option value="build_credit">Build credit from scratch</option>
-                <option value="manage_debt">Manage existing debt</option>
-                <option value="learn_credit">Learn about credit</option>
-                <option value="improve_score">Improve credit score</option>
-              </select>
-              {errors.primaryGoal && (
-                <p className="text-red-500 text-sm mt-1">{errors.primaryGoal}</p>
-              )}
-            </div>
+            <SelectInput
+              label="What's your primary goal?"
+              value={accountSetup.primaryGoal}
+              onChange={(value) =>
+                setAccountSetup({
+                  ...accountSetup,
+                  primaryGoal: value as any,
+                })
+              }
+              options={[
+                { value: 'build_credit', label: 'Build credit from scratch' },
+                { value: 'manage_debt', label: 'Manage existing debt' },
+                { value: 'learn_credit', label: 'Learn about credit' },
+                { value: 'improve_score', label: 'Improve credit score' },
+              ]}
+              placeholder="Choose one"
+              error={errors.primaryGoal}
+            />
 
             {/* Credit Products */}
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">
-                Which credit products do you own?
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {[
-                  { value: 'no_credit', label: 'No credit yet' },
-                  { value: 'secured_card', label: 'Secured credit card' },
-                  { value: 'regular_card', label: 'Regular credit card' },
-                  { value: 'phone_plan', label: 'Phone plan on contract' },
-                  { value: 'auto_loan', label: 'Auto loan' },
-                ].map((product) => (
-                  <label
-                    key={product.value}
-                    className={`relative flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      accountSetup.creditProducts.includes(product.value)
-                        ? 'border-brand bg-brand/5'
-                        : 'border-border hover:border-brand/50'
-                    }`}
-                  >
-                    <span className="text-sm text-foreground pr-2">{product.label}</span>
-                    <input
-                      type="checkbox"
-                      checked={accountSetup.creditProducts.includes(product.value)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setAccountSetup({
-                            ...accountSetup,
-                            creditProducts: [
-                              ...accountSetup.creditProducts,
-                              product.value,
-                            ],
-                          });
-                        } else {
-                          setAccountSetup({
-                            ...accountSetup,
-                            creditProducts: accountSetup.creditProducts.filter(
-                              (p) => p !== product.value
-                            ),
-                          });
-                        }
-                      }}
-                      className="sr-only"
-                    />
-                    <div
-                      className={`flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center ${
-                        accountSetup.creditProducts.includes(product.value)
-                          ? 'border-brand bg-brand'
-                          : 'border-border bg-background'
-                      }`}
-                    >
-                      {accountSetup.creditProducts.includes(product.value) && (
-                        <svg
-                          className="h-3 w-3 text-white"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={3}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
-              {errors.creditProducts && (
-                <p className="text-red-500 text-sm mt-1">{errors.creditProducts}</p>
-              )}
-            </div>
+            <CheckboxGrid
+              label="Which credit products do you own?"
+              options={[
+                { value: 'no_credit', label: 'No credit yet' },
+                { value: 'secured_card', label: 'Secured credit card' },
+                { value: 'regular_card', label: 'Regular credit card' },
+                { value: 'phone_plan', label: 'Phone plan on contract' },
+                { value: 'auto_loan', label: 'Auto loan' },
+              ]}
+              selectedValues={accountSetup.creditProducts}
+              onChange={(values) =>
+                setAccountSetup({ ...accountSetup, creditProducts: values })
+              }
+              columns={3}
+              error={errors.creditProducts}
+            />
 
             <Button onClick={handleNext} className="w-full" size="lg">
               Next
@@ -597,204 +461,76 @@ export default function OnboardingPage() {
           <div className="space-y-8">
             {/* Immigration Status */}
             {finishSubStep === 'immigration' && (
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Immigration Status</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  What best describes your status in Canada?
-                </p>
-                <div className="space-y-3">
-                  {[
-                    { value: 'new_immigrant', label: 'New Immigrant' },
-                    { value: 'permanent_resident', label: 'Permanent Resident' },
-                    { value: 'canadian_citizen', label: 'Canadian Citizen' },
-                  ].map((status) => (
-                    <button
-                      key={status.value}
-                      onClick={() =>
-                        setAccountSetup({
-                          ...accountSetup,
-                          immigrationStatus: status.value as any,
-                        })
-                      }
-                      className={`w-full px-6 py-4 rounded-lg border-2 flex items-center justify-between text-left transition-all ${
-                        accountSetup.immigrationStatus === status.value
-                          ? 'border-brand bg-brand/5 text-brand'
-                          : 'border-border hover:border-brand/50'
-                      }`}
-                    >
-                      <span>{status.label}</span>
-                      <div
-                        className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
-                          accountSetup.immigrationStatus === status.value
-                            ? 'border-brand bg-brand'
-                            : 'border-border bg-background'
-                        }`}
-                      >
-                        {accountSetup.immigrationStatus === status.value && (
-                          <svg
-                            className="h-3 w-3 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={3}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <RadioList
+                title="Immigration Status"
+                description="What best describes your status in Canada?"
+                options={[
+                  { value: 'new_immigrant', label: 'New Immigrant' },
+                  { value: 'permanent_resident', label: 'Permanent Resident' },
+                  { value: 'canadian_citizen', label: 'Canadian Citizen' },
+                ]}
+                selectedValue={accountSetup.immigrationStatus || ''}
+                onChange={(value) =>
+                  setAccountSetup({
+                    ...accountSetup,
+                    immigrationStatus: value as any,
+                  })
+                }
+              />
             )}
 
             {/* Credit Knowledge Level */}
             {finishSubStep === 'knowledge' && (
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Credit Knowledge Level</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  How familiar are you with the Canadian credit system?
-                </p>
-                <div className="space-y-3">
-                  {[
-                    { value: 'no_knowledge', label: "What's a credit score? (No knowledge)" },
-                    {
-                      value: 'beginner',
-                      label: "I've heard about it but don't really understand (Beginner)",
-                    },
-                    {
-                      value: 'intermediate',
-                      label: 'I understand the basics (Intermediate)',
-                    },
-                    {
-                      value: 'advanced',
-                      label: "I'm pretty knowledgeable (Advanced)",
-                    },
-                  ].map((level) => (
-                    <button
-                      key={level.value}
-                      onClick={() =>
-                        setAccountSetup({
-                          ...accountSetup,
-                          creditKnowledge: level.value as any,
-                        })
-                      }
-                      className={`w-full px-6 py-4 rounded-lg border-2 flex items-center justify-between text-left transition-all ${
-                        accountSetup.creditKnowledge === level.value
-                          ? 'border-brand bg-brand/5 text-brand'
-                          : 'border-border hover:border-brand/50'
-                      }`}
-                    >
-                      <span className="flex-1 pr-4">{level.label}</span>
-                      <div
-                        className={`flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center ${
-                          accountSetup.creditKnowledge === level.value
-                            ? 'border-brand bg-brand'
-                            : 'border-border bg-background'
-                        }`}
-                      >
-                        {accountSetup.creditKnowledge === level.value && (
-                          <svg
-                            className="h-3 w-3 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={3}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <RadioList
+                title="Credit Knowledge Level"
+                description="How familiar are you with the Canadian credit system?"
+                options={[
+                  { value: 'no_knowledge', label: "What's a credit score? (No knowledge)" },
+                  {
+                    value: 'beginner',
+                    label: "I've heard about it but don't really understand (Beginner)",
+                  },
+                  {
+                    value: 'intermediate',
+                    label: 'I understand the basics (Intermediate)',
+                  },
+                  {
+                    value: 'advanced',
+                    label: "I'm pretty knowledgeable (Advanced)",
+                  },
+                ]}
+                selectedValue={accountSetup.creditKnowledge || ''}
+                onChange={(value) =>
+                  setAccountSetup({
+                    ...accountSetup,
+                    creditKnowledge: value as any,
+                  })
+                }
+              />
             )}
 
             {/* Current Credit Situation */}
             {finishSubStep === 'situation' && (
-              <div>
-                <h3 className="text-xl font-semibold mb-2">
-                  What's your current credit situation
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  This helps us understand where you are on your credit journey so we can
-                  give you the right guidance. You can select all the options that apply to
-                  you.
-                </p>
-                <div className="space-y-3">
-                  {[
-                    'No credit history in Canada yet',
-                    'I have 1 credit card',
-                    'I have more than 1 credit card',
-                    'I have credit cards, loans, line of credit',
-                    "I'm currently in debt and struggling",
-                    "I've had credit problems (missed payments, collections, bankruptcy)",
-                    'I have good credit but want to improve',
-                  ].map((situation) => (
-                    <label
-                      key={situation}
-                      className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        accountSetup.currentSituation?.includes(situation)
-                          ? 'border-brand bg-brand/5'
-                          : 'border-border hover:border-brand/50'
-                      }`}
-                    >
-                      <span className="text-foreground flex-1 pr-4">{situation}</span>
-                      <input
-                        type="checkbox"
-                        checked={accountSetup.currentSituation?.includes(situation)}
-                        onChange={(e) => {
-                          const current = accountSetup.currentSituation || [];
-                          if (e.target.checked) {
-                            setAccountSetup({
-                              ...accountSetup,
-                              currentSituation: [...current, situation],
-                            });
-                          } else {
-                            setAccountSetup({
-                              ...accountSetup,
-                              currentSituation: current.filter((s) => s !== situation),
-                            });
-                          }
-                        }}
-                        className="sr-only"
-                      />
-                      <div
-                        className={`flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center ${
-                          accountSetup.currentSituation?.includes(situation)
-                            ? 'border-brand bg-brand'
-                            : 'border-border bg-background'
-                        }`}
-                      >
-                        {accountSetup.currentSituation?.includes(situation) && (
-                          <svg
-                            className="h-3 w-3 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={3}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <CheckboxList
+                title="What's your current credit situation"
+                description="This helps us understand where you are on your credit journey so we can give you the right guidance. You can select all the options that apply to you."
+                options={[
+                  'No credit history in Canada yet',
+                  'I have 1 credit card',
+                  'I have more than 1 credit card',
+                  'I have credit cards, loans, line of credit',
+                  "I'm currently in debt and struggling",
+                  "I've had credit problems (missed payments, collections, bankruptcy)",
+                  'I have good credit but want to improve',
+                ]}
+                selectedValues={accountSetup.currentSituation || []}
+                onChange={(values) =>
+                  setAccountSetup({
+                    ...accountSetup,
+                    currentSituation: values,
+                  })
+                }
+              />
             )}
 
             {/* Carousel Navigation Dots */}
@@ -833,97 +569,21 @@ export default function OnboardingPage() {
     { stage: 'finish', label: 'Finish', step: 3 },
   ];
 
-  const currentStepNumber = stages.find((s) => s.stage === currentStage)?.step || 1;
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-[#1a1a1a] dark:bg-[#1a1a1a]">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700" />
-            <span className="text-xl font-bold text-white">Creduman</span>
-          </div>
-        </div>
-      </div>
+      {/* Navigation */}
+      <Navigation />
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid lg:grid-cols-[300px,1fr] gap-8">
-            {/* Left Sidebar */}
-            <div className="space-y-8">
-              {/* Back Button - Only show if not on first step */}
-              {currentStage !== 'personal' && (
-                <button
-                  onClick={handleBack}
-                  className="flex items-center justify-center h-12 w-12 rounded-full border border-border hover:border-brand transition-colors"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-              )}
-
-              {/* Title */}
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold text-brand">
-                  Let's get Started!
-                </h1>
-                <p className="text-muted-foreground">
-                  We are glad to have you, fill out the information
-                </p>
-              </div>
-
-              {/* Progress Steps */}
-              <div className="relative">
-                {stages.map((step, index) => {
-                  const isActive = currentStage === step.stage;
-                  const isCompleted = currentStepNumber > step.step;
-                  
-                  // Line should be purple only if current step is beyond this one
-                  const shouldLineBeColored = currentStepNumber > step.step;
-
-                  return (
-                    <div key={step.stage} className="relative flex items-start pb-8 last:pb-0">
-                      {/* Vertical Line - Only show if not the last item */}
-                      {index < stages.length - 1 && (
-                        <div
-                          className={`absolute left-[3px] top-2 bottom-0 w-0.5 ${
-                            shouldLineBeColored ? 'bg-brand' : 'bg-muted'
-                          }`}
-                        />
-                      )}
-
-                      {/* Step Indicator */}
-                      <div className="relative z-10 flex items-center space-x-3">
-                        <div
-                          className={`h-2 w-2 rounded-full flex-shrink-0 ${
-                            isActive || isCompleted
-                              ? 'bg-brand'
-                              : 'bg-muted'
-                          }`}
-                        />
-                        <span
-                          className={`text-base ${
-                            isActive || isCompleted
-                              ? 'text-foreground'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          {step.label}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Right Content Area */}
-            <div className="bg-card rounded-2xl border border-border p-8 lg:p-12">
-              {renderStageContent()}
-            </div>
-          </div>
-        </div>
+      <div className="pt-24 pb-8 px-4">
+        <OnboardingLayout
+          currentStage={currentStage}
+          stages={stages}
+          onBack={handleBack}
+          showBack={currentStage !== 'personal'}
+        >
+          {renderStageContent()}
+        </OnboardingLayout>
       </div>
 
       {/* Success Modal */}

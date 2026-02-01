@@ -143,15 +143,6 @@ export function Navigation() {
   // Show navigation items only if onboarding is completed
   const showNavItems = user?.onboarding_completed;
 
-  // Generate user initials
-  const getUserInitials = () => {
-    if (user?.first_name) {
-      const initials = user.first_name[0] + (user.surname?.[0] || '');
-      return initials.toUpperCase();
-    }
-    return user?.email?.[0]?.toUpperCase() || 'U';
-  };
-
   // Get user display name
   const getUserDisplayName = () => {
     if (user?.first_name) {
@@ -275,8 +266,14 @@ export function Navigation() {
                       }}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-accent transition-colors"
                     >
-                      <div className="h-8 w-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium">
-                        {getUserInitials()}
+                      <div className="h-8 w-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-foreground">
+                        <Image
+                          src="/user.svg"
+                          alt="User profile"
+                          width={40}
+                          height={40}
+                          className="object-cover"
+                        />
                       </div>
                       <div className="hidden md:block text-left">
                         <p className="text-sm font-medium leading-tight">
