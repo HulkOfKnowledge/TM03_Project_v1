@@ -43,10 +43,14 @@ function LoginForm() {
       setErrors({});
 
       const supabase = createClient();
+      // Use current origin for callback to ensure it works in both dev and prod
+      const redirectUrl = `${window.location.origin}/api/auth/callback`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: false,
         },
       });
 
