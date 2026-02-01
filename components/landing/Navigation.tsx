@@ -7,12 +7,13 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useIsDarkMode } from '@/hooks/useTheme';
+import { useUser } from '@/hooks/useAuth';
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -23,54 +24,10 @@ import {
 export function Navigation() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<{ id: string; email?: string; first_name?: string; surname?: string } | null>(null);
+  const { user, profile } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const isDark = useIsDarkMode();
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    // Get initial user
-    const getUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        // Get user profile for name
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('first_name, surname')
-          .eq('id', authUser.id)
-          .single();
-
-        setUser({
-          id: authUser.id,
-          email: authUser.email,
-          first_name: profile?.first_name || undefined,
-          surname: profile?.surname || undefined,
-        });
-      }
-    };
-
-    getUser();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          first_name: session.user.user_metadata?.first_name || undefined,
-          surname: session.user.user_metadata?.surname || undefined,
-        });
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   // Close one menu when opening another
   const handleUserMenuToggle = () => {
@@ -86,7 +43,6 @@ export function Navigation() {
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    setUser(null);
     setShowUserMenu(false);
     router.push('/');
   };
@@ -144,19 +100,19 @@ export function Navigation() {
                     className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-accent transition-colors"
                   >
                     <div className="h-8 w-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium">
-                      {user.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                      {profile?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <span className="text-sm font-medium">
-                      {user.first_name || 'User'}
+                      {profile?.first_name || 'User'}
                     </span>
                   </button>
                 }
               >
                 <DropdownMenuHeader>
                   <p className="text-sm font-medium">
-                    {user.first_name ? `${user.first_name} ${user.surname || ''}`.trim() : 'User'}
+                    {profile?.first_name ? `${profile.first_name} ${profile.surname || ''}`.trim() : 'User'}
                   </p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </DropdownMenuHeader>
                 <DropdownMenuSection>
                   <DropdownMenuItem
@@ -203,7 +159,7 @@ export function Navigation() {
                 onClick={handleUserMenuToggle}
                 className="h-9 w-9 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium"
               >
-                {user.first_name?.[0]?.toUpperCase() || 'U'}
+                {profile?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
               </button>
             )}
             <button

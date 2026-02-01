@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Home, 
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useIsDarkMode } from '@/hooks/useTheme';
+import { useUser } from '@/hooks/useAuth';
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -30,69 +31,19 @@ import {
 } from '@/components/ui/DropdownMenu';
 import { Submenu, SubmenuItem } from '@/components/ui/Submenu';
 
-interface UserProfile {
-  id: string;
-  email?: string;
-  first_name?: string;
-  surname?: string;
-  onboarding_completed: boolean;
-  preferred_dashboard?: 'learn' | 'card';
-}
-
 export function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const { user, profile } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
   const isDark = useIsDarkMode();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
-  useEffect(() => {
-    const supabase = createClient();
-
-    const getUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id, first_name, surname, onboarding_completed, preferred_dashboard')
-          .eq('id', authUser.id)
-          .single();
-
-        if (profile) {
-          setUser({
-            id: authUser.id,
-            email: authUser.email,
-            first_name: profile.first_name,
-            surname: profile.surname,
-            onboarding_completed: profile.onboarding_completed,
-            preferred_dashboard: profile.preferred_dashboard,
-          });
-        }
-      }
-    };
-
-    getUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        getUser();
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    setUser(null);
     setShowUserMenu(false);
     router.push('/');
   };
@@ -126,12 +77,12 @@ export function Navigation() {
   ];
 
   // Show navigation items only if onboarding is completed
-  const showNavItems = user?.onboarding_completed;
+  const showNavItems = profile?.onboarding_completed;
 
   // Get user display name
   const getUserDisplayName = () => {
-    if (user?.first_name) {
-      return `${user.first_name} ${user.surname || ''}`.trim();
+    if (profile?.first_name) {
+      return `${profile.first_name} ${profile.surname || ''}`.trim();
     }
     return user?.email?.split('@')[0] || 'User';
   };
@@ -341,7 +292,7 @@ export function Navigation() {
                         <BookOpen className="h-4 w-4" />
                       }
                     >
-                      {pathname?.includes('learn') ? 'Switch to Card Dashboard' : 'Switch to Learn Dashboard'}
+                      {pathname?.includes('learn') ? 'Card Dashboard' : 'Learn Dashboard'}
                     </DropdownMenuItem>
                   </DropdownMenuSection>
                 )}
