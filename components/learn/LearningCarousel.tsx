@@ -5,50 +5,57 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { LearningCard } from './LearningCard';
+import { LearningCard, LearningCardSkeleton } from './LearningCard';
 import type { LearningContent } from '@/types/learn.types';
 
 interface LearningCarouselProps {
   items: LearningContent[];
   itemsPerPage?: number;
   onItemClick?: (item: LearningContent) => void;
+  isLoading?: boolean;
+  skeletonCount?: number;
 }
 
-export function LearningCarousel({ 
-  items, 
-  itemsPerPage = 3, 
-  onItemClick 
+export function LearningCarousel({
+  items,
+  itemsPerPage = 3,
+  onItemClick,
+  isLoading = false,
+  skeletonCount = 3,
 }: LearningCarouselProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const slideBy = 1;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const CARD_WIDTH = 280;
+  const GAP = 16;
+  const ITEM_WIDTH = CARD_WIDTH + GAP;
 
-  const displayedItems = items.slice(
-    currentPage,
-    currentPage + itemsPerPage
-  );
+  const loopItems = useMemo(() => {
+    if (!items.length) return [] as LearningContent[];
+    return [...items, ...items, ...items];
+  }, [items]);
+
+  const displayedItems = useMemo(() => {
+    if (!items.length) return [] as LearningContent[];
+    const count = Math.min(itemsPerPage, items.length);
+    return Array.from({ length: count }, (_, index) => items[(currentPage + index) % items.length]);
+  }, [items, itemsPerPage, currentPage]);
 
   const nextPage = () => {
-    setCurrentPage((prev) =>
-      prev + slideBy >= items.length - itemsPerPage + 1 
-        ? 0 
-        : prev + slideBy
-    );
+    if (!items.length) return;
+    setCurrentPage((prev) => (prev + slideBy) % items.length);
   };
 
   const prevPage = () => {
-    setCurrentPage((prev) =>
-      prev === 0 
-        ? items.length - itemsPerPage 
-        : prev - slideBy
-    );
+    if (!items.length) return;
+    setCurrentPage((prev) => (prev - slideBy + items.length) % items.length);
   };
 
   const scrollMobile = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
-      const scrollAmount = 296; // 280px card width + 16px gap
+      const scrollAmount = ITEM_WIDTH;
       const newScrollLeft = direction === 'right'
         ? scrollRef.current.scrollLeft + scrollAmount
         : scrollRef.current.scrollLeft - scrollAmount;
@@ -60,14 +67,61 @@ export function LearningCarousel({
     }
   };
 
+  useEffect(() => {
+    if (!scrollRef.current || !items.length) return;
+    scrollRef.current.scrollLeft = items.length * ITEM_WIDTH;
+  }, [items.length]);
+
+  const handleMobileScroll = () => {
+    if (!scrollRef.current || !items.length) return;
+    const totalWidth = items.length * ITEM_WIDTH;
+    const current = scrollRef.current.scrollLeft;
+
+    if (current < totalWidth * 0.5) {
+      scrollRef.current.scrollLeft = current + totalWidth;
+    } else if (current > totalWidth * 1.5) {
+      scrollRef.current.scrollLeft = current - totalWidth;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="md:hidden">
+          <div className="overflow-x-auto -mx-4 px-4 mb-8 scrollbar-hide">
+            <div className="flex gap-4 pb-2">
+              {Array.from({ length: skeletonCount }).map((_, index) => (
+                <div key={index} className="flex-shrink-0 w-[280px]">
+                  <LearningCardSkeleton />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden md:block">
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+              <LearningCardSkeleton key={index} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Mobile: Horizontal scroll */}
       <div className="md:hidden">
-        <div ref={scrollRef} className="overflow-x-auto -mx-4 px-4 mb-8 scrollbar-hide">
+        <div
+          ref={scrollRef}
+          onScroll={handleMobileScroll}
+          className="overflow-x-auto -mx-4 px-4 mb-8 scrollbar-hide"
+        >
           <div className="flex gap-4 pb-2">
-            {items.map((content) => (
-              <div key={content.id} className="flex-shrink-0 w-[280px]">
+            {loopItems.map((content, index) => (
+              <div key={`${content.id}-${index}`} className="flex-shrink-0 w-[280px]">
                 <LearningCard
                   content={content}
                   onClick={() => onItemClick?.(content)}

@@ -50,9 +50,9 @@ export function Navigation() {
   const navItems = [
     { 
       label: 'Home', 
-      href: '/dashboard', 
+      href: '/', 
       icon: Home,
-      active: pathname === '/dashboard'
+      active: pathname === '/'
     },
     { 
       label: 'Learn', 
@@ -107,9 +107,6 @@ export function Navigation() {
     }
     setShowThemeSubmenu(false);
   };
-
-  console.log("user", user);
-  console.log("profile", profile);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

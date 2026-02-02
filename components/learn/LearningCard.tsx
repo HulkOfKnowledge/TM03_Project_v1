@@ -7,6 +7,7 @@
 
 import { Play } from 'lucide-react';
 import type { LearningContent } from '@/types/learn.types';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface LearningCardProps {
   content: LearningContent;
@@ -67,6 +68,21 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
         <span className="text-sm text-gray-600 dark:text-gray-400">
           {content.duration}
         </span>
+      </div>
+    </div>
+  );
+}
+
+export function LearningCardSkeleton() {
+  return (
+    <div className="group">
+      <Skeleton className="relative aspect-video rounded-2xl mb-4" />
+      <Skeleton className="h-5 w-3/4 mb-2" />
+      <Skeleton className="h-4 w-full mb-2" />
+      <Skeleton className="h-4 w-2/3 mb-4" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-6 w-20 rounded-full" />
+        <Skeleton className="h-4 w-16" />
       </div>
     </div>
   );
