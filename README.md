@@ -167,8 +167,7 @@ creduman/
 
 The platform supports:
 - **English (en)**: Default language
-- **French (fr)**: Quebec compliance
-- **Arabic (ar)**: For Arabic-speaking newcomers
+- **Future release may support multi-language
 
 Language preference is stored in user profile and affects:
 - UI text and labels
@@ -185,32 +184,6 @@ Language preference is stored in user profile and affects:
 - `user_learning_progress`: User progress tracking
 - `credit_insights`: AI-generated insights and recommendations
 - `audit_logs`: Security and activity logs
-
-All tables have proper indexes, RLS policies, and foreign key relationships.
-
-## Data Flow
-
-1. **User Connects Card**:
-   - User initiates Flinks OAuth flow
-   - Flinks redirects to callback with loginId
-   - Fetch accounts and store in `connected_credit_cards`
-   - Trigger initial data sync
-
-2. **Data Sync**:
-   - Call Flinks API to get latest card data
-   - Store in `credit_data_cache`
-   - Send to Python service for analysis
-
-3. **Credit Analysis**:
-   - Python service analyzes credit data
-   - Generates insights and recommendations
-   - Sends webhook back to Next.js
-   - Next.js stores in `credit_insights`
-
-4. **User Views Dashboard**:
-   - Fetch cards and credit data
-   - Fetch insights
-   - Display in UI
 
 ## Development Workflow
 
@@ -258,47 +231,3 @@ docker run -p 8000:8000 --env-file .env creduman-intelligence
 ```yaml
 # docker-compose.yml coming soon
 ```
-
-## TODO: Implementation Checklist
-
-### Authentication & User Management
-- [ ] Implement signup with email verification
-- [ ] Implement login with session management
-- [ ] Implement logout
-- [ ] Build onboarding flow
-- [ ] Implement user profile updates
-
-### Flinks Integration
-- [ ] Implement Flinks OAuth connection
-- [ ] Handle Flinks callback
-- [ ] Implement data sync
-- [ ] Transform Flinks data to internal format
-- [ ] Handle disconnection
-
-### Credit Intelligence
-- [ ] Implement rules-based credit analyzer
-- [ ] Build payment recommendation engine
-- [ ] Create payoff simulator
-- [ ] Implement webhook handling
-- [ ] Add ML model (future)
-
-### Learning Dashboard
-- [ ] Create learning modules UI
-- [ ] Implement progress tracking
-- [ ] Add module content viewer
-- [ ] Build quiz/assessment system
-
-### Card Dashboard
-- [ ] Display connected cards
-- [ ] Show credit utilization
-- [ ] Display payment recommendations
-- [ ] Show credit insights
-- [ ] Add sync functionality
-
-### UI Components
-- [ ] Install shadcn/ui components
-- [ ] Build card components
-- [ ] Create insight cards
-- [ ] Add loading states
-- [ ] Implement error boundaries
-
