@@ -54,21 +54,21 @@ export function Navigation() {
   const navItems = [
     { 
       label: 'Home', 
-      href: '/', 
+      href: '/learn-dashboard', 
       icon: Home,
-      active: pathname === '/'
+      active: pathname === '/learn-dashboard'
     },
     { 
       label: 'Learn', 
-      href: '/learn-dashboard', 
+      href: '/learn-dashboard/learn', 
       icon: BookOpen,
-      active: pathname === '/learn-dashboard' || pathname?.startsWith('/learn')
+      active: pathname === '/learn-dashboard/learn' || pathname?.startsWith('/learn-dashboard/learn')
     },
     { 
       label: 'Cards & Accounts', 
       href: '/card-dashboard', 
       icon: CreditCard,
-      active: pathname === '/card-dashboard' || pathname?.startsWith('/cards')
+      active: pathname === '/cards' || pathname?.startsWith('/cards')
     },
     { 
       label: 'Profile', 
