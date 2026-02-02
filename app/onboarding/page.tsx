@@ -8,7 +8,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SuccessModal } from '@/components/auth/SuccessModal';
@@ -88,94 +87,99 @@ export default function OnboardingPage() {
     return { firstName, surname };
   };
 
+  const applyUserData = (user: any, profile: any | null) => {
+    setUserId(user.id);
+
+    if (profile?.onboarding_completed) {
+      router.push(
+        profile.preferred_dashboard === 'card'
+          ? '/card-dashboard'
+          : '/learn-dashboard'
+      );
+      return;
+    }
+
+    // Parse Google OAuth name data
+    let firstName = '';
+    let surname = '';
+
+    // Check for Google OAuth data (full_name or name)
+    const googleFullName = user.user_metadata?.full_name || user.user_metadata?.name;
+    if (googleFullName) {
+      const parsedName = parseFullName(googleFullName);
+      firstName = parsedName.firstName;
+      surname = parsedName.surname;
+    }
+
+    // Prefill form with available data from profile or user metadata
+    const restoredPersonalDetails = {
+      email: user.email || '',
+      firstName: profile?.first_name || firstName || user.user_metadata?.first_name || '',
+      surname: profile?.surname || surname || user.user_metadata?.surname || '',
+      mobileNumber: profile?.mobile_number || user.user_metadata?.phone || user.user_metadata?.mobile_number || '',
+      password: '',
+      confirmPassword: '',
+    };
+
+    // Restore saved onboarding progress if available
+    let restoredAccountSetup = {
+      statusInCanada: '',
+      province: '',
+      primaryGoal: '',
+      creditProducts: [],
+      immigrationStatus: '',
+      creditKnowledge: '',
+      currentSituation: [],
+    } as AccountSetup;
+
+    if (profile?.onboarding_data) {
+      const savedData = profile.onboarding_data as any;
+      if (savedData.personalDetails) {
+        Object.assign(restoredPersonalDetails, savedData.personalDetails, {
+          password: '',
+          confirmPassword: '',
+        });
+      }
+      if (savedData.accountSetup) {
+        restoredAccountSetup = savedData.accountSetup;
+      }
+    }
+
+    // Set all state at once
+    setPersonalDetails(restoredPersonalDetails);
+    setAccountSetup(restoredAccountSetup);
+
+    // Restore stage and substep
+    if (profile?.onboarding_stage) {
+      setCurrentStage(profile.onboarding_stage as OnboardingStage);
+    }
+    if (profile?.onboarding_substep) {
+      setFinishSubStep(profile.onboarding_substep as FinishSubStep);
+    }
+  };
+
   useEffect(() => {
     // Get current user and check if onboarding is already completed
     const getUser = async () => {
       try {
         setIsLoadingUserData(true);
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const meResponse = await fetch('/api/auth/me', {
+          method: 'GET',
+          credentials: 'include',
+        });
 
-        const user = session?.user;
-        if (user) {
-          setUserId(user.id);
+        if (meResponse.ok) {
+          const meJson = await meResponse.json();
+          const serverUser = meJson?.data?.user;
+          const serverProfile = meJson?.data?.profile ?? null;
 
-          // Check if onboarding already completed and fetch profile data
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('onboarding_completed, preferred_dashboard, first_name, surname, mobile_number, onboarding_stage, onboarding_substep, onboarding_data')
-            .eq('id', user.id)
-            .single();
-
-          if (profile?.onboarding_completed) {
-            router.push(
-              profile.preferred_dashboard === 'card'
-                ? '/card-dashboard'
-                : '/learn-dashboard'
-            );
+          if (serverUser) {
+            applyUserData(serverUser, serverProfile);
             return;
           }
-
-          // Parse Google OAuth name data
-          let firstName = '';
-          let surname = '';
-          
-          // Check for Google OAuth data (full_name or name)
-          const googleFullName = user.user_metadata?.full_name || user.user_metadata?.name;
-          if (googleFullName) {
-            const parsedName = parseFullName(googleFullName);
-            firstName = parsedName.firstName;
-            surname = parsedName.surname;
-          }
-
-          // Prefill form with available data from profile or user metadata
-          const restoredPersonalDetails = {
-            email: user.email || '',
-            firstName: profile?.first_name || firstName || user.user_metadata?.first_name || '',
-            surname: profile?.surname || surname || user.user_metadata?.surname || '',
-            mobileNumber: profile?.mobile_number || user.user_metadata?.phone || user.user_metadata?.mobile_number || '',
-            password: '',
-            confirmPassword: '',
-          };
-
-          // Restore saved onboarding progress if available
-          let restoredAccountSetup = {
-            statusInCanada: '',
-            province: '',
-            primaryGoal: '',
-            creditProducts: [],
-            immigrationStatus: '',
-            creditKnowledge: '',
-            currentSituation: [],
-          } as AccountSetup;
-
-          if (profile?.onboarding_data) {
-            const savedData = profile.onboarding_data as any;
-            if (savedData.personalDetails) {
-              Object.assign(restoredPersonalDetails, savedData.personalDetails, {
-                password: '', // Don't restore password for security
-                confirmPassword: '',
-              });
-            }
-            if (savedData.accountSetup) {
-              restoredAccountSetup = savedData.accountSetup;
-            }
-          }
-
-          // Set all state at once
-          setPersonalDetails(restoredPersonalDetails);
-          setAccountSetup(restoredAccountSetup);
-
-          // Restore stage and substep
-          if (profile?.onboarding_stage) {
-            setCurrentStage(profile.onboarding_stage as OnboardingStage);
-          }
-          if (profile?.onboarding_substep) {
-            setFinishSubStep(profile.onboarding_substep as FinishSubStep);
-          }
         }
+
+        router.push('/login');
       } catch (error) {
         console.error('Error fetching user data:', error);
       } finally {
@@ -302,8 +306,6 @@ export default function OnboardingPage() {
     if (!userId) return;
 
     try {
-      const supabase = createClient();
-      
       // Get the latest state values
       const progressData = {
         onboarding_stage: currentStage,
@@ -319,13 +321,18 @@ export default function OnboardingPage() {
         },
       };
 
-      const { error } = await supabase
-        .from('user_profiles')
-        .update(progressData)
-        .eq('id', userId);
+      const response = await fetch('/api/onboarding/progress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(progressData),
+      });
 
-      if (error) {
-        console.error('Failed to save progress:', error);
+      if (!response.ok) {
+        const result = await response.json();
+        console.error('Failed to save progress:', result?.error?.message || response.statusText);
       }
     } catch (error) {
       console.error('Error saving progress:', error);
@@ -336,50 +343,25 @@ export default function OnboardingPage() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
+      const response = await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          personalDetails,
+          accountSetup,
+          isEditingPassword,
+        }),
+      });
 
-      // Determine preferred dashboard based on credit knowledge level
-      // Newcomers and beginners go to learn dashboard
-      // Intermediate and advanced users go to card dashboard
-      let preferredDashboard: 'learn' | 'card' = 'learn';
-      
-      if (accountSetup.creditKnowledge === 'intermediate' || 
-          accountSetup.creditKnowledge === 'advanced') {
-        preferredDashboard = 'card';
+      if (!response.ok) {
+        const result = await response.json();
+        console.error('Failed to complete onboarding:', result?.error?.message || response.statusText);
+        setIsLoading(false);
+        return;
       }
-
-      // Update password if user edited it
-      if (isEditingPassword && personalDetails.password) {
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: personalDetails.password,
-        });
-        if (passwordError) {
-          console.error('Password update error:', passwordError);
-        }
-      }
-
-      // Update user profile with all collected data
-      await supabase
-        .from('user_profiles')
-        .update({
-          onboarding_completed: true,
-          first_name: personalDetails.firstName,
-          surname: personalDetails.surname,
-          mobile_number: personalDetails.mobileNumber,
-          status_in_canada: accountSetup.statusInCanada,
-          province: accountSetup.province,
-          primary_goal: accountSetup.primaryGoal,
-          credit_products: accountSetup.creditProducts,
-          immigration_status: accountSetup.immigrationStatus,
-          credit_knowledge: accountSetup.creditKnowledge,
-          current_situation: accountSetup.currentSituation,
-          preferred_dashboard: preferredDashboard,
-          // Clear progress tracking fields
-          onboarding_stage: null,
-          onboarding_substep: null,
-          onboarding_data: null,
-        })
-        .eq('id', userId);
 
       setShowSuccessModal(true);
     } catch (error) {
