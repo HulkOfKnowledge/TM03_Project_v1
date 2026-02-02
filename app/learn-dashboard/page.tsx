@@ -133,10 +133,10 @@ export default function LearnDashboard() {
             {/* Beginner's Checklist */}
             {checklistOpen && (
               <section className="mb-16">
-                <div className="bg-transparent md:bg-gray-50 md:dark:bg-gray-900 border-0 md:border md:border-gray-200 md:dark:border-white/10 rounded-none md:rounded-3xl p-4 md:p-8 md:md:p-10 relative">
+                <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-10 pt-12 pr-12 md:pt-8 md:pr-8 relative">
                   <button
                     onClick={() => setChecklistOpen(false)}
-                    className="absolute top-6 right-6 h-10 w-10 rounded-full bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 flex items-center justify-center transition-colors"
+                    className="absolute top-4 right-4 md:top-6 md:right-6 h-10 w-10 rounded-full bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 flex items-center justify-center transition-colors"
                     aria-label="Close checklist"
                   >
                     <X className="h-5 w-5 text-gray-700 dark:text-white" />
