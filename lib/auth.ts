@@ -4,34 +4,32 @@
  */
 
 import { createClient } from '@/lib/supabase/client';
-import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 /**
  * Handle user logout
  * Properly signs out from Supabase and redirects to home page
  */
-export async function handleLogout(router: AppRouterInstance): Promise<void> {
+export async function handleLogout(): Promise<void> {
   try {
     const supabase = createClient();
-    
-    // Sign out from Supabase and wait for it to complete
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.error('Logout error:', error);
-      throw error;
-    }
-    
-    // Clear any client-side state if needed
-    // (Supabase SSR should handle cookie cleanup)
-    
-    // Redirect to home page after successful logout
-    router.push('/');
-    router.refresh(); // Refresh to update server components
+
+    // Fire-and-forget logout calls to avoid blocking navigation
+    void fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      keepalive: true,
+    });
+
+    void supabase.auth.signOut();
+
+    // Force a full navigation so server components see cleared cookies immediately
+    window.location.replace('/login');
   } catch (error) {
     console.error('Failed to logout:', error);
     // Still redirect even if there's an error to prevent stuck state
-    router.push('/');
-    router.refresh();
+    window.location.replace('/login');
   }
 }

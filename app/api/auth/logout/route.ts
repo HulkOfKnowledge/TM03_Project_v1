@@ -10,16 +10,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
-    // TODO: Call Supabase auth.signOut
-    // const supabase = await createClient();
-    // TODO: Clear cookies
-    // TODO: Return success
+    const supabase = await createClient();
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      return NextResponse.json(
+        createErrorResponse('LOGOUT_FAILED', error.message),
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json(
-      createErrorResponse('NOT_IMPLEMENTED', 'Logout not implemented yet'),
-      { status: 501 }
+      createSuccessResponse({ logged_out: true }),
+      { status: 200 }
     );
   } catch (error) {
     return NextResponse.json(

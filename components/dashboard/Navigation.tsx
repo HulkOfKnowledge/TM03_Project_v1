@@ -43,7 +43,7 @@ export function Navigation() {
 
   const onLogout = async () => {
     setShowUserMenu(false);
-    await handleLogout(router);
+    await handleLogout();
   };
 
   // Navigation items - only shown after onboarding
