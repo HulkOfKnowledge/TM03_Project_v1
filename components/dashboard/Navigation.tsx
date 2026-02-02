@@ -82,7 +82,7 @@ export function Navigation() {
     if (profile?.first_name) {
       return `${profile.first_name} ${profile.surname || ''}`.trim();
     }
-    return user?.email?.split('@')[0] || 'User';
+    return user?.user_metadata?.full_name || 'User';
   };
 
   // Copy referrer code to clipboard
@@ -208,13 +208,23 @@ export function Navigation() {
                       className="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors"
                     >
                       <div className="h-8 w-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-foreground">
-                        <Image
-                          src="/user.svg"
-                          alt="User profile"
-                          width={40}
-                          height={40}
-                          className="object-cover"
-                        />
+                        {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+                          <Image
+                            src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                            alt="User profile"
+                            width={40}
+                            height={40}
+                            className="object-cover"
+                          />
+                        ) : (
+                          <Image
+                            src="/user.svg"
+                            alt="User profile"
+                            width={40}
+                            height={40}
+                            className="object-cover"
+                          />
+                        )}
                       </div>
                       <div className="hidden md:block text-left">
                         <p className="text-sm font-medium leading-tight">

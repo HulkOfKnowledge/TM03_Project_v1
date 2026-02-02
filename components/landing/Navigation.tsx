@@ -24,7 +24,7 @@ import {
 export function Navigation() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, profile, loading } = useUser();
+  const { user, profile } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const isDark = useIsDarkMode();
@@ -87,7 +87,7 @@ export function Navigation() {
               onToggle={handleThemeMenuToggle}
             />
 
-            {!loading && user ? (
+            {user ? (
               // Logged in user menu
               <DropdownMenu
                 isOpen={showUserMenu}
@@ -97,18 +97,30 @@ export function Navigation() {
                     onClick={handleUserMenuToggle}
                     className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-accent transition-colors"
                   >
-                    <div className="h-8 w-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium">
-                      {profile?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-                    </div>
+                    {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+                      <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-brand">
+                        <Image
+                          src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                          alt="User profile"
+                          width={32}
+                          height={32}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium">
+                        {profile?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                      </div>
+                    )}
                     <span className="text-sm font-medium">
-                      {profile?.first_name || 'User'}
+                      {user?.user_metadata?.full_name || 'User'}
                     </span>
                   </button>
                 }
               >
                 <DropdownMenuHeader>
                   <p className="text-sm font-medium">
-                    {profile?.first_name ? `${profile.first_name} ${profile.surname || ''}`.trim() : 'User'}
+                    {user?.user_metadata?.full_name || 'User'}
                   </p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </DropdownMenuHeader>
@@ -152,13 +164,28 @@ export function Navigation() {
 
           {/* Mobile Actions */}
           <div className="flex lg:hidden items-center gap-2">
-            {!loading && user && (
-              <button
-                onClick={handleUserMenuToggle}
-                className="h-9 w-9 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium"
-              >
-                {profile?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-              </button>
+            {user && (
+              user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+                <button
+                  onClick={handleUserMenuToggle}
+                  className="h-9 w-9 rounded-full overflow-hidden border-2 border-brand"
+                >
+                  <Image
+                    src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                    alt="User profile"
+                    width={36}
+                    height={36}
+                    className="object-cover w-full h-full"
+                  />
+                </button>
+              ) : (
+                <button
+                  onClick={handleUserMenuToggle}
+                  className="h-9 w-9 rounded-full bg-brand flex items-center justify-center text-white text-sm font-medium"
+                >
+                  {profile?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                </button>
+              )
             )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -201,7 +228,7 @@ export function Navigation() {
               mobile
             />
 
-            {!loading && user ? (
+            {user ? (
               <>
                 <Link
                   href="/learn-dashboard"
