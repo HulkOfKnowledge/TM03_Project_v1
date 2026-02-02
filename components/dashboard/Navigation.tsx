@@ -139,7 +139,7 @@ export function Navigation() {
                     href={item.href}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       item.active
-                        ? 'text-foreground bg-accent'
+                        ? 'text-brand'
                         : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                     }`}
                   >

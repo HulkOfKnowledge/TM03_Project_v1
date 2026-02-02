@@ -32,25 +32,39 @@ export function LearningCarousel({
   const GAP = 16;
   const ITEM_WIDTH = CARD_WIDTH + GAP;
 
+  const totalPages = useMemo(() => {
+    if (!items.length) return 1;
+    return Math.ceil(items.length / itemsPerPage);
+  }, [items.length, itemsPerPage]);
+
+  const pagedItems = useMemo(() => {
+    if (!items.length) return [] as LearningContent[][];
+    const pages: LearningContent[][] = [];
+    for (let i = 0; i < items.length; i += itemsPerPage) {
+      pages.push(items.slice(i, i + itemsPerPage));
+    }
+    return pages;
+  }, [items, itemsPerPage]);
+
   const loopItems = useMemo(() => {
     if (!items.length) return [] as LearningContent[];
     return [...items, ...items, ...items];
   }, [items]);
 
-  const displayedItems = useMemo(() => {
-    if (!items.length) return [] as LearningContent[];
-    const count = Math.min(itemsPerPage, items.length);
-    return Array.from({ length: count }, (_, index) => items[(currentPage + index) % items.length]);
-  }, [items, itemsPerPage, currentPage]);
+  useEffect(() => {
+    if (currentPage >= totalPages) {
+      setCurrentPage(0);
+    }
+  }, [currentPage, totalPages]);
 
   const nextPage = () => {
     if (!items.length) return;
-    setCurrentPage((prev) => (prev + slideBy) % items.length);
+    setCurrentPage((prev) => (prev + slideBy) % totalPages);
   };
 
   const prevPage = () => {
     if (!items.length) return;
-    setCurrentPage((prev) => (prev - slideBy + items.length) % items.length);
+    setCurrentPage((prev) => (prev - slideBy + totalPages) % totalPages);
   };
 
   const scrollMobile = (direction: 'left' | 'right') => {
@@ -117,11 +131,11 @@ export function LearningCarousel({
         <div
           ref={scrollRef}
           onScroll={handleMobileScroll}
-          className="overflow-x-auto -mx-4 px-4 mb-8 scrollbar-hide"
+          className="overflow-x-auto -mx-4 px-4 mb-8 scrollbar-hide scroll-smooth snap-x snap-mandatory"
         >
           <div className="flex gap-4 pb-2">
             {loopItems.map((content, index) => (
-              <div key={`${content.id}-${index}`} className="flex-shrink-0 w-[280px]">
+              <div key={`${content.id}-${index}`} className="flex-shrink-0 w-[280px] snap-start">
                 <LearningCard
                   content={content}
                   onClick={() => onItemClick?.(content)}
@@ -154,14 +168,26 @@ export function LearningCarousel({
 
       {/* Desktop: Grid with pagination */}
       <div className="hidden md:block">
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          {displayedItems.map((content) => (
-            <LearningCard
-              key={content.id}
-              content={content}
-              onClick={() => onItemClick?.(content)}
-            />
-          ))}
+        <div className="relative overflow-hidden mb-8">
+          <div
+            className="flex transition-transform duration-700 ease-out"
+            style={{ transform: `translateX(-${currentPage * 100}%)` }}
+          >
+            {pagedItems.map((page, pageIndex) => (
+              <div
+                key={`page-${pageIndex}`}
+                className="min-w-full grid md:grid-cols-3 gap-6"
+              >
+                {page.map((content) => (
+                  <LearningCard
+                    key={content.id}
+                    content={content}
+                    onClick={() => onItemClick?.(content)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Desktop Navigation */}

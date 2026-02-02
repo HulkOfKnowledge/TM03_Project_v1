@@ -28,7 +28,7 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
 
   const getThumbnailBg = () => {
     if (content.thumbnailUrl) return '';
-    const colors = ['bg-gray-200', 'bg-pink-100', 'bg-blue-100'];
+    const colors = ['bg-gray-200 dark:bg-gray-700', 'bg-pink-100 dark:bg-pink-900/30', 'bg-blue-100 dark:bg-blue-900/30'];
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
@@ -38,15 +38,23 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
         className={`relative aspect-video rounded-2xl overflow-hidden mb-4 ${getThumbnailBg()}`}
       >
         {content.thumbnailUrl ? (
-          <img
-            src={content.thumbnailUrl}
-            alt={content.title}
-            className="w-full h-full object-cover"
-          />
+          <>
+            <img
+              src={content.thumbnailUrl}
+              alt={content.title}
+              className="w-full h-full object-cover"
+            />
+            {/* Play button overlay for thumbnails */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-20 rounded-full bg-white/30 dark:bg-black/40 backdrop-blur-xl border border-white/40 dark:border-white/30 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-2xl">
+                <Play className="h-10 w-10 text-white/90 dark:text-white/80 fill-none stroke-[2.5] ml-1" />
+              </div>
+            </div>
+          </>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-16 h-16 rounded-full bg-white/80 dark:bg-white/90 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Play className="h-8 w-8 text-gray-800 fill-gray-800 ml-1" />
+            <div className="w-20 h-20 rounded-full bg-white/50 dark:bg-white/20 backdrop-blur-xl border border-white/60 dark:border-white/30 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-2xl">
+              <Play className="h-10 w-10 text-gray-700 dark:text-white fill-none stroke-[2.5] ml-1" />
             </div>
           </div>
         )}
