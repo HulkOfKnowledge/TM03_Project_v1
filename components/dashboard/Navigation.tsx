@@ -117,7 +117,7 @@ export function Navigation() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href={showNavItems ? '/dashboard' : '/'} className="flex items-center">
+          <Link href={showNavItems ? '/learn-dashboard' : '/'} className="flex items-center">
             <Image
               src={isDark ? '/Logo.svg' : '/Logo-dark.svg'}
               alt="Creduman Logo"
