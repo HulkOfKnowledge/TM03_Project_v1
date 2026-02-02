@@ -42,7 +42,7 @@ export function Navigation() {
 
   const onLogout = async () => {
     setShowUserMenu(false);
-    await handleLogout();
+    handleLogout();
   };
 
   const navItems = [

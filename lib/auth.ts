@@ -8,9 +8,12 @@
  * Handle user logout
  * Properly signs out from Supabase and redirects to home page
  */
-export async function handleLogout(): Promise<void> {
+export function handleLogout(): void {
   try {
-    // Fire-and-forget logout calls to avoid blocking navigation
+    // Redirect immediately
+    window.location.replace('/login');
+
+    // Fire-and-forget logout call to clear cookies
     void fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'include',
@@ -19,9 +22,6 @@ export async function handleLogout(): Promise<void> {
       },
       keepalive: true,
     });
-
-    // Force a full navigation so server components see cleared cookies immediately
-    window.location.replace('/login');
   } catch (error) {
     console.error('Failed to logout:', error);
     // Still redirect even if there's an error to prevent stuck state
