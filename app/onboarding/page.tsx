@@ -364,7 +364,7 @@ export default function OnboardingPage() {
         .update({
           onboarding_completed: true,
           first_name: personalDetails.firstName,
-          last_name: personalDetails.surname,
+          surname: personalDetails.surname,
           mobile_number: personalDetails.mobileNumber,
           status_in_canada: accountSetup.statusInCanada,
           province: accountSetup.province,
