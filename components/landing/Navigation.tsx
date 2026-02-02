@@ -221,13 +221,6 @@ export function Navigation() {
             {/* Divider */}
             <div className="border-t my-2" />
 
-            {/* Theme Toggle for Mobile */}
-            <ThemeToggle
-              isOpen={showThemeMenu}
-              onToggle={handleThemeMenuToggle}
-              mobile
-            />
-
             {user ? (
               <>
                 <Link
@@ -267,6 +260,16 @@ export function Navigation() {
                 </Link>
               </>
             )}
+
+            {/* Divider */}
+            <div className="border-t my-2" />
+
+            {/* Theme Toggle for Mobile (Last) */}
+            <ThemeToggle
+              isOpen={showThemeMenu}
+              onToggle={handleThemeMenuToggle}
+              mobile
+            />
           </div>
         </div>
       )}

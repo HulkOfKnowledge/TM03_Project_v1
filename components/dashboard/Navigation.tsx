@@ -19,6 +19,8 @@ import {
   LogOut,
   Settings,
   HelpCircle,
+  Menu,
+  X,
 } from 'lucide-react';
 import { handleLogout } from '@/lib/auth';
 import { useIsDarkMode } from '@/hooks/useTheme';
@@ -30,11 +32,13 @@ import {
   DropdownMenuSection,
 } from '@/components/ui/DropdownMenu';
 import { Submenu, SubmenuItem } from '@/components/ui/Submenu';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, profile } = useUser();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
@@ -432,34 +436,97 @@ export function Navigation() {
                 </DropdownMenuSection>
               </DropdownMenu>
             )}
+
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => {
+                setMobileMenuOpen(!mobileMenuOpen);
+                setShowNotifications(false);
+                setShowUserMenu(false);
+                setShowThemeSubmenu(false);
+              }}
+              className="lg:hidden rounded-lg p-2 hover:bg-accent"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
           </div>
         </div>
-
-        {/* Mobile Navigation - Only show after onboarding */}
-        {showNavItems && (
-          <div className="lg:hidden border-t border-border py-2">
-            <div className="flex items-center justify-around">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-colors ${
-                      item.active
-                        ? 'text-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="text-xs font-medium">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden border-t bg-background">
+          <div className="container mx-auto px-4 py-4 space-y-3">
+            {/* Navigation Items */}
+            {showNavItems && navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="block text-base font-medium text-muted-foreground hover:text-foreground py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+
+            {/* Divider */}
+            <div className="border-t my-2" />
+
+            {user ? (
+              <>
+                <Link
+                  href="/settings"
+                  className="block text-base font-medium text-muted-foreground hover:text-foreground py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Settings
+                </Link>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                  className="flex items-center gap-2 w-full text-left text-base font-medium text-red-600 dark:text-red-400 py-2"
+                >
+                  Log Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="block text-base font-medium text-muted-foreground hover:text-foreground py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="block w-full text-center rounded-lg bg-brand px-4 py-3 text-base font-medium text-white hover:bg-brand-600 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
+
+            {/* Divider */}
+            <div className="border-t my-2" />
+
+            {/* Theme Toggle (Last) */}
+            <ThemeToggle
+              isOpen={false}
+              onToggle={() => {}}
+              mobile
+            />
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
