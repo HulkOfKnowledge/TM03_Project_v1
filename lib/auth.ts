@@ -3,7 +3,6 @@
  * Shared authentication helper functions
  */
 
-import { createClient } from '@/lib/supabase/client';
 
 /**
  * Handle user logout
@@ -11,8 +10,6 @@ import { createClient } from '@/lib/supabase/client';
  */
 export async function handleLogout(): Promise<void> {
   try {
-    const supabase = createClient();
-
     // Fire-and-forget logout calls to avoid blocking navigation
     void fetch('/api/auth/logout', {
       method: 'POST',
@@ -22,8 +19,6 @@ export async function handleLogout(): Promise<void> {
       },
       keepalive: true,
     });
-
-    void supabase.auth.signOut();
 
     // Force a full navigation so server components see cleared cookies immediately
     window.location.replace('/login');

@@ -18,6 +18,7 @@ import { RadioList } from '@/components/onboarding/RadioList';
 import { CheckboxList } from '@/components/onboarding/CheckboxList';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { FormSkeleton } from '@/components/ui/Skeleton';
+import { fetchAuthMe } from '@/lib/api/auth-client';
 
 type OnboardingStage = 'personal' | 'account' | 'finish';
 type FinishSubStep = 'immigration' | 'knowledge' | 'situation';
@@ -163,20 +164,11 @@ export default function OnboardingPage() {
     const getUser = async () => {
       try {
         setIsLoadingUserData(true);
-        const meResponse = await fetch('/api/auth/me', {
-          method: 'GET',
-          credentials: 'include',
-        });
+        const { user: serverUser, profile: serverProfile } = await fetchAuthMe();
 
-        if (meResponse.ok) {
-          const meJson = await meResponse.json();
-          const serverUser = meJson?.data?.user;
-          const serverProfile = meJson?.data?.profile ?? null;
-
-          if (serverUser) {
-            applyUserData(serverUser, serverProfile);
-            return;
-          }
+        if (serverUser) {
+          applyUserData(serverUser, serverProfile);
+          return;
         }
 
         router.push('/login');

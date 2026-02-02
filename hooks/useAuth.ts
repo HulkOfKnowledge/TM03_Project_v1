@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import { fetchAuthMe } from '@/lib/api/auth-client';
 
 interface UserProfile {
   id: string;
@@ -13,6 +13,7 @@ interface UserProfile {
   first_name: string | null;
   surname: string | null;
   mobile_number: string | null;
+  avatar_url?: string | null;
   preferred_language: string;
   preferred_dashboard: 'learn' | 'card' | null;
   onboarding_completed: boolean;
@@ -44,20 +45,15 @@ export function useUser(): UseUserReturn {
   const [loading, setLoading] = useState(!isInitialized);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchUserAndProfile = useCallback(async () => {
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const { user: nextUser, profile: nextProfile } = await fetchAuthMe();
 
-      if (error) throw error;
-
-      cachedProfile = data as UserProfile;
-      setProfile(cachedProfile);
-      return cachedProfile;
+      cachedUser = nextUser;
+      cachedProfile = nextProfile;
+      setUser(nextUser);
+      setProfile(nextProfile);
+      return nextProfile;
     } catch (err) {
       console.error('Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch profile');
@@ -66,15 +62,12 @@ export function useUser(): UseUserReturn {
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (user?.id) {
-      setLoading(true);
-      await fetchProfile(user.id);
-      setLoading(false);
-    }
-  }, [user?.id, fetchProfile]);
+    setLoading(true);
+    await fetchUserAndProfile();
+    setLoading(false);
+  }, [fetchUserAndProfile]);
 
   useEffect(() => {
-    const supabase = createClient();
     let mounted = true;
 
     const initializeUser = async () => {
@@ -82,34 +75,8 @@ export function useUser(): UseUserReturn {
         // Only fetch if not already initialized
         if (!isInitialized) {
           setLoading(true);
-          const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-          
-          // Handle missing session gracefully - this is expected when user is not logged in
-          if (authError) {
-            if (authError.message === 'Auth session missing!' || authError.name === 'AuthSessionMissingError') {
-              // No session is a normal state, not an error
-              if (mounted) {
-                cachedUser = null;
-                setUser(null);
-                cachedProfile = null;
-                setProfile(null);
-                isInitialized = true;
-                setLoading(false);
-              }
-              return;
-            }
-            // For other auth errors, throw
-            throw authError;
-          }
-
+          await fetchUserAndProfile();
           if (mounted) {
-            cachedUser = authUser;
-            setUser(authUser);
-
-            if (authUser) {
-              await fetchProfile(authUser.id);
-            }
-
             isInitialized = true;
             setLoading(false);
           }
@@ -125,33 +92,10 @@ export function useUser(): UseUserReturn {
 
     initializeUser();
 
-    // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) return;
-
-      const newUser = session?.user ?? null;
-      
-      // Only update if user actually changed
-      if (newUser?.id !== cachedUser?.id) {
-        cachedUser = newUser;
-        setUser(newUser);
-
-        if (newUser) {
-          setLoading(true);
-          await fetchProfile(newUser.id);
-          setLoading(false);
-        } else {
-          cachedProfile = null;
-          setProfile(null);
-        }
-      }
-    });
-
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchUserAndProfile]);
 
   return { user, profile, loading, error, refreshProfile };
 }

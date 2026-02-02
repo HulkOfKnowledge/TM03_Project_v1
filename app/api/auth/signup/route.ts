@@ -10,33 +10,89 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { signupSchema } from '@/lib/validations';
+import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    // TODO: Implement signup endpoint
-    // TODO: Parse and validate request body
-    // TODO: Validate with signupSchema from @/lib/validations
-    // TODO: Call Supabase auth.signUp using createClient from @/lib/supabase/server
-    // TODO: Return response using createSuccessResponse or createErrorResponse from @/types/api.types
-    //   email: validatedData.email,
-    //   password: validatedData.password,
-    //   options: {
-    //     data: {
-    //       full_name: validatedData.full_name,
-    //       preferred_language: validatedData.preferred_language || 'en',
-    //     },
-    //   },
-    // });
+    const body = await request.json();
+    const validatedData = signupSchema.parse(body);
+    const emailRedirectTo = body?.emailRedirectTo as string | undefined;
 
-    // TODO: Handle errors and return response
+    const supabase = await createClient();
+
+    const { data: existingProfile } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('email', validatedData.email)
+      .maybeSingle();
+
+    if (existingProfile) {
+      return NextResponse.json(
+        createErrorResponse('EMAIL_EXISTS', 'An account with this email already exists'),
+        { status: 400 }
+      );
+    }
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: validatedData.email,
+      password: validatedData.password,
+      options: {
+        emailRedirectTo: emailRedirectTo || undefined,
+        data: {
+          first_name: validatedData.first_name,
+          surname: validatedData.surname,
+          mobile_number: validatedData.mobile_number,
+        },
+      },
+    });
+
+    if (authError) {
+      return NextResponse.json(
+        createErrorResponse('SIGNUP_FAILED', authError.message),
+        { status: 400 }
+      );
+    }
+
+    if (!authData.user) {
+      return NextResponse.json(
+        createErrorResponse('NO_USER', 'Signup failed - no user returned'),
+        { status: 400 }
+      );
+    }
+
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: authData.user.id,
+        email: validatedData.email,
+        first_name: validatedData.first_name,
+        surname: validatedData.surname,
+        mobile_number: validatedData.mobile_number,
+        preferred_language: 'en',
+        onboarding_completed: false,
+        preferred_dashboard: 'learn',
+      });
+
+    if (profileError) {
+      // Continue anyway; profile may be created by a trigger
+      console.error('Profile creation error:', profileError);
+    }
 
     return NextResponse.json(
-      { success: false, error: { code: 'NOT_IMPLEMENTED', message: 'Signup not implemented yet' } },
-      { status: 501 }
+      createSuccessResponse({ user: authData.user }),
+      { status: 200 }
     );
   } catch (error) {
+    if (error && typeof error === 'object' && 'errors' in error) {
+      return NextResponse.json(
+        createErrorResponse('VALIDATION_ERROR', 'Invalid request'),
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'An error occurred' } },
+      createErrorResponse('INTERNAL_ERROR', 'An error occurred'),
       { status: 500 }
     );
   }

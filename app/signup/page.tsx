@@ -15,9 +15,9 @@ import { SocialAuthButtons } from '@/components/auth/SocialAuthButtons';
 import { SuccessModal } from '@/components/auth/SuccessModal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { createClient } from '@/lib/supabase/client';
 import { signupSchema } from '@/lib/validations';
 import { Check } from 'lucide-react';
+import { signupWithEmail, startOAuth } from '@/lib/api/auth-client';
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState('');
@@ -36,19 +36,9 @@ export default function SignupPage() {
       setIsLoading(true);
       setErrors({});
 
-      const supabase = createClient();
-      // Use current origin for callback to ensure it works in both dev and prod
       const redirectUrl = `${window.location.origin}/api/auth/callback?next=/onboarding`;
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: false,
-        },
-      });
-
-      if (error) throw error;
+      const url = await startOAuth(provider, redirectUrl);
+      if (url) window.location.href = url;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Social authentication failed';
       setErrors({ general: message });
@@ -102,58 +92,20 @@ export default function SignupPage() {
         password,
       });
 
-      const supabase = createClient();
-
-      // Check if email already exists
-      const { data: existingUser } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('email', validatedData.email)
-        .maybeSingle();
-
-      if (existingUser) {
-        setErrors({ email: 'An account with this email already exists' });
-        setIsLoading(false);
-        return;
-      }
-
-      // Sign up the user with PKCE flow for cross-device email confirmation
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: validatedData.email,
-        password: validatedData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
-          data: {
-            first_name: validatedData.first_name,
-            surname: validatedData.surname,
-            mobile_number: validatedData.mobile_number,
-          },
-        },
+      const { response, result } = await signupWithEmail({
+        ...validatedData,
+        emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
       });
 
-      if (authError) throw authError;
-
-      if (!authData.user) {
-        throw new Error('Signup failed - no user returned');
-      }
-
-      // Create user profile immediately
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: authData.user.id,
-          email: validatedData.email,
-          first_name: validatedData.first_name,
-          surname: validatedData.surname,
-          mobile_number: validatedData.mobile_number,
-          preferred_language: 'en',
-          onboarding_completed: false,
-          preferred_dashboard: 'learn',
-        });
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        // Continue anyway - profile can be created via trigger or callback
+      if (!response.ok) {
+        const message = result?.error?.message || 'Signup failed. Please try again.';
+        if (result?.error?.code === 'EMAIL_EXISTS') {
+          setErrors({ email: message });
+        } else {
+          setErrors({ general: message });
+        }
+        setIsLoading(false);
+        return;
       }
 
       // Success - redirect to onboarding immediately

@@ -3,7 +3,6 @@
  * Handles learning content, testimonials, and user progress
  */
 
-import { createClient } from '@/lib/supabase/client';
 import type {
   LearningContent,
   ChecklistItem,

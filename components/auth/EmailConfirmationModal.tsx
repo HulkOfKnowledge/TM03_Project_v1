@@ -8,9 +8,9 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { Mail, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { fetchAuthMe, resendConfirmationEmail } from '@/lib/api/auth-client';
 
 export function EmailConfirmationModal() {
   const pathname = usePathname();
@@ -27,43 +27,27 @@ export function EmailConfirmationModal() {
     }
 
     const checkEmailConfirmation = async () => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const { user } = await fetchAuthMe();
 
-      const user = session?.user;
       if (!user) {
         setShow(false);
         return;
       }
 
-      // Check if email is confirmed
       const emailConfirmed = user.email_confirmed_at !== null;
-      
       setShow(!emailConfirmed);
       setUserEmail(user.email || '');
     };
 
     checkEmailConfirmation();
 
-    // Set up real-time listener for auth state changes
-    const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          const user = session?.user;
-          if (user) {
-            const emailConfirmed = user.email_confirmed_at !== null;
-            setShow(!emailConfirmed);
-            setUserEmail(user.email || '');
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setShow(false);
-        }
-      }
-    );
+    const onFocus = () => checkEmailConfirmation();
+    window.addEventListener('focus', onFocus);
+    const interval = window.setInterval(checkEmailConfirmation, 30000);
 
     return () => {
-      subscription.unsubscribe();
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(interval);
     };
   }, [pathname]);
 
@@ -72,16 +56,12 @@ export function EmailConfirmationModal() {
     setResendMessage('');
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
+      const ok = await resendConfirmationEmail({
         email: userEmail,
-        options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
-        },
+        redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
       });
 
-      if (error) throw error;
+      if (!ok) throw new Error('Failed to resend email');
 
       setResendMessage('Confirmation email sent! Check your inbox.');
     } catch (error) {

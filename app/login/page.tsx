@@ -16,8 +16,8 @@ import { SocialAuthButtons } from '@/components/auth/SocialAuthButtons';
 import { SuccessModal } from '@/components/auth/SuccessModal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { createClient } from '@/lib/supabase/client';
 import { loginSchema } from '@/lib/validations';
+import { loginWithEmail, resendConfirmationEmail, startOAuth } from '@/lib/api/auth-client';
 function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -42,19 +42,9 @@ function LoginForm() {
       setIsLoading(true);
       setErrors({});
 
-      const supabase = createClient();
-      // Use current origin for callback to ensure it works in both dev and prod
       const redirectUrl = `${window.location.origin}/api/auth/callback`;
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: false,
-        },
-      });
-
-      if (error) throw error;
+      const url = await startOAuth(provider, redirectUrl);
+      if (url) window.location.href = url;
 
       // OAuth redirects to provider, so no success modal here
     } catch (error: unknown) {
@@ -73,40 +63,22 @@ function LoginForm() {
       // Validate form data
       const validatedData = loginSchema.parse({ email, password });
 
-      const supabase = createClient();
+      const { response, result } = await loginWithEmail(validatedData);
 
-      // Sign in with email and password
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email: validatedData.email,
-          password: validatedData.password,
-        });
-
-      if (authError) {
-        // Special handling for unconfirmed email
-        if (authError.message.includes('Email not confirmed') || authError.message.includes('email_not_confirmed')) {
-          setErrors({ 
+      if (!response.ok) {
+        const message = result?.error?.message || 'Login failed. Please check your credentials.';
+        if (message.includes('Email not confirmed') || message.includes('email_not_confirmed')) {
+          setErrors({
             general: 'Your email address has not been confirmed yet. Please check your inbox for the confirmation email.'
           });
           setShowResendButton(true);
           setIsLoading(false);
           return;
         }
-        throw authError;
+        throw new Error(message);
       }
 
-      if (!authData.user) {
-        throw new Error('Login failed - no user returned');
-      }
-
-      // Fetch user profile to determine preferred dashboard
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('preferred_dashboard, onboarding_completed, first_name')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (profileError) throw profileError;
+      const profile = result?.data?.profile;
 
       // Determine redirect destination
       let destination = '/learn-dashboard';
@@ -138,16 +110,12 @@ function LoginForm() {
   const handleResendConfirmation = async () => {
     try {
       setIsLoading(true);
-      const supabase = createClient();
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
-        },
+      const ok = await resendConfirmationEmail({
+        email,
+        redirectTo: `${window.location.origin}/api/auth/callback`,
       });
 
-      if (error) throw error;
+      if (!ok) throw new Error('Failed to resend email');
       
       setResendSuccess(true);
       setErrors({ general: '✓ Confirmation email sent! Please check your inbox.' });
