@@ -64,6 +64,71 @@ class PaymentRecommender:
             )
 
         minimum_total = sum(card.minimum_payment for card in cards)
+        total_balance = sum(card.current_balance for card in cards)
+        
+        # Handle edge cases
+        # Case 1: Budget is less than minimum payments - allocate proportionally
+        # Case 2: Budget exceeds total balance - pay off all cards
+        if available_amount < minimum_total:
+            # Insufficient to cover minimums - allocate proportionally to avoid all late fees equally
+            ratio = available_amount / minimum_total if minimum_total > 0 else 0
+            recommendations: List[PaymentRecommendation] = []
+            for index, card in enumerate(cards, start=1):
+                suggested_amount = card.minimum_payment * ratio
+                impact = self.calculate_impact(card, suggested_amount)
+                reasoning = (
+                    f"Pay ${suggested_amount:.2f} (partial payment) • "
+                    f"Budget insufficient to cover minimum (${card.minimum_payment:.2f}) • "
+                    f"May incur late fees. Consider increasing budget to ${minimum_total:.2f}"
+                )
+                recommendations.append(
+                    PaymentRecommendation(
+                        card_id=card.card_id,
+                        suggested_amount=round(suggested_amount, 2),
+                        reasoning={"en": reasoning, "fr": reasoning, "ar": reasoning},
+                        expected_impact=impact,
+                        priority=index,
+                    )
+                )
+            projected = self.calculate_projected_savings(cards, recommendations)
+            return PaymentRecommendationResponse(
+                user_id=request.user_id,
+                total_amount=round(available_amount, 2),
+                recommendations=recommendations,
+                strategy=request.optimization_goal,
+                projected_savings=projected,
+            )
+        
+        # Case 2: Budget exceeds total balance - pay off everything
+        if available_amount >= total_balance:
+            recommendations: List[PaymentRecommendation] = []
+            for index, card in enumerate(cards, start=1):
+                suggested_amount = card.current_balance
+                impact = self.calculate_impact(card, suggested_amount)
+                reasoning = (
+                    f"Pay ${suggested_amount:.2f} (full balance) • "
+                    f"This will pay off {card.institution_name} completely • "
+                    f"Card will have $0 balance"
+                )
+                recommendations.append(
+                    PaymentRecommendation(
+                        card_id=card.card_id,
+                        suggested_amount=round(suggested_amount, 2),
+                        reasoning={"en": reasoning, "fr": reasoning, "ar": reasoning},
+                        expected_impact=impact,
+                        priority=index,
+                    )
+                )
+            projected = self.calculate_projected_savings(cards, recommendations)
+            return PaymentRecommendationResponse(
+                user_id=request.user_id,
+                total_amount=round(total_balance, 2),
+                recommendations=recommendations,
+                strategy=request.optimization_goal,
+                projected_savings=projected,
+            )
+        
+        # Normal case: Budget covers minimums but less than total balance
         extra_pool = max(0.0, available_amount - minimum_total)
 
         if request.optimization_goal == "minimize_interest":

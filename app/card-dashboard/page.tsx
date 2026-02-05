@@ -312,11 +312,11 @@ export default function CardDashboardPage() {
   useEffect(() => {
     if (connectedCardIds.length === 0) return;
 
-    let isMounted = true;
-
-    async function runRecommendations() {
-      setRecommendations({ data: null, isLoading: true, error: null });
+    // Debounce to avoid excessive API calls while user is typing
+    const timeoutId = setTimeout(async () => {
       try {
+        setRecommendations({ data: null, isLoading: true, error: null });
+        
         const response = await fetch('/api/credit-intelligence/recommendations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -336,24 +336,18 @@ export default function CardDashboardPage() {
           throw new Error(payload?.error?.message ?? 'Failed to load recommendations.');
         }
 
-        if (isMounted) {
-          setRecommendations({ data: payload.data, isLoading: false, error: null });
-        }
+        setRecommendations({ data: payload.data, isLoading: false, error: null });
       } catch (error) {
-        if (isMounted) {
-          setRecommendations({
-            data: null,
-            isLoading: false,
-            error: error instanceof Error ? error.message : 'Failed to load recommendations.',
-          });
-        }
+        setRecommendations({
+          data: null,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Failed to load recommendations.',
+        });
       }
-    }
-
-    runRecommendations();
+    }, 500); // 500ms debounce
 
     return () => {
-      isMounted = false;
+      clearTimeout(timeoutId);
     };
   }, [connectedCardIds, availableAmount, optimizationGoal]);
 
@@ -698,11 +692,21 @@ export default function CardDashboardPage() {
                     setSelectedCardIds(next);
                   }}
                 >
-                  {connectedCards.map((card) => (
-                    <option key={card.id} value={card.id}>
-                      {card.card_name} •••• {card.card_last_four}
-                    </option>
-                  ))}
+                  <option value="">Select a card</option>
+                  {connectedCards
+                    .filter(card => {
+                      // In compare mode, don't show cards already selected in other dropdown
+                      if (viewMode === 'compare') {
+                        const otherIndex = index === 0 ? 1 : 0;
+                        return card.id !== selectedCardIds[otherIndex];
+                      }
+                      return true;
+                    })
+                    .map((card) => (
+                      <option key={card.id} value={card.id}>
+                        {card.card_name} •••• {card.card_last_four}
+                      </option>
+                    ))}
                 </select>
               ))}
             </div>
@@ -844,15 +848,13 @@ export default function CardDashboardPage() {
               {!analysis.isLoading && !analysis.error && analysis.data?.insights?.length ? (
                 analysis.data.insights.map((item, index) => (
                     <div key={`${item.priority}-${index}`} className="border border-gray-200 bg-white p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <p className="font-semibold text-black">{item.title?.en ?? 'Insight'}</p>
-                          <p className="mt-1 text-sm text-gray-600">{item.message?.en ?? ''}</p>
-                        </div>
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <p className="font-semibold text-black flex-1">{item.title?.en ?? 'Insight'}</p>
                         <span className="border border-gray-300 px-2 py-1 text-xs font-medium uppercase text-gray-700">
                           {item.priority}
                         </span>
                       </div>
+                      <p className="text-sm text-gray-600">{item.message?.en ?? ''}</p>
                     </div>
                   ))
               ) : !analysis.isLoading && !analysis.error ? (
@@ -884,6 +886,16 @@ export default function CardDashboardPage() {
                   onChange={(e) => setAvailableAmount(Number(e.target.value))}
                   placeholder={currencyFormatter.format(summary.total_balance)}
                 />
+                {availableAmount < summary.total_minimum_payment && availableAmount > 0 && (
+                  <p className="mt-1 text-xs text-gray-600">
+                    Less than minimum payment ({currencyFormatter.format(summary.total_minimum_payment)}). May result in late fees.
+                  </p>
+                )}
+                {availableAmount > summary.total_balance && (
+                  <p className="mt-1 text-xs text-gray-600">
+                    Amount exceeds total balance. Recommendations will pay off all cards.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -934,23 +946,28 @@ export default function CardDashboardPage() {
 
                   {recommendations.data.recommendations.map((rec) => {
                       const card = cardsById.get(rec.cardId);
+                      const reasoningParts = (rec.reasoning?.en ?? '').split(' • ');
                       return (
                         <div key={rec.cardId} className="border border-gray-200 bg-white p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="flex h-5 w-5 items-center justify-center border border-gray-300 text-xs font-bold text-black">
-                                  {rec.priority}
-                                </span>
-                                <p className="font-semibold text-black">{card?.card_name ?? 'Card'}</p>
-                              </div>
-                              <p className="mt-2 text-sm text-gray-600">{rec.reasoning?.en ?? ''}</p>
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex items-center gap-2 flex-1">
+                              <span className="flex h-5 w-5 items-center justify-center border border-gray-300 text-xs font-bold text-black">
+                                {rec.priority}
+                              </span>
+                              <p className="font-semibold text-black">{card?.card_name ?? 'Card'}</p>
                             </div>
                             <div className="text-right">
                               <p className="text-xl font-bold text-black">
                                 {currencyFormatter.format(rec.suggestedAmount)}
                               </p>
                             </div>
+                          </div>
+                          <div className="space-y-1">
+                            {reasoningParts.map((part, idx) => (
+                              <p key={idx} className="text-sm text-gray-600">
+                                {idx > 0 && '• '}{part}
+                              </p>
+                            ))}
                           </div>
                         </div>
                       );
@@ -965,7 +982,7 @@ export default function CardDashboardPage() {
           </div>
 
           {/* Score */}
-          {analysis.data && (
+          {/* {analysis.data && (
             <div className="border-2 border-black bg-black p-6 text-white">
               <h3 className="font-bold">Credit Health Score</h3>
               <div className="mt-4 flex items-center gap-4">
@@ -982,7 +999,7 @@ export default function CardDashboardPage() {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
         </div>
       </div>
 
