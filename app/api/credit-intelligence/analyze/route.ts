@@ -12,26 +12,56 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { creditIntelligenceService } from '@/services/credit-intelligence.service';
+import { demoDataService } from '@/services/demo-data.service';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Get authenticated user
-    // TODO: Fetch user's credit cards and data
-    // TODO: Prepare payload
-    // TODO: Call creditIntelligenceService.analyzeCredit
-    // TODO: Store insights in database
-    // TODO: Return analysis results
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-    return NextResponse.json(
-      createErrorResponse('NOT_IMPLEMENTED', 'Credit analysis not implemented yet'),
-      { status: 501 }
-    );
+    if (!isDemoMode) {
+      return NextResponse.json(
+        createErrorResponse('NOT_IMPLEMENTED', 'Credit analysis is only enabled in demo mode'),
+        { status: 501 }
+      );
+    }
+
+    const demoData = await demoDataService.getDashboardData();
+
+    const payload = {
+      userId: demoData.user.id,
+      timestamp: new Date().toISOString(),
+      cards: demoData.cards.map((card) => ({
+        cardId: card.id,
+        institutionName: card.institution_name,
+        currentBalance: card.current_balance,
+        creditLimit: card.credit_limit,
+        utilizationPercentage: card.utilization_percentage,
+        minimumPayment: card.minimum_payment,
+        paymentDueDate: card.payment_due_date,
+        interestRate: card.interest_rate,
+        lastPaymentAmount: null,
+        lastPaymentDate: null,
+      })),
+    };
+
+    console.log('[credit-intelligence-analyze] payload', {
+      userId: payload.userId,
+      timestamp: payload.timestamp,
+      cardsCount: payload.cards.length,
+      cardIds: payload.cards.map((card) => card.cardId),
+    });
+
+    const analysis = await creditIntelligenceService.analyzeCredit(payload);
+
+    return NextResponse.json(createSuccessResponse(analysis));
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'An error occurred';
+    console.error('[credit-intelligence-analyze]', message);
     return NextResponse.json(
-      createErrorResponse('INTERNAL_ERROR', 'An error occurred'),
+      createErrorResponse('INTERNAL_ERROR', message),
       { status: 500 }
     );
   }

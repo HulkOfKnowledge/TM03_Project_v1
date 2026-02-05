@@ -27,9 +27,6 @@ async def analyze_credit(
     - Return structured insights and recommendations
     """
     try:
-        # TODO: Call analyzer.analyze(request)
-        # TODO: Return analysis results
-        
-        raise HTTPException(status_code=501, detail="Not implemented")
+        return analyzer.analyze(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

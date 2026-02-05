@@ -13,6 +13,8 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -71,7 +73,7 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Redirect to login if accessing protected route without authentication
-  if (isProtectedRoute && !user) {
+  if (isProtectedRoute && !user && !isDemoMode) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -81,7 +83,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith(route)
   );
 
-  if (isAuthRoute && user) {
+  if (isAuthRoute && user && !isDemoMode) {
     return NextResponse.redirect(new URL('/card-dashboard', request.url));
   }
 

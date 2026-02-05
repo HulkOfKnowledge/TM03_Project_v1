@@ -30,9 +30,6 @@ async def get_payment_recommendations(
     - Return prioritized payment strategy
     """
     try:
-        # TODO: Call recommender.recommend(request)
-        # TODO: Return recommendations
-        
-        raise HTTPException(status_code=501, detail="Not implemented")
+        return recommender.recommend(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

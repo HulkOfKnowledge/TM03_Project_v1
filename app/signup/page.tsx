@@ -8,7 +8,7 @@
  * - Create user profile via trigger
  * - Handle errors (email already exists, weak password, etc.)
  * - Send verification email if required
- * - Redirect to onboarding after successful signup
+ * - Redirect to card dashboard after successful signup
  * - Link to login page
  */
 

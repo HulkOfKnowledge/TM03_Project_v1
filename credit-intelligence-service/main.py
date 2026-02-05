@@ -75,9 +75,8 @@ async def health_check():
     }
 
 
-# TODO: Include API routers
-# app.include_router(analyze.router, prefix="/api/v1", tags=["analyze"])
-# app.include_router(recommendations.router, prefix="/api/v1", tags=["recommendations"])
+app.include_router(analyze.router, prefix="/api/v1", tags=["analyze"])
+app.include_router(recommendations.router, prefix="/api/v1", tags=["recommendations"])
 # app.include_router(simulate.router, prefix="/api/v1", tags=["simulate"])
 
 

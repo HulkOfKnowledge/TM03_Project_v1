@@ -14,7 +14,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS user_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
-  full_name TEXT,
+  first_name TEXT NOT NULL,
+  surname TEXT NOT NULL,
+  mobile_number TEXT,
   preferred_language TEXT NOT NULL DEFAULT 'en' CHECK (preferred_language IN ('en', 'fr', 'ar')),
   preferred_dashboard TEXT CHECK (preferred_dashboard IN ('learn', 'card')),
   onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -293,9 +295,38 @@ CREATE TRIGGER update_credit_insights_updated_at
 -- =====================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  user_first_name TEXT;
+  user_surname TEXT;
+  full_name_text TEXT;
 BEGIN
-  INSERT INTO public.user_profiles (id, email)
-  VALUES (NEW.id, NEW.email);
+  -- Extract first_name and surname from user metadata
+  full_name_text := COALESCE(NEW.raw_user_meta_data->>'first_name', NEW.raw_user_meta_data->>'full_name', 'User');
+  
+  -- If we have separate first_name and surname in metadata, use them
+  user_first_name := COALESCE(NEW.raw_user_meta_data->>'first_name', split_part(full_name_text, ' ', 1));
+  user_surname := COALESCE(NEW.raw_user_meta_data->>'surname', NULLIF(trim(substring(full_name_text from position(' ' in full_name_text || ' '))), ''));
+  
+  -- Ensure we have valid values (not empty strings)
+  user_first_name := COALESCE(NULLIF(user_first_name, ''), 'User');
+  user_surname := COALESCE(NULLIF(user_surname, ''), '');
+  
+  INSERT INTO public.user_profiles (
+    id, 
+    email, 
+    first_name, 
+    surname,
+    mobile_number,
+    preferred_language
+  )
+  VALUES (
+    NEW.id, 
+    NEW.email,
+    user_first_name,
+    user_surname,
+    NEW.raw_user_meta_data->>'mobile_number',
+    COALESCE(NEW.raw_user_meta_data->>'preferred_language', 'en')
+  );
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
