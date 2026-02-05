@@ -27,12 +27,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const body = await request.json().catch(() => ({}));
+    const connectedCardIds = body?.connectedCardIds ?? [];
+
     const demoData = await demoDataService.getDashboardData();
+
+    // Filter cards based on connectedCardIds
+    const filteredCards = connectedCardIds.length > 0
+      ? demoData.cards.filter(card => connectedCardIds.includes(card.id))
+      : demoData.cards;
 
     const payload = {
       userId: demoData.user.id,
       timestamp: new Date().toISOString(),
-      cards: demoData.cards.map((card) => ({
+      cards: filteredCards.map((card) => ({
         cardId: card.id,
         institutionName: card.institution_name,
         currentBalance: card.current_balance,

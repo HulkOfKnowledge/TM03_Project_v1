@@ -91,10 +91,10 @@ class PaymentRecommender:
             remaining = max(0.0, remaining - extra_payment)
 
             impact = self.calculate_impact(card, suggested_amount)
-
-            reasoning = (
-                f"Pay ${suggested_amount:.2f} to {card.institution_name} to "
-                f"{request.optimization_goal.replace('_', ' ')}."
+            
+            # Generate contextual reasoning based on optimization goal and card details
+            reasoning = self._generate_reasoning(
+                card, suggested_amount, extra_payment, request.optimization_goal, impact
             )
 
             recommendations.append(
@@ -212,3 +212,54 @@ class PaymentRecommender:
             monthly_interest=round(monthly_interest, 2),
             annual_interest=round(monthly_interest * 12, 2)
         )
+    
+    def _generate_reasoning(
+        self,
+        card: CardData,
+        suggested_amount: float,
+        extra_payment: float,
+        optimization_goal: str,
+        impact: ExpectedImpact
+    ) -> str:
+        """Generate contextual reasoning for payment recommendation"""
+        
+        # Calculate new utilization after payment
+        new_balance = card.current_balance - suggested_amount
+        new_utilization = (new_balance / card.credit_limit * 100) if card.credit_limit > 0 else 0
+        
+        # Base information
+        parts = []
+        
+        if extra_payment > 0:
+            parts.append(f"Pay ${suggested_amount:.2f} (${card.minimum_payment:.2f} min + ${extra_payment:.2f} extra)")
+        else:
+            parts.append(f"Pay ${suggested_amount:.2f} (minimum payment)")
+        
+        # Add context based on optimization goal
+        if optimization_goal == "minimize_interest":
+            if card.interest_rate and card.interest_rate > 0:
+                parts.append(f"This card has {card.interest_rate:.1f}% APR (highest interest rate)")
+                if impact.interest_saved > 0:
+                    parts.append(f"Saves ${impact.interest_saved:.2f}/month in interest charges")
+        
+        elif optimization_goal == "improve_score":
+            parts.append(f"Current utilization: {card.utilization_percentage:.1f}%")
+            if extra_payment > 0:
+                parts.append(f"Will reduce to {new_utilization:.1f}%")
+                if card.utilization_percentage > 30:
+                    parts.append("Getting closer to ideal 30% threshold")
+        
+        else:  # balanced
+            reasons = []
+            if card.utilization_percentage > 50:
+                reasons.append(f"high utilization ({card.utilization_percentage:.1f}%)")
+            if card.interest_rate and card.interest_rate > 15:
+                reasons.append(f"high APR ({card.interest_rate:.1f}%)")
+            
+            if reasons:
+                parts.append(f"Priority due to: {', '.join(reasons)}")
+            
+            if extra_payment > 0 and impact.interest_saved > 0:
+                parts.append(f"Saves ${impact.interest_saved:.2f}/month, improves utilization by {impact.utilization_improvement:.1f}%")
+        
+        return " • ".join(parts)
