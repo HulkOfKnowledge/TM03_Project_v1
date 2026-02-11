@@ -1,14 +1,116 @@
 /**
  * Learning Space Page
- * Interactive learning environment for credit education
+ * Interactive learning environment with expandable modules
  */
 
 'use client';
 
+import { useState, useEffect } from 'react';
+import { Search, Filter, ChevronDown, ChevronUp, Star, ChevronRight } from 'lucide-react';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
+import { LearningCarousel } from '@/components/learn/LearningCarousel';
+import { learnService } from '@/services/learn.service';
+import type { LearningContent, Testimonial } from '@/types/learn.types';
+
+// Module data structure
+interface LearningModule {
+  id: string;
+  title: string;
+  description: string;
+  lessonsCount: number;
+  progress: number;
+  isExpanded: boolean;
+  lessons: LearningContent[];
+}
 
 export default function LearningSpacePage() {
+  const [modules, setModules] = useState<LearningModule[]>([
+    {
+      id: 'module-1',
+      title: 'Learning Module 1',
+      description: 'Lesson one introduces users to the Canadian credit system in the simplest, calmest way possible. They learn what credit is, why it matters, and how their credit card affects everything. The content focuses on clarity: no stress, no deep theory, just the basics that every newcomer needs to stop feeling lost.',
+      lessonsCount: 3,
+      progress: 0,
+      isExpanded: true,
+      lessons: [],
+    },
+    {
+      id: 'module-2',
+      title: 'Learning Module 2',
+      description: '',
+      lessonsCount: 0,
+      progress: 0,
+      isExpanded: false,
+      lessons: [],
+    },
+    {
+      id: 'module-3',
+      title: 'Learning Module 3',
+      description: '',
+      lessonsCount: 0,
+      progress: 0,
+      isExpanded: false,
+      lessons: [],
+    },
+  ]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadLearningData();
+  }, []);
+
+  const loadLearningData = async () => {
+    try {
+      setLoading(true);
+      const data = await learnService.getDashboardData();
+      
+      // Populate module 1 with actual lessons
+      setModules(prev => prev.map(module => {
+        if (module.id === 'module-1') {
+          return {
+            ...module,
+            lessons: data.learningPath || [],
+            lessonsCount: data.learningPath?.length || 3,
+          };
+        }
+        return module;
+      }));
+
+      setTestimonials(data.testimonials || []);
+    } catch (error) {
+      console.error('Error loading learning data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleModule = (moduleId: string) => {
+    setModules(prev =>
+      prev.map(module =>
+        module.id === moduleId
+          ? { ...module, isExpanded: !module.isExpanded }
+          : module
+      )
+    );
+  };
+
+  const handleContentClick = async (content: LearningContent) => {
+    console.log('Opening content:', content);
+  };
+
+  const nextTestimonial = () => {
+    setCurrentTestimonialIndex((prev) => 
+      prev === testimonials.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const currentTestimonial = testimonials[currentTestimonialIndex];
+
   return (
     <div className="min-h-screen bg-white dark:bg-black">
       <Navigation />
@@ -16,21 +118,198 @@ export default function LearningSpacePage() {
       {/* Main Content */}
       <main className="pt-28 pb-16">
         <div className="container mx-auto px-4 md:px-6">
-          <h1 className="text-3xl md:text-4xl font-bold text-brand mb-6">Learning Space</h1>
-          
-          <div className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 border border-gray-200 dark:border-white/10">
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              This page will contain:
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
+              Learning Space
+            </h1>
+            <p className="text-base text-gray-600 dark:text-gray-400">
+              Discover all you need to know about your credit and how to manage and live smart
             </p>
-            <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-400">
-              <li>Interactive learning modules organized by topics</li>
-              <li>Progress tracking for each module</li>
-              <li>Video lessons, quizzes, and interactive content</li>
-              <li>Personalized learning paths based on user goals</li>
-              <li>Certificate badges and achievements</li>
-              <li>Recommended next steps</li>
-            </ul>
           </div>
+
+          {/* Search and Filter */}
+          <div className="flex gap-3 mb-8">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-12 pl-4 pr-12 bg-white dark:bg-black border border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/20"
+              />
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            </div>
+            <button className="h-12 px-5 bg-white dark:bg-black border border-gray-200 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center gap-2">
+              <span className="hidden sm:inline">Filter</span>
+              <Filter className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Learning Modules */}
+          <div className="space-y-6 mb-16">
+            {modules.map((module) => (
+              <div
+                key={module.id}
+                className="bg-white dark:bg-black border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden"
+              >
+                {/* Module Header */}
+                <div className="px-6 py-5">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    {/* Left: Toggle + Star + Title */}
+                    <button
+                      onClick={() => toggleModule(module.id)}
+                      className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0">
+                        {module.isExpanded ? (
+                          <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                        )}
+                      </div>
+                      <Star 
+                        className={`h-5 w-5 flex-shrink-0 ${
+                          module.id === 'module-1' 
+                            ? 'fill-brand text-brand' 
+                            : 'text-gray-300 dark:text-gray-600'
+                        }`} 
+                      />
+                      <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {module.title}
+                      </span>
+                    </button>
+
+                    {/* Right: Start Here Button (visible when module is active) */}
+                    {module.id === 'module-1' && (
+                      <button className="px-6 py-2.5 bg-brand hover:bg-[#5558E3] text-white rounded-lg font-medium transition-colors flex-shrink-0 self-start md:self-center">
+                        Start Here
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Module Content */}
+                {module.isExpanded && (
+                  <div className="border-t border-gray-200 dark:border-white/10 px-6 py-6">
+                    {module.id === 'module-1' ? (
+                      <>
+                        {/* Start Lesson Button + Progress */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                          <button className="px-6 py-2.5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 text-gray-900 dark:text-white rounded-lg font-medium transition-colors flex items-center gap-2 self-start">
+                            Start Lesson
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+
+                          <div className="flex items-center gap-3">
+                            <div className="w-48 h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-brand rounded-full transition-all"
+                                style={{ width: `${module.progress}%` }}
+                              />
+                            </div>
+                            <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                              {module.progress} of {module.lessonsCount} Lessons
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Module Description */}
+                        <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-8">
+                          {module.description}
+                        </p>
+
+                        {/* Lessons Carousel */}
+                        <LearningCarousel
+                          items={module.lessons}
+                          onItemClick={handleContentClick}
+                          isLoading={loading}
+                          skeletonCount={3}
+                        />
+                      </>
+                    ) : (
+                      <p className="text-gray-400 dark:text-gray-600 text-center py-8">
+                        Module content coming soon
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Testimonials Section */}
+          {testimonials.length > 0 && currentTestimonial && (
+            <section className="mb-16">
+              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
+                Testimonials
+              </h2>
+              <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl overflow-hidden">
+                <div className="grid lg:grid-cols-2">
+                  {/* Left Content */}
+                  <div className="p-8 md:p-12 flex flex-col">
+                    <div className="flex-1">
+                      <h3 className="text-2xl md:text-3xl font-bold text-brand mb-4">
+                        {currentTestimonial.title}
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
+                        {currentTestimonial.description}
+                      </p>
+                    </div>
+
+                    {/* Bottom Controls */}
+                    <div className="flex items-center justify-between mt-8">
+                      <button className="px-6 py-2.5 bg-brand hover:bg-[#5558E3] text-white rounded-xl font-medium transition-colors">
+                        Watch Now
+                      </button>
+
+                      <div className="flex items-center gap-3">
+                        {/* Dots */}
+                        <div className="flex items-center gap-2">
+                          {testimonials.map((_, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setCurrentTestimonialIndex(index)}
+                              className={`transition-all ${
+                                index === currentTestimonialIndex
+                                  ? 'w-8 h-2 bg-brand rounded-full'
+                                  : 'w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full'
+                              }`}
+                              aria-label={`Go to testimonial ${index + 1}`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Next Button */}
+                        <button
+                          onClick={nextTestimonial}
+                          className="w-10 h-10 rounded-full bg-brand hover:bg-[#5558E3] text-white flex items-center justify-center transition-colors"
+                          aria-label="Next testimonial"
+                        >
+                          <ChevronDown className="h-5 w-5 rotate-[-90deg]" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Image/Video */}
+                  <div className="relative aspect-[4/3] lg:aspect-auto bg-gray-100 dark:bg-black">
+                    {currentTestimonial.imageUrl ? (
+                      <img
+                        src={currentTestimonial.imageUrl}
+                        alt={currentTestimonial.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-white/10" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       </main>
 

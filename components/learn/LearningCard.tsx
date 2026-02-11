@@ -65,7 +65,7 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
         {content.description}
       </p>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-1">
         <span
           className={`px-3 py-1.5 text-xs font-medium rounded-full border-2 ${getCategoryColor(
             content.category
