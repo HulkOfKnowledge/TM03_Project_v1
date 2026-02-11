@@ -69,11 +69,11 @@ export function Navigation() {
 
   // Define subnav items for each main nav
   const learnSubNav: SubNavItem[] = [
-    { label: 'Learning Space', href: '/learn-dashboard/learn' },
-    { label: 'Resources', href: '/learn-dashboard/resources' },
-    { label: 'Articles & Guides', href: '/learn-dashboard/articles' },
-    { label: 'Credit Platform Overview', href: '/learn-dashboard/overview' },
-    { label: 'Learning History', href: '/learn-dashboard/history' },
+    { label: 'Learning Space', href: '/learn-dashboard/learn/learning-space' },
+    { label: 'Resources', href: '/learn-dashboard/learn/resources' },
+    { label: 'Articles & Guides', href: '/learn-dashboard/learn/articles' },
+    { label: 'Credit Platform Overview', href: '/learn-dashboard/learn/overview' },
+    { label: 'Learning History', href: '/learn-dashboard/learn/history' },
   ];
 
   const cardSubNav: SubNavItem[] = [
@@ -91,14 +91,14 @@ export function Navigation() {
     },
     { 
       label: 'Learn', 
-      href: '/learn-dashboard/learn', 
+      href: '#', 
       icon: BookOpen,
       active: pathname === '/learn-dashboard/learn' || pathname?.startsWith('/learn-dashboard/learn'),
       subNav: learnSubNav
     },
     { 
       label: 'Cards & Accounts', 
-      href: '/card-dashboard', 
+      href: '#', 
       icon: CreditCard,
       active: pathname === '/cards' || pathname?.startsWith('/cards'),
       subNav: cardSubNav
@@ -228,7 +228,7 @@ export function Navigation() {
                   const Icon = item.icon;
                   return (
                     <Link
-                      key={item.href}
+                      key={item.label}
                       href={item.href}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         item.active
@@ -594,7 +594,7 @@ export function Navigation() {
                 const hasSubNav = item.subNav && item.subNav.length > 0;
                 
                 return (
-                  <div key={item.href} className="space-y-1">
+                  <div key={item.label} className="space-y-1">
                     <Link
                       href={item.href}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors ${
