@@ -148,7 +148,7 @@ export function Navigation() {
   };
 
   // Determine which nav item should show subnav
-  const currentSubNavItem = hoveredNavItem || activeNavItem;
+  const currentSubNavItem = hoveredNavItem;
   const currentNavItem = navItems.find(item => item.label === currentSubNavItem);
   const showSubNav = currentNavItem?.subNav && currentNavItem.subNav.length > 0;
 
@@ -557,7 +557,7 @@ export function Navigation() {
         {/* Sub Navigation Bar - Tabbed UI */}
         {showSubNav && (
           <div 
-            className="hidden lg:block border-t bg-foreground/5"
+            className="hidden lg:block border-t bg-[#f5f5f5] dark:bg-background"
             onMouseEnter={handleSubNavMouseEnter}
             onMouseLeave={handleSubNavMouseLeave}
           >
@@ -639,9 +639,9 @@ export function Navigation() {
                           <Link
                             key={subItem.href}
                             href={subItem.href}
-                            className={`block px-4 py-2 rounded-lg text-sm transition-colors ${
+                            className={`block px-4 py-2 text-sm transition-colors ${
                               isSubNavActive(subItem.href)
-                                ? 'bg-brand text-white font-medium'
+                                ? 'text-brand font-medium'
                                 : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                             }`}
                             onClick={() => {
