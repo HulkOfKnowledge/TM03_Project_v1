@@ -10,6 +10,8 @@ import { Search, Filter, ChevronDown, ChevronUp, Star, ChevronRight } from 'luci
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { LearningCarousel } from '@/components/learn/LearningCarousel';
+import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { learnService } from '@/services/learn.service';
 import type { LearningContent, Testimonial } from '@/types/learn.types';
 
@@ -57,7 +59,6 @@ export default function LearningSpacePage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -103,13 +104,30 @@ export default function LearningSpacePage() {
     console.log('Opening content:', content);
   };
 
-  const nextTestimonial = () => {
-    setCurrentTestimonialIndex((prev) => 
-      prev === testimonials.length - 1 ? 0 : prev + 1
+  const renderTestimonialsSkeleton = () => (
+      <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl overflow-hidden">
+        <div className="grid lg:grid-cols-2">
+          <div className="p-8 md:p-12 space-y-4">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-7 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <div className="flex items-center justify-between pt-6">
+              <Skeleton className="h-10 w-32 rounded-xl" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-2 w-8 rounded-full" />
+                <Skeleton className="h-2 w-2 rounded-full" />
+                <Skeleton className="h-2 w-2 rounded-full" />
+                <Skeleton className="h-8 w-8 rounded-full" />
+              </div>
+            </div>
+          </div>
+          <div className="relative aspect-[4/3] lg:aspect-auto">
+            <Skeleton className="h-full w-full" />
+          </div>
+        </div>
+      </div>
     );
-  };
-
-  const currentTestimonial = testimonials[currentTestimonialIndex];
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
@@ -154,10 +172,9 @@ export default function LearningSpacePage() {
                 className="bg-white dark:bg-black border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden"
               >
                 {/* Module Header */}
-                <div className="px-6 py-5 flex items-center justify-between">
+                <div className="px-6 py-5 flex items-center justify-between cursor-pointer" onClick={() => toggleModule(module.id)}>
                   {/* Left: Toggle + Star + Title */}
                   <button
-                    onClick={() => toggleModule(module.id)}
                     className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
                   >
                     <div className="flex items-center justify-center flex-shrink-0">
@@ -309,77 +326,9 @@ export default function LearningSpacePage() {
           </div>
 
           {/* Testimonials Section */}
-          {testimonials.length > 0 && currentTestimonial && (
-            <section className="mb-16">
-              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-                Testimonials
-              </h2>
-              <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl overflow-hidden">
-                <div className="grid lg:grid-cols-2">
-                  {/* Left Content */}
-                  <div className="p-8 md:p-12 flex flex-col">
-                    <div className="flex-1">
-                      <h3 className="text-2xl md:text-3xl font-bold text-brand mb-4">
-                        {currentTestimonial.title}
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
-                        {currentTestimonial.description}
-                      </p>
-                    </div>
-
-                    {/* Bottom Controls */}
-                    <div className="flex items-center justify-between mt-8">
-                      <button className="px-6 py-2.5 bg-brand hover:bg-[#5558E3] text-white rounded-xl font-medium transition-colors">
-                        Watch Now
-                      </button>
-
-                      <div className="flex items-center gap-3">
-                        {/* Dots */}
-                        <div className="flex items-center gap-2">
-                          {testimonials.map((_, index) => (
-                            <button
-                              key={index}
-                              onClick={() => setCurrentTestimonialIndex(index)}
-                              className={`transition-all ${
-                                index === currentTestimonialIndex
-                                  ? 'w-8 h-2 bg-brand rounded-full'
-                                  : 'w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full'
-                              }`}
-                              aria-label={`Go to testimonial ${index + 1}`}
-                            />
-                          ))}
-                        </div>
-
-                        {/* Next Button */}
-                        <button
-                          onClick={nextTestimonial}
-                          className="w-10 h-10 rounded-full bg-brand hover:bg-[#5558E3] text-white flex items-center justify-center transition-colors"
-                          aria-label="Next testimonial"
-                        >
-                          <ChevronDown className="h-5 w-5 rotate-[-90deg]" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Image/Video */}
-                  <div className="relative aspect-[4/3] lg:aspect-auto bg-gray-100 dark:bg-black">
-                    {currentTestimonial.imageUrl ? (
-                      <img
-                        src={currentTestimonial.imageUrl}
-                        alt={currentTestimonial.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-white/10" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
+          <section className="mb-16">
+            {loading ? renderTestimonialsSkeleton() : <TestimonialCarousel testimonials={testimonials} />}
+          </section>
         </div>
       </main>
 

@@ -36,7 +36,7 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
     <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl overflow-hidden">
       <div className="grid lg:grid-cols-2">
         {/* Content Side */}
-        <div className="p-8 md:p-12 flex flex-col justify-between">
+        <div className="pl-2 pr-8 flex flex-col justify-between">
           <div>
             <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
               Testimonials
