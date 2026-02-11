@@ -4,6 +4,7 @@ import './globals.css';
 import { EmailConfirmationModal } from '@/components/auth/EmailConfirmationModal';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ThemeScript } from '@/components/ThemeScript';
+import { AuthProvider } from '@/hooks/useAuth';
 
 // Clash Grotesk for headers
 const clashGrotesk = localFont({
@@ -56,8 +57,10 @@ export default function RootLayout({
       </head>
       <body className={sfPro.className}>
         <ThemeProvider defaultTheme="system">
-          {children}
-          <EmailConfirmationModal />
+          <AuthProvider>
+            {children}
+            <EmailConfirmationModal />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

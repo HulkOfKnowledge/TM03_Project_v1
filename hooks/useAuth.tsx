@@ -1,9 +1,13 @@
+"use client";
+
 /**
  * Custom Authentication Hooks
  * Centralized user and auth state management
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { fetchAuthMe } from '@/lib/api/auth-client';
 
@@ -31,33 +35,48 @@ interface UseUserReturn {
   refreshProfile: () => Promise<void>;
 }
 
-// Cache to avoid unnecessary refetches
-let cachedUser: User | null = null;
-let cachedProfile: UserProfile | null = null;
-let isInitialized = false;
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+const AuthContext = createContext<UseUserReturn | undefined>(undefined);
 
 /**
- * Hook to get current user and profile from Supabase
+ * Auth Provider
+ * Fetches user state once and shares across the app
  */
-export function useUser(): UseUserReturn {
-  const [user, setUser] = useState<User | null>(cachedUser);
-  const [profile, setProfile] = useState<UserProfile | null>(cachedProfile);
-  const [loading, setLoading] = useState(!isInitialized);
+export function AuthProvider({ children }: AuthProviderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const inFlightRequest = useRef<Promise<{ user: User | null; profile: UserProfile | null }> | null>(null);
 
   const fetchUserAndProfile = useCallback(async () => {
     try {
-      const { user: nextUser, profile: nextProfile } = await fetchAuthMe();
+      if (inFlightRequest.current) {
+        const inFlightResult = await inFlightRequest.current;
+        setUser(inFlightResult.user);
+        setProfile(inFlightResult.profile);
+        return;
+      }
 
-      cachedUser = nextUser;
-      cachedProfile = nextProfile;
+      inFlightRequest.current = (async () => {
+        const { user: nextUser, profile: nextProfile } = await fetchAuthMe();
+        return { user: nextUser, profile: nextProfile };
+      })();
+
+      const { user: nextUser, profile: nextProfile } = await inFlightRequest.current;
+      inFlightRequest.current = null;
+
       setUser(nextUser);
       setProfile(nextProfile);
-      return nextProfile;
     } catch (err) {
+      inFlightRequest.current = null;
       console.error('Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch profile');
-      return null;
     }
   }, []);
 
@@ -68,34 +87,39 @@ export function useUser(): UseUserReturn {
   }, [fetchUserAndProfile]);
 
   useEffect(() => {
-    let mounted = true;
+    void refreshProfile();
+  }, [refreshProfile]);
 
-    const initializeUser = async () => {
-      try {
-        // Only fetch if not already initialized
-        if (!isInitialized) {
-          setLoading(true);
-          await fetchUserAndProfile();
-          if (mounted) {
-            isInitialized = true;
-            setLoading(false);
-          }
-        }
-      } catch (err) {
-        if (mounted) {
-          console.error('Error initializing user:', err);
-          setError(err instanceof Error ? err.message : 'Failed to initialize user');
-          setLoading(false);
-        }
-      }
-    };
+  useEffect(() => {
+    if (loading) return;
 
-    initializeUser();
+    const isPublicRoute =
+      pathname === '/' ||
+      pathname?.startsWith('/login') ||
+      pathname?.startsWith('/signup');
 
-    return () => {
-      mounted = false;
-    };
-  }, [fetchUserAndProfile]);
+    if (!user && !isPublicRoute) {
+      router.replace('/login');
+    }
+  }, [loading, user, pathname, router]);
+
+  return (
+    <AuthContext.Provider value={{ user, profile, loading, error, refreshProfile }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+/**
+ * Hook to get current user and profile from Supabase
+ */
+export function useUser(): UseUserReturn {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useUser must be used within AuthProvider');
+  }
+
+  const { user, profile, loading, error, refreshProfile } = context;
 
   return { user, profile, loading, error, refreshProfile };
 }

@@ -18,7 +18,7 @@ import { RadioList } from '@/components/onboarding/RadioList';
 import { CheckboxList } from '@/components/onboarding/CheckboxList';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { FormSkeleton } from '@/components/ui/Skeleton';
-import { fetchAuthMe } from '@/lib/api/auth-client';
+import { useUser } from '@/hooks/useAuth';
 
 type OnboardingStage = 'personal' | 'account' | 'finish';
 type FinishSubStep = 'immigration' | 'knowledge' | 'situation';
@@ -44,10 +44,10 @@ interface AccountSetup {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { user, profile, loading, refreshProfile } = useUser();
   const [currentStage, setCurrentStage] = useState<OnboardingStage>('personal');
   const [finishSubStep, setFinishSubStep] = useState<FinishSubStep>('immigration');
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -160,27 +160,11 @@ export default function OnboardingPage() {
   };
 
   useEffect(() => {
-    // Get current user and check if onboarding is already completed
-    const getUser = async () => {
-      try {
-        setIsLoadingUserData(true);
-        const { user: serverUser, profile: serverProfile } = await fetchAuthMe();
-
-        if (serverUser) {
-          applyUserData(serverUser, serverProfile);
-          return;
-        }
-
-        router.push('/login');
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      } finally {
-        setIsLoadingUserData(false);
-      }
-    };
-
-    getUser();
-  }, [router]);
+    if (loading) return;
+    if (user) {
+      applyUserData(user, profile);
+    }
+  }, [loading, user, profile]);
 
   const validatePersonalDetails = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -355,6 +339,7 @@ export default function OnboardingPage() {
         return;
       }
 
+      await refreshProfile();
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
@@ -704,7 +689,7 @@ export default function OnboardingPage() {
       : currentStage;
 
   // Show loading state while fetching user data
-  if (isLoadingUserData) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />

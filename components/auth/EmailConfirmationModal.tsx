@@ -10,10 +10,12 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Mail, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { fetchAuthMe, resendConfirmationEmail } from '@/lib/api/auth-client';
+import { resendConfirmationEmail } from '@/lib/api/auth-client';
+import { useUser } from '@/hooks/useAuth';
 
 export function EmailConfirmationModal() {
   const pathname = usePathname();
+  const { user, refreshProfile } = useUser();
   const [show, setShow] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
@@ -23,33 +25,38 @@ export function EmailConfirmationModal() {
     // Don't check on public auth pages (login, signup, landing)
     const publicPages = ['/login', '/signup', '/'];
     if (publicPages.includes(pathname)) {
+      setShow(false);
+      return;
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    // Hide when unauthenticated or when email is confirmed
+    if (!user) {
+      setShow(false);
       return;
     }
 
-    const checkEmailConfirmation = async () => {
-      const { user } = await fetchAuthMe();
+    const emailConfirmed = user.email_confirmed_at !== null;
+    setShow(!emailConfirmed);
+    setUserEmail(user.email || '');
+  }, [user]);
 
-      if (!user) {
-        setShow(false);
-        return;
-      }
+  useEffect(() => {
+    const publicPages = ['/login', '/signup', '/'];
+    if (publicPages.includes(pathname)) return;
 
-      const emailConfirmed = user.email_confirmed_at !== null;
-      setShow(!emailConfirmed);
-      setUserEmail(user.email || '');
-    };
-
-    checkEmailConfirmation();
-
-    const onFocus = () => checkEmailConfirmation();
+    const onFocus = () => refreshProfile();
     window.addEventListener('focus', onFocus);
-    const interval = window.setInterval(checkEmailConfirmation, 30000);
+    const interval = window.setInterval(() => {
+      void refreshProfile();
+    }, 30000);
 
     return () => {
       window.removeEventListener('focus', onFocus);
       window.clearInterval(interval);
     };
-  }, [pathname]);
+  }, [pathname, refreshProfile]);
 
   const handleResendEmail = async () => {
     setIsResending(true);
