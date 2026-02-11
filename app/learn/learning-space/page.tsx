@@ -154,39 +154,37 @@ export default function LearningSpacePage() {
                 className="bg-white dark:bg-black border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden"
               >
                 {/* Module Header */}
-                <div className="px-6 py-5">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    {/* Left: Toggle + Star + Title */}
-                    <button
-                      onClick={() => toggleModule(module.id)}
-                      className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
-                    >
-                      <div className="flex items-center justify-center flex-shrink-0">
-                        {module.isExpanded ? (
-                          <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                        )}
-                      </div>
-                      <Star 
-                        className={`h-5 w-5 flex-shrink-0 ${
-                          module.id === 'module-1' 
-                            ? 'fill-brand text-brand' 
-                            : 'text-gray-300 dark:text-gray-600'
-                        }`} 
-                      />
-                      <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {module.title}
-                      </span>
-                    </button>
+                <div className="px-6 py-5 flex items-center justify-between">
+                  {/* Left: Toggle + Star + Title */}
+                  <button
+                    onClick={() => toggleModule(module.id)}
+                    className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left"
+                  >
+                    <div className="flex items-center justify-center flex-shrink-0">
+                      {module.isExpanded ? (
+                        <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                      )}
+                    </div>
+                    <Star 
+                      className={`h-5 w-5 flex-shrink-0 ${
+                        module.id === 'module-1' 
+                          ? 'fill-brand text-brand' 
+                          : 'text-gray-300 dark:text-gray-600'
+                      }`} 
+                    />
+                    <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {module.title}
+                    </span>
+                  </button>
 
-                    {/* Right: Start Here Button (visible when module is active) */}
-                    {module.id === 'module-1' && (
-                      <button className="px-6 py-2.5 bg-brand hover:bg-[#5558E3] text-white rounded-lg font-medium transition-colors flex-shrink-0 self-start md:self-center">
-                        Start Here
-                      </button>
-                    )}
-                  </div>
+                  {/* Right: Start Here Button (visible when module is active) */}
+                  {module.id === 'module-1' && (
+                    <button className="px-6 py-2.5 bg-brand hover:bg-[#5558E3] text-white rounded-lg font-medium transition-colors flex-shrink-0">
+                      Start Here
+                    </button>
+                  )}
                 </div>
 
                 {/* Module Content */}
@@ -219,13 +217,85 @@ export default function LearningSpacePage() {
                           {module.description}
                         </p>
 
-                        {/* Lessons Carousel */}
-                        <LearningCarousel
-                          items={module.lessons}
-                          onItemClick={handleContentClick}
-                          isLoading={loading}
-                          skeletonCount={3}
-                        />
+                        {/* Lessons - Mobile: Carousel, Desktop: Grid */}
+                        <div className="md:hidden">
+                          <LearningCarousel
+                            items={module.lessons}
+                            onItemClick={handleContentClick}
+                            isLoading={loading}
+                            skeletonCount={3}
+                          />
+                        </div>
+
+                        <div className="hidden md:grid md:grid-cols-3 gap-6">
+                          {loading ? (
+                            Array.from({ length: 3 }).map((_, index) => (
+                              <div key={index} className="group">
+                                <div className="relative aspect-video rounded-2xl mb-4 bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                                <div className="h-5 w-3/4 mb-2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                                <div className="h-4 w-full mb-2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                                <div className="h-4 w-2/3 mb-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                                <div className="flex items-center justify-between">
+                                  <div className="h-6 w-20 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                                  <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            module.lessons.map((lesson) => (
+                              <div
+                                key={lesson.id}
+                                className="group cursor-pointer"
+                                onClick={() => handleContentClick(lesson)}
+                              >
+                                <div className="relative aspect-video rounded-2xl overflow-hidden mb-4 bg-gray-200 dark:bg-gray-700">
+                                  {lesson.thumbnailUrl ? (
+                                    <>
+                                      <img
+                                        src={lesson.thumbnailUrl}
+                                        alt={lesson.title}
+                                        className="w-full h-full object-cover"
+                                      />
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-20 h-20 rounded-full bg-white/30 dark:bg-black/40 backdrop-blur-xl border border-white/40 dark:border-white/30 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-2xl">
+                                          <svg className="h-10 w-10 text-white/90 dark:text-white/80 fill-none stroke-[2.5] ml-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M5 3L19 12L5 21V3Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                          </svg>
+                                        </div>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <div className="w-20 h-20 rounded-full bg-white/50 dark:bg-white/20 backdrop-blur-xl border border-white/60 dark:border-white/30 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-2xl">
+                                        <svg className="h-10 w-10 text-gray-700 dark:text-white fill-none stroke-[2.5] ml-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                          <path d="M5 3L19 12L5 21V3Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-brand transition-colors">
+                                  {lesson.title}
+                                </h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                  {lesson.description}
+                                </p>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className={`px-3 py-1.5 text-xs font-medium rounded-full border-2 ${
+                                    lesson.category === 'Intermediate' ? 'border-[#EC4899] text-[#EC4899]' :
+                                    lesson.category === 'Advanced' ? 'border-purple-500 text-purple-500' :
+                                    'border-brand text-brand'
+                                  }`}>
+                                    {lesson.category}
+                                  </span>
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                                    {lesson.duration}
+                                  </span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </>
                     ) : (
                       <p className="text-gray-400 dark:text-gray-600 text-center py-8">
