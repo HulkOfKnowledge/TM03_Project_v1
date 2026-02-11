@@ -11,10 +11,11 @@ import { Footer } from '@/components/landing/Footer';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { LearningCarousel } from '@/components/learn/LearningCarousel';
 import { ChecklistItem } from '@/components/learn/ChecklistItem';
+import { ChecklistSkeleton } from '@/components/learn/ChecklistSkeleton';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
+import { TestimonialSkeleton } from '@/components/learn/TestimonialSkeleton';
 import { learnService } from '@/services/learn.service';
 import { useUser } from '@/hooks/useAuth';
-import { Skeleton } from '@/components/ui/Skeleton';
 import type {
   LearningContent,
   ChecklistItem as ChecklistItemType,
@@ -59,46 +60,6 @@ export default function LearnDashboard() {
   };
 
   const userName = profile?.first_name || user?.email?.split('@')[0] || 'there';
-
-  const renderChecklistSkeleton = () => (
-    <div className="space-y-6">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="flex items-start gap-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-2/3" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderTestimonialsSkeleton = () => (
-    <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl overflow-hidden">
-      <div className="grid lg:grid-cols-2">
-        <div className="p-8 md:p-12 space-y-4">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-7 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <div className="flex items-center justify-between pt-6">
-            <Skeleton className="h-10 w-32 rounded-xl" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-2 w-8 rounded-full" />
-              <Skeleton className="h-2 w-2 rounded-full" />
-              <Skeleton className="h-2 w-2 rounded-full" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-            </div>
-          </div>
-        </div>
-        <div className="relative aspect-[4/3] lg:aspect-auto">
-          <Skeleton className="h-full w-full" />
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
@@ -152,7 +113,7 @@ export default function LearnDashboard() {
                       </p>
 
                       {loading ? (
-                        renderChecklistSkeleton()
+                        <ChecklistSkeleton />
                       ) : (
                         <div className="space-y-6">
                           {checklistItems.map((item) => (
@@ -236,7 +197,7 @@ export default function LearnDashboard() {
 
             {/* Testimonials Section */}
             <section className="mb-16">
-              {loading ? renderTestimonialsSkeleton() : <TestimonialCarousel testimonials={testimonials} />}
+              {loading ? <TestimonialSkeleton /> : <TestimonialCarousel testimonials={testimonials} />}
             </section>
           </>
         </div>
