@@ -69,31 +69,31 @@ export function Navigation() {
 
   // Define subnav items for each main nav
   const learnSubNav: SubNavItem[] = [
-    { label: 'Learning Space', href: '/learn-dashboard/learn/learning-space' },
-    { label: 'Resources', href: '/learn-dashboard/learn/resources' },
-    { label: 'Articles & Guides', href: '/learn-dashboard/learn/articles' },
-    { label: 'Credit Platform Overview', href: '/learn-dashboard/learn/overview' },
-    { label: 'Learning History', href: '/learn-dashboard/learn/history' },
+    { label: 'Learning Space', href: '/learn/learning-space' },
+    { label: 'Resources', href: '/learn/resources' },
+    { label: 'Articles & Guides', href: '/learn/articles' },
+    { label: 'Credit Platform Overview', href: '/learn/overview' },
+    { label: 'Learning History', href: '/learn/history' },
   ];
 
   const cardSubNav: SubNavItem[] = [
-    { label: 'Card Dashboard', href: '/card-dashboard/cards' },
-    { label: 'Credit Analysis', href: '/card-dashboard/analysis' },
+    { label: 'Card Dashboard', href: '/cards' },
+    { label: 'Credit Analysis', href: '/cards/analysis' },
   ];
 
   // Navigation items - only shown after onboarding
   const navItems: NavItem[] = [
     { 
       label: 'Home', 
-      href: '/learn-dashboard', 
+      href: '/learn', 
       icon: Home,
-      active: pathname === '/learn-dashboard'
+      active: pathname === '/learn'
     },
     { 
       label: 'Learn', 
       href: '#', 
       icon: BookOpen,
-      active: pathname === '/learn-dashboard/learn' || pathname?.startsWith('/learn-dashboard/learn'),
+      active: pathname?.startsWith('/learn/'),
       subNav: learnSubNav
     },
     { 
@@ -207,7 +207,7 @@ export function Navigation() {
         <div className="container mx-auto px-4 md:px-6">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link href={showNavItems ? '/learn-dashboard' : '/'} className="flex items-center">
+            <Link href={showNavItems ? '/learn' : '/'} className="flex items-center">
               <Image
                 src={isDark ? '/Logo.svg' : '/Logo-dark.svg'}
                 alt="Creduman Logo"
@@ -409,7 +409,7 @@ export function Navigation() {
                       {/* Switch Dashboard */}
                       <DropdownMenuItem
                         onClick={() => {
-                          const targetDashboard = pathname?.includes('learn') ? '/card-dashboard' : '/learn-dashboard';
+                          const targetDashboard = pathname?.includes('learn') ? '/cards' : '/learn';
                           router.push(targetDashboard);
                           setShowUserMenu(false);
                         }}

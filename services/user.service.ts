@@ -135,7 +135,7 @@ export class UserService {
    */
   async getDashboardRoute(userId: string): Promise<string> {
     // TODO: Implementation needed
-    // Should return '/learn-dashboard' or '/card-dashboard'
+    // Should return '/learn' or '/cards'
     throw new Error('Not implemented');
   }
 

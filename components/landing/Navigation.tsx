@@ -127,7 +127,7 @@ export function Navigation() {
                 <DropdownMenuSection>
                   <DropdownMenuItem
                     onClick={() => {
-                      router.push('/learn-dashboard');
+                      router.push('/learn');
                       setShowUserMenu(false);
                     }}
                     icon={<LayoutDashboard className="h-4 w-4" />}
@@ -224,7 +224,7 @@ export function Navigation() {
             {user ? (
               <>
                 <Link
-                  href="/learn-dashboard"
+                  href="/learn"
                   className="flex items-center gap-2 text-base font-medium text-muted-foreground hover:text-foreground py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >

@@ -49,7 +49,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protected routes - require authentication (but NOT email confirmation)
-  const protectedRoutes = ['/learn-dashboard', '/card-dashboard', '/onboarding'];
+  const protectedRoutes = ['/learn', '/cards', '/onboarding'];
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
@@ -62,8 +62,8 @@ export async function updateSession(request: NextRequest) {
 
   // Check onboarding status for protected routes
   if (user && (request.nextUrl.pathname.startsWith('/onboarding') || 
-               request.nextUrl.pathname.startsWith('/learn-dashboard') ||
-               request.nextUrl.pathname.startsWith('/card-dashboard'))) {
+               request.nextUrl.pathname.startsWith('/learn') ||
+               request.nextUrl.pathname.startsWith('/cards'))) {
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('onboarding_completed, preferred_dashboard')
@@ -72,15 +72,15 @@ export async function updateSession(request: NextRequest) {
 
     // If accessing onboarding when already completed, redirect to dashboard
     if (request.nextUrl.pathname.startsWith('/onboarding') && profile?.onboarding_completed) {
-      const destination = profile?.preferred_dashboard === 'card' 
-        ? '/card-dashboard' 
-        : '/learn-dashboard';
+      const destination = profile?.preferred_dashboard === 'card'
+        ? '/cards' 
+        : '/learn';
       return NextResponse.redirect(new URL(destination, request.url));
     }
 
     // If accessing dashboards without completing onboarding, redirect to onboarding
-    if ((request.nextUrl.pathname.startsWith('/learn-dashboard') || 
-         request.nextUrl.pathname.startsWith('/card-dashboard')) && 
+    if ((request.nextUrl.pathname.startsWith('/learn') || 
+         request.nextUrl.pathname.startsWith('/cards')) && 
         !profile?.onboarding_completed) {
       return NextResponse.redirect(new URL('/onboarding', request.url));
     }

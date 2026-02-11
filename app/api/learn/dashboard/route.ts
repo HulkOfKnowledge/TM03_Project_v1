@@ -372,7 +372,7 @@ export async function GET() {
       description: 'Allow Creduman to monitor your credit limit and advise accordingly',
       icon: 'card',
       completed: false,
-      actionUrl: '/card-dashboard',
+      actionUrl: '/cards',
       order: 2,
     },
     {

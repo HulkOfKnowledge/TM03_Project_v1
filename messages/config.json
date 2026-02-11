@@ -6,7 +6,7 @@
     "/login": ["auth"],
     "/signup": ["auth"],
     "/onboarding": ["onboarding"],
-    "/learn-dashboard": ["learning"],
-    "/card-dashboard": ["cards"]
+    "/learn": ["learning"],
+    "/cards": ["cards"]
   }
 }

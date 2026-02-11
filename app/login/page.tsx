@@ -81,12 +81,12 @@ function LoginForm() {
       const profile = result?.data?.profile;
 
       // Determine redirect destination
-      let destination = '/learn-dashboard';
+      let destination = '/learn';
       
       if (!profile?.onboarding_completed) {
         destination = '/onboarding';
       } else if (profile?.preferred_dashboard === 'card') {
-        destination = '/card-dashboard';
+        destination = '/cards';
       }
 
       setRedirectTo(destination);
