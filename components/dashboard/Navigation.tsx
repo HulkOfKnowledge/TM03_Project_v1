@@ -21,6 +21,7 @@ import {
   HelpCircle,
   Menu,
   X,
+  ChevronDown,
 } from 'lucide-react';
 import { handleLogout } from '@/lib/auth';
 import { useIsDarkMode } from '@/hooks/useTheme';
@@ -57,6 +58,7 @@ export function Navigation() {
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
   const [activeNavItem, setActiveNavItem] = useState<string | null>(null);
   const [hoveredNavItem, setHoveredNavItem] = useState<string | null>(null);
+  const [expandedMobileMenu, setExpandedMobileMenu] = useState<string | null>(null);
   const isDark = useIsDarkMode();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const navRef = useRef<HTMLDivElement>(null);
@@ -592,24 +594,46 @@ export function Navigation() {
               {showNavItems && navItems.map((item) => {
                 const Icon = item.icon;
                 const hasSubNav = item.subNav && item.subNav.length > 0;
+                const isExpanded = expandedMobileMenu === item.label;
                 
                 return (
                   <div key={item.label} className="space-y-1">
-                    <Link
-                      href={item.href}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors ${
-                        item.active
-                          ? 'bg-brand text-white'
-                          : 'text-foreground hover:bg-accent'
-                      }`}
-                      onClick={() => !hasSubNav && setMobileMenuOpen(false)}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </Link>
+                    {hasSubNav ? (
+                      <button
+                        onClick={() => setExpandedMobileMenu(isExpanded ? null : item.label)}
+                        className={`flex items-center justify-between w-full gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors ${
+                          item.active
+                            ? 'bg-brand text-white'
+                            : 'text-foreground hover:bg-accent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="h-5 w-5" />
+                          <span>{item.label}</span>
+                        </div>
+                        <ChevronDown 
+                          className={`h-5 w-5 transition-transform duration-200 ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors ${
+                          item.active
+                            ? 'bg-brand text-white'
+                            : 'text-foreground hover:bg-accent'
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </Link>
+                    )}
                     
                     {/* Mobile SubNav */}
-                    {hasSubNav && item.active && (
+                    {hasSubNav && isExpanded && (
                       <div className="ml-4 pl-4 border-l-2 border-border space-y-1">
                         {item?.subNav?.map((subItem) => (
                           <Link
@@ -620,7 +644,10 @@ export function Navigation() {
                                 ? 'bg-brand text-white font-medium'
                                 : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                             }`}
-                            onClick={() => setMobileMenuOpen(false)}
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setExpandedMobileMenu(null);
+                            }}
                           >
                             {subItem.label}
                           </Link>
