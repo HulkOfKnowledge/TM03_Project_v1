@@ -27,7 +27,7 @@ export default function HomePage() {
       <Navigation />
 
       {/* Hero Section */}
-      <Section className="pt-24 pb-12 sm:pt-32 sm:pb-16 md:pt-40 md:pb-24">
+      <Section className="pt-24 pb-12 sm:pt-32 sm:pb-16 md:pt-28 lg:pt-40 md:pb-24">
         <div className="flex flex-col items-center text-center">
           <div className="mb-4 inline-flex items-center rounded-full border px-3 py-1.5 text-xs sm:text-sm">
             <Sparkles className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-brand" />

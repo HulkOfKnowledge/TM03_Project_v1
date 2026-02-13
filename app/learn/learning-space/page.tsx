@@ -110,7 +110,7 @@ export default function LearningSpacePage() {
       <Navigation />
 
       {/* Main Content */}
-      <main className="pt-28 pb-16">
+      <main className="pt-28 lg:pt-40 pb-16">
         <div className="container mx-auto px-4 md:px-6">
           {/* Header */}
           <div className="mb-8">

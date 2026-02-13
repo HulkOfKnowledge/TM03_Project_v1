@@ -71,7 +71,7 @@ export default function LearnDashboard() {
       <Navigation />
 
       {/* Main Content */}
-      <main className="pt-28 pb-16">
+      <main className="pt-28 lg:pt-40 pb-16">
         <div className="container mx-auto px-4 md:px-6">
           {/* Welcome Section */}
           <div className="mb-12">
