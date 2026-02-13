@@ -5,6 +5,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CreditCard, X } from 'lucide-react';
 import { Footer } from '@/components/landing/Footer';
@@ -16,6 +17,7 @@ import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { TestimonialSkeleton } from '@/components/learn/TestimonialSkeleton';
 import { learnService } from '@/services/learn.service';
 import { useUser } from '@/hooks/useAuth';
+import { createContentNavigationHandler } from '@/lib/learn-navigation';
 import type {
   LearningContent,
   ChecklistItem as ChecklistItemType,
@@ -24,6 +26,7 @@ import type {
 
 // ==================== Main Page Component ====================
 export default function LearnDashboard() {
+  const router = useRouter();
   const { user, profile } = useUser();
   const [checklistOpen, setChecklistOpen] = useState(true);
   const [learningPath, setLearningPath] = useState<LearningContent[]>([]);
@@ -51,13 +54,15 @@ export default function LearnDashboard() {
     }
   };
 
-  const handleContentClick = async (content: LearningContent) => {
-    // TODO: Navigate to content detail page or open modal
-    console.log('Opening content:', content);
-    if (user?.id) {
-      await learnService.markContentCompleted(user.id, content.id);
+  const handleContentClick = createContentNavigationHandler(
+    router,
+    async (content) => {
+      // Mark content as accessed if user is logged in
+      if (user?.id) {
+        await learnService.markContentCompleted(user.id, content.id);
+      }
     }
-  };
+  );
 
   const userName = profile?.first_name || user?.email?.split('@')[0] || 'there';
 

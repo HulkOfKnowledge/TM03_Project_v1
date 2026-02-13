@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, Filter, ChevronDown, ChevronUp, Star, ChevronRight } from 'lucide-react';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
@@ -13,6 +14,7 @@ import { LearningCarousel } from '@/components/learn/LearningCarousel';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { TestimonialSkeleton } from '@/components/learn/TestimonialSkeleton';
 import { learnService } from '@/services/learn.service';
+import { createContentNavigationHandler } from '@/lib/learn-navigation';
 import type { LearningContent, Testimonial } from '@/types/learn.types';
 
 // Module data structure
@@ -27,6 +29,7 @@ interface LearningModule {
 }
 
 export default function LearningSpacePage() {
+  const router = useRouter();
   const [modules, setModules] = useState<LearningModule[]>([
     {
       id: 'module-1',
@@ -100,9 +103,7 @@ export default function LearningSpacePage() {
     );
   };
 
-  const handleContentClick = async (content: LearningContent) => {
-    console.log('Opening content:', content);
-  };
+  const handleContentClick = createContentNavigationHandler(router);
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
