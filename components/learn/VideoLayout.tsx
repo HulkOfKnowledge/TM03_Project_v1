@@ -48,7 +48,7 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
   // Sample lesson data - replace with actual data from your backend
   const lessonData = {
     number: `Lesson ${id}`,
-    title: 'Understanding Credit Reports: Equifax vs TransUnion',
+    title: _topic,
     description: `Lesson one introduces users to the Canadian credit system in the simplest, calmest way possible. They learn what credit is, why it matters, and how their credit card affects everything. The content focuses on clarity: no stress, no deep theory, just the basics that every newcomer needs to stop feeling lost.
 
 They'll understand how limits, balances, and credit utilization work, why 30% usage matters, and what a "danger zone" really means. You also teach them how Creduman will protect them by tracking their card, warning them before they get into trouble, and showing them the safe way to use their credit card from day one.

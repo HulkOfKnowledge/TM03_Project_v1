@@ -105,8 +105,8 @@ export async function updateSession(request: NextRequest) {
     }
 
     const destination = profile?.preferred_dashboard === 'card' 
-      ? '/card-dashboard' 
-      : '/learn-dashboard';
+      ? '/cards' 
+      : '/learn';
     return NextResponse.redirect(new URL(destination, request.url));
   }
 

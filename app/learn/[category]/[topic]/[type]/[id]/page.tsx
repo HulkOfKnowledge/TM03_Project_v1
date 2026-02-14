@@ -55,12 +55,12 @@ export default function LearnContentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
+    <div className="bg-white dark:bg-black">
       <Navigation />
 
       {/* Main Content */}
       <main className="pt-28 lg:pt-40 pb-16">
-        <div className="container mx-auto px-4 md:px-6">
+        <div className="container mx-auto px-1">
           {renderContent()}
         </div>
       </main>
