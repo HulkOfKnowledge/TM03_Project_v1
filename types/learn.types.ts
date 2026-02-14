@@ -48,3 +48,19 @@ export interface UserProgress {
   }[];
   lastAccessedAt: string;
 }
+
+export interface VideoChapter {
+  id: string;
+  number: string;
+  title: string;
+  duration: string;
+  timestamp: number;
+}
+
+export interface RelatedLesson {
+  id: string;
+  title: string;
+  duration: string;
+  category: string;
+  thumbnailUrl?: string;
+}

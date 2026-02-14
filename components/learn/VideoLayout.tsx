@@ -5,18 +5,26 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Play } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
+import { VideoChapterItem } from '@/components/learn/VideoChapterItem';
+import { RelatedLessonsSection } from '@/components/learn/RelatedLessonsSection';
+import {
+  getSampleLessonData,
+  sampleVideoChapters,
+  sampleRelatedLessons,
+  sampleQuizQuestions,
+} from './videoLayoutConstants';
 import { VideoPreviewSkeleton } from '@/components/learn/VideoPreviewSkeleton';
 import { QuizContent } from '@/components/learn/QuizContent';
 import { LessonPreviewCard } from '@/components/learn/LessonPreviewCard';
 import { InfoListItem } from '@/components/learn/InfoListItem';
 import { learnService } from '@/services/learn.service';
-import { Testimonial } from '@/types/learn.types';
+import type { Testimonial } from '@/types/learn.types';
 
 interface VideoLayoutProps {
   id: string;
@@ -29,7 +37,17 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
   const [showVideo, setShowVideo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [quizActive, setQuizActive] = useState(false); // Track if quiz is in progress
+  const [quizActive, setQuizActive] = useState(false);
+  const [videoTab, setVideoTab] = useState('overview');
+  
+  // Video player state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [showControls, setShowControls] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     loadLessonData();
@@ -38,7 +56,6 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
   const loadLessonData = async () => {
     try {
       setLoading(true);
-      // Load testimonials from API
       const data = await learnService.getDashboardData();
       setTestimonials(data.testimonials || []);
     } catch (error) {
@@ -48,120 +65,293 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
     }
   };
 
-  // Sample lesson data - replace with actual data from your backend
-  const lessonData = {
-    number: `Lesson ${id}`,
-    title: _topic,
-    description: `Lesson one introduces users to the Canadian credit system in the simplest, calmest way possible. They learn what credit is, why it matters, and how their credit card affects everything. The content focuses on clarity: no stress, no deep theory, just the basics that every newcomer needs to stop feeling lost.
-
-They'll understand how limits, balances, and credit utilization work, why 30% usage matters, and what a "danger zone" really means. You also teach them how Creduman will protect them by tracking their card, warning them before they get into trouble, and showing them the safe way to use their credit card from day one.
-
-By the end of week one, they walk away with a strong, simple foundation: what credit is, how their card impacts their future, and how Creduman keeps them safe so they can build credit confidently.`,
-    thumbnailUrl: '/lesson-thumbnail.jpg', // Replace with actual image
-    videoUrl: '/videos/lesson-1.mp4', // Replace with actual video URL
-    duration: '12:45',
-    learningPoints: [
-      {
-        text: 'A simple explanation of how the system works and why newcomers start with no credit file.',
-      },
-      {
-        text: 'How limits, balances, and spending behavior shape your credit growth.',
-      },
-      {
-        text: 'What a credit limit actually is, how to check it, and how it affects your risk level.',
-      },
-      {
-        text: 'Why staying under 30% is the safest way to grow your credit score.',
-      },
-      {
-        text: 'What triggers red flags: high usage, near-limit spending, missed payments.',
-      },
-      {
-        text: 'How the app tracks your card, warns you early, and keeps you from making costly mistakes.',
-      },
-    ],
+  // Video player controls
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
   };
 
-  // Sample quiz questions - replace with actual questions from your backend
-  const quizQuestions = [
-    {
-      id: 'q1',
-      question: 'What is the recommended credit utilization ratio to maintain a healthy credit score?',
-      options: [
-        'Under 10%',
-        'Under 30%',
-        'Under 50%',
-        'Under 70%',
-      ],
-      correctAnswer: 1,
-      explanation: 'Keeping your credit utilization under 30% is recommended as it shows lenders you can manage credit responsibly without maxing out your cards.',
-    },
-    {
-      id: 'q2',
-      question: 'Why do newcomers to Canada start with no credit file?',
-      options: [
-        'They have bad credit from their home country',
-        'Canadian credit bureaus don\'t track international credit history',
-        'They need to apply for citizenship first',
-        'It\'s a requirement by law',
-      ],
-      correctAnswer: 1,
-      explanation: 'Canadian credit bureaus (Equifax and TransUnion) only track credit activity within Canada, so newcomers start fresh regardless of their credit history in other countries.',
-    },
-    {
-      id: 'q3',
-      question: 'What is a credit limit?',
-      options: [
-        'The minimum amount you must spend each month',
-        'The maximum amount you can borrow on your credit card',
-        'The total amount of debt you owe',
-        'The fee charged for using your credit card',
-      ],
-      correctAnswer: 1,
-      explanation: 'A credit limit is the maximum amount of money a lender allows you to borrow on your credit card. It\'s important to stay well below this limit to maintain good credit health.',
-    },
-    {
-      id: 'q4',
-      question: 'Which of the following triggers red flags with credit bureaus?',
-      options: [
-        'Paying your balance in full each month',
-        'Keeping utilization under 30%',
-        'Near-limit spending and high utilization',
-        'Having multiple credit cards',
-      ],
-      correctAnswer: 2,
-      explanation: 'High credit utilization, especially near your credit limit, signals financial stress to lenders and can negatively impact your credit score. Missed payments also trigger major red flags.',
-    },
-    {
-      id: 'q5',
-      question: 'How does Creduman help protect your credit score?',
-      options: [
-        'By automatically paying your bills',
-        'By tracking your card and warning you before you get into trouble',
-        'By increasing your credit limit',
-        'By removing negative marks from your credit report',
-      ],
-      correctAnswer: 1,
-      explanation: 'Creduman monitors your credit card usage in real-time and sends alerts when you\'re approaching dangerous utilization levels or patterns that could harm your credit score, helping you make better decisions.',
-    },
-  ];
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
 
-  // Show loading skeleton while data is loading
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value);
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (videoRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        videoRef.current.requestFullscreen();
+      }
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleMouseMove = () => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (isPlaying) {
+        setShowControls(false);
+      }
+    }, 3000);
+  };
+
+  const seekToChapter = (timestamp: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = timestamp;
+      setCurrentTime(timestamp);
+      if (!isPlaying) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  // Load sample data (TODO: Replace with actual API calls)
+  const lessonData = getSampleLessonData(id, _topic);
+  const videoChapters = sampleVideoChapters;
+  const relatedLessons = sampleRelatedLessons;
+  const quizQuestions = sampleQuizQuestions;
+  const lessonCategories = ['First 3 months', 'Next: 4 - 6 Months'];
+
   if (loading) {
     return <VideoPreviewSkeleton />;
   }
 
+  // Video Viewing Screen
   if (showVideo) {
-    // Video player screen will be implemented next
     return (
-      <div className="min-h-screen bg-background">
-        <div className="mx-auto px-4 pt-8 md:px-6">
-          <div className="space-y-6">
-            <p className="text-foreground">Video Player Screen - Coming Next</p>
-            <Button onClick={() => setShowVideo(false)} variant="default">
-              Back to Preview
-            </Button>
+      <div className="min-h-screen">
+        <div className="mx-auto px-4 pt-6 md:px-6 md:pt-8">
+          {/* Header with Back Button and Title */}
+          <div className="mb-6 flex items-center gap-4">
+            <button
+              onClick={() => setShowVideo(false)}
+              className="group inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-foreground transition-colors hover:bg-accent"
+              aria-label="Back to lesson overview"
+            >
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 md:h-5 md:w-5" />
+            </button>
+            <h1 className="text-xl font-bold text-foreground md:text-2xl">
+              {lessonData.title}
+            </h1>
           </div>
+
+          {/* Main Layout: Video + Sidebar */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]">
+            {/* Left Column: Video and Tabs */}
+            <div className="min-w-0">
+              {/* Video Player */}
+              <div
+                className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gray-200 shadow-lg"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => isPlaying && setShowControls(false)}
+              >
+                {/* Placeholder for video - replace with actual video element */}
+                <div className="flex h-full w-full items-center justify-center bg-gray-300">
+                  <button
+                    onClick={togglePlay}
+                    className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg transition-transform hover:scale-110"
+                  >
+                    <Play className="h-8 w-8 fill-current text-brand" />
+                  </button>
+                </div>
+
+                {/* Video Controls Overlay */}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 ${
+                    showControls ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  {/* Bottom Controls */}
+                  <div className="absolute bottom-0 left-0 right-0 space-y-2 p-4">
+                    {/* Progress Bar */}
+                    <input
+                      type="range"
+                      min="0"
+                      max={duration || 0}
+                      value={currentTime}
+                      onChange={handleSeek}
+                      className="h-1 w-full cursor-pointer appearance-none rounded-full bg-white/30 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                    />
+
+                    {/* Control Buttons */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={togglePlay}
+                          className="text-white"
+                          aria-label={isPlaying ? 'Pause' : 'Play'}
+                        >
+                          {isPlaying ? (
+                            <Pause className="h-6 w-6" />
+                          ) : (
+                            <Play className="h-6 w-6" />
+                          )}
+                        </button>
+                        <button
+                          onClick={toggleMute}
+                          className="text-white"
+                          aria-label={isMuted ? 'Unmute' : 'Mute'}
+                        >
+                          {isMuted ? (
+                            <VolumeX className="h-6 w-6" />
+                          ) : (
+                            <Volume2 className="h-6 w-6" />
+                          )}
+                        </button>
+                        <div className="text-sm font-medium text-white">
+                          {formatTime(currentTime)} / {formatTime(duration)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button className="text-white" aria-label="Settings">
+                          <Settings className="h-6 w-6" />
+                        </button>
+                        <button
+                          onClick={toggleFullscreen}
+                          className="text-white"
+                          aria-label="Fullscreen"
+                        >
+                          <Maximize className="h-6 w-6" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs below video */}
+              <div className="mt-6">
+                <Tabs value={videoTab} onValueChange={setVideoTab}>
+                  <TabsList className="w-full justify-start">
+                    <TabsTrigger value="overview">Lesson Overview</TabsTrigger>
+                    <TabsTrigger value="transcript">Transcript</TabsTrigger>
+                    <TabsTrigger value="resources">Resources</TabsTrigger>
+                  </TabsList>
+
+                  {/* Lesson Overview Tab */}
+                  <TabsContent value="overview" className="mt-6">
+                    {/* Video Chapters */}
+                    <div className="space-y-2 rounded-xl border border-border p-4">
+                      {videoChapters.map((chapter) => (
+                        <VideoChapterItem
+                          key={chapter.id}
+                          number={chapter.number}
+                          title={chapter.title}
+                          duration={chapter.duration}
+                          timestamp={chapter.timestamp}
+                          onSeek={seekToChapter}
+                        />
+                      ))}
+                    </div>
+
+                    {/* About This Lesson */}
+                    <div className="mt-8">
+                      <h2 className="mb-4 text-xl font-bold text-foreground">
+                        About This Lesson
+                      </h2>
+                      <p className="text-sm leading-relaxed text-foreground/70 md:text-base">
+                        {lessonData.description}
+                      </p>
+                    </div>
+
+                    {/* What You'll Learn */}
+                    <div className="mt-8">
+                      <h3 className="mb-4 text-xl font-bold text-foreground">
+                        What you'll learn
+                      </h3>
+                      <div className="space-y-3">
+                        {lessonData.learningPoints.map((point, index) => (
+                          <InfoListItem
+                            key={index}
+                            text={point.text}
+                            variant="check"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Transcript Tab */}
+                  <TabsContent value="transcript" className="mt-6">
+                    <div className="rounded-xl border border-border p-6">
+                      <p className="text-sm text-foreground/60">
+                        Transcript content will be displayed here...
+                      </p>
+                    </div>
+                  </TabsContent>
+
+                  {/* Resources Tab */}
+                  <TabsContent value="resources" className="mt-6">
+                    <div className="rounded-xl border border-border p-6">
+                      <p className="text-sm text-foreground/60">
+                        Additional resources and downloads will be displayed here...
+                      </p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              {/* Mobile Related Lessons - Shows below tabs on mobile only */}
+              <div className="mt-8 lg:hidden">
+                <h3 className="mb-4 text-base font-semibold text-foreground">
+                  Related Lessons
+                </h3>
+                <RelatedLessonsSection
+                  lessons={relatedLessons}
+                  categories={lessonCategories}
+                />
+              </div>
+            </div>
+
+            {/* Right Sidebar: Related Lessons - Hidden on mobile, visible on lg+ */}
+            <div className="hidden min-w-0 lg:block">
+              <div className="sticky top-6 max-h-[calc(100vh-8rem)] overflow-hidden">
+                {/* Fixed Header */}
+                <h3 className="mb-4 text-base font-semibold text-foreground">
+                  Lessons
+                </h3>
+
+                {/* Scrollable Content */}
+                <div className="overflow-y-auto pr-2" style={{ maxHeight: 'calc(100vh - 12rem)' }}>
+                  <RelatedLessonsSection
+                    lessons={relatedLessons}
+                    categories={lessonCategories}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Testimonials Section */}
+          <section className="mb-12 mt-16 md:mb-16 md:mt-24">
+            <TestimonialCarousel testimonials={testimonials} />
+          </section>
         </div>
       </div>
     );
