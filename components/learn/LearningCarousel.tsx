@@ -46,10 +46,7 @@ export function LearningCarousel({
     return pages;
   }, [items, itemsPerPage]);
 
-  const loopItems = useMemo(() => {
-    if (!items.length) return [] as LearningContent[];
-    return [...items, ...items, ...items];
-  }, [items]);
+
 
   useEffect(() => {
     if (currentPage >= totalPages) {
@@ -58,13 +55,24 @@ export function LearningCarousel({
   }, [currentPage, totalPages]);
 
   const nextPage = () => {
-    if (!items.length) return;
-    setCurrentPage((prev) => (prev + slideBy) % totalPages);
+    if (!items.length || currentPage >= totalPages - 1) return;
+    setCurrentPage((prev) => prev + slideBy);
   };
 
   const prevPage = () => {
-    if (!items.length) return;
-    setCurrentPage((prev) => (prev - slideBy + totalPages) % totalPages);
+    if (!items.length || currentPage <= 0) return;
+    setCurrentPage((prev) => prev - slideBy);
+  };
+
+  const canScrollLeft = () => {
+    if (!scrollRef.current) return false;
+    return scrollRef.current.scrollLeft > 0;
+  };
+
+  const canScrollRight = () => {
+    if (!scrollRef.current) return false;
+    const maxScroll = scrollRef.current.scrollWidth - scrollRef.current.clientWidth;
+    return scrollRef.current.scrollLeft < maxScroll - 10;
   };
 
   const scrollMobile = (direction: 'left' | 'right') => {
@@ -81,22 +89,20 @@ export function LearningCarousel({
     }
   };
 
-  useEffect(() => {
-    if (!scrollRef.current || !items.length) return;
-    scrollRef.current.scrollLeft = items.length * ITEM_WIDTH;
-  }, [items.length]);
+  const [mobileScrollState, setMobileScrollState] = useState({ canScrollLeft: false, canScrollRight: true });
 
-  const handleMobileScroll = () => {
-    if (!scrollRef.current || !items.length) return;
-    const totalWidth = items.length * ITEM_WIDTH;
-    const current = scrollRef.current.scrollLeft;
-
-    if (current < totalWidth * 0.5) {
-      scrollRef.current.scrollLeft = current + totalWidth;
-    } else if (current > totalWidth * 1.5) {
-      scrollRef.current.scrollLeft = current - totalWidth;
-    }
+  const updateMobileScrollState = () => {
+    if (!scrollRef.current) return;
+    const maxScroll = scrollRef.current.scrollWidth - scrollRef.current.clientWidth;
+    setMobileScrollState({
+      canScrollLeft: scrollRef.current.scrollLeft > 0,
+      canScrollRight: scrollRef.current.scrollLeft < maxScroll - 10
+    });
   };
+
+  useEffect(() => {
+    updateMobileScrollState();
+  }, [items]);
 
   if (isLoading) {
     return (
@@ -130,12 +136,12 @@ export function LearningCarousel({
       <div className="md:hidden">
         <div
           ref={scrollRef}
-          onScroll={handleMobileScroll}
+          onScroll={updateMobileScrollState}
           className="overflow-x-auto -mx-4 px-4 mb-8 scrollbar-hide scroll-smooth snap-x snap-mandatory"
         >
           <div className="flex gap-4 pb-2">
-            {loopItems.map((content, index) => (
-              <div key={`${content.id}-${index}`} className="flex-shrink-0 w-[280px] snap-start">
+            {items.map((content) => (
+              <div key={content.id} className="flex-shrink-0 w-[280px] snap-start">
                 <LearningCard
                   content={content}
                   onClick={() => onItemClick?.(content)}
@@ -150,14 +156,16 @@ export function LearningCarousel({
           <div className="flex items-center justify-end gap-4">
             <button
               onClick={() => scrollMobile('left')}
-              className="h-12 w-12 rounded-full bg-brand text-white hover:bg-[#5558E3] transition-colors flex items-center justify-center"
+              disabled={!mobileScrollState.canScrollLeft}
+              className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-brand transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-300 dark:disabled:hover:bg-gray-800"
               aria-label="Previous"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               onClick={() => scrollMobile('right')}
-              className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
+              disabled={!mobileScrollState.canScrollRight}
+              className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-brand dark:hover:bg-brand transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-300 dark:disabled:hover:bg-gray-800"
               aria-label="Next"
             >
               <ChevronRight className="h-5 w-5" />
@@ -195,14 +203,16 @@ export function LearningCarousel({
           <div className="flex items-center justify-end gap-4">
             <button
               onClick={prevPage}
-              className="h-14 w-14 rounded-full bg-brand text-white hover:bg-[#5558E3] transition-colors flex items-center justify-center"
+              disabled={currentPage <= 0}
+              className="h-14 w-14 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-brand dark:hover:bg-brand transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-300 dark:disabled:hover:bg-gray-800"
               aria-label="Previous"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
             <button
               onClick={nextPage}
-              className="h-14 w-14 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
+              disabled={currentPage >= totalPages - 1}
+              className="h-14 w-14 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-brand dark:hover:bg-brand transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-300 dark:disabled:hover:bg-gray-800"
               aria-label="Next"
             >
               <ChevronRight className="h-6 w-6" />
