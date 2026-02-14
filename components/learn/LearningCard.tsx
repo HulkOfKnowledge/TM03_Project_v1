@@ -33,7 +33,7 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
   };
 
   return (
-    <div className="group cursor-pointer bg-background border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden hover:border-gray-300 dark:hover:border-gray-700 transition-colors" onClick={onClick}>
+    <div className="group flex h-full min-h-[200px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-200 bg-background transition-colors hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-700" onClick={onClick}>
       <div
         className={`relative aspect-video ${getThumbnailBg()}`}
       >
@@ -42,13 +42,13 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
             <img
               src={content.thumbnailUrl}
               alt={content.title}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
             />
             {/* Play button overlay for videos only */}
             {content.type === 'video' && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-20 rounded-full bg-white/30 dark:bg-black/40 backdrop-blur-xl border border-white/40 dark:border-white/30 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-2xl">
-                  <Play className="h-10 w-10 text-white/90 dark:text-white/80 fill-none stroke-[2.5] ml-1" />
+                <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/40 bg-white/30 shadow-2xl backdrop-blur-xl transition-all duration-300 group-hover:scale-110 dark:border-white/30 dark:bg-black/40">
+                  <Play className="ml-1 h-10 w-10 fill-none stroke-[2.5] text-white/90 dark:text-white/80" />
                 </div>
               </div>
             )}
@@ -56,23 +56,23 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
         ) : (
           content.type === 'video' && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-20 h-20 rounded-full bg-white/50 dark:bg-white/20 backdrop-blur-xl border border-white/60 dark:border-white/30 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-2xl">
-                <Play className="h-10 w-10 text-gray-700 dark:text-white fill-none stroke-[2.5] ml-1" />
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/60 bg-white/50 shadow-2xl backdrop-blur-xl transition-all duration-300 group-hover:scale-110 dark:border-white/30 dark:bg-white/20">
+                <Play className="ml-1 h-10 w-10 fill-none stroke-[2.5] text-gray-700 dark:text-white" />
               </div>
             </div>
           )
         )}
       </div>
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-brand transition-colors">
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="mb-1 text-lg font-semibold text-gray-900 transition-colors group-hover:text-brand dark:text-white">
           {content.title}
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+        <p className="mb-3 line-clamp-2 flex-1 text-sm text-gray-600 dark:text-gray-400">
           {content.description}
         </p>
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between">
           <span
-            className={`px-3 py-1 text-xs font-medium rounded-full border-2 ${getCategoryColor(
+            className={`rounded-full border-2 px-3 py-1 text-xs font-medium ${getCategoryColor(
               content.category
             )}`}
           >
@@ -89,14 +89,16 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
 
 export function LearningCardSkeleton() {
   return (
-    <div className="group">
-      <Skeleton className="relative aspect-video rounded-2xl mb-4" />
-      <Skeleton className="h-5 w-3/4 mb-2" />
-      <Skeleton className="h-4 w-full mb-2" />
-      <Skeleton className="h-4 w-2/3 mb-4" />
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-6 w-20 rounded-full" />
-        <Skeleton className="h-4 w-16" />
+    <div className="group flex h-full min-h-[360px] flex-col overflow-hidden rounded-2xl border border-transparent">
+      <Skeleton className="relative aspect-video rounded-t-2xl mb-0" />
+      <div className="flex flex-1 flex-col p-4">
+        <Skeleton className="h-5 w-3/4 mb-2" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-2/3 mb-3 flex-1" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-6 w-20 rounded-full" />
+          <Skeleton className="h-4 w-16" />
+        </div>
       </div>
     </div>
   );

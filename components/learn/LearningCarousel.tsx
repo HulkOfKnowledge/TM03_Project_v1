@@ -64,17 +64,6 @@ export function LearningCarousel({
     setCurrentPage((prev) => prev - slideBy);
   };
 
-  const canScrollLeft = () => {
-    if (!scrollRef.current) return false;
-    return scrollRef.current.scrollLeft > 0;
-  };
-
-  const canScrollRight = () => {
-    if (!scrollRef.current) return false;
-    const maxScroll = scrollRef.current.scrollWidth - scrollRef.current.clientWidth;
-    return scrollRef.current.scrollLeft < maxScroll - 10;
-  };
-
   const scrollMobile = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const scrollAmount = ITEM_WIDTH;
@@ -111,7 +100,7 @@ export function LearningCarousel({
           <div className="overflow-x-auto -mx-4 px-4 mb-8 scrollbar-hide">
             <div className="flex gap-4 pb-2">
               {Array.from({ length: skeletonCount }).map((_, index) => (
-                <div key={index} className="flex-shrink-0 w-[280px]">
+                <div key={index} className="w-[280px] flex-shrink-0">
                   <LearningCardSkeleton />
                 </div>
               ))}
@@ -120,7 +109,7 @@ export function LearningCarousel({
         </div>
 
         <div className="hidden md:block">
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-3">
             {Array.from({ length: skeletonCount }).map((_, index) => (
               <LearningCardSkeleton key={index} />
             ))}
@@ -141,7 +130,7 @@ export function LearningCarousel({
         >
           <div className="flex gap-4 pb-2">
             {items.map((content) => (
-              <div key={content.id} className="flex-shrink-0 w-[280px] snap-start">
+              <div key={content.id} className="w-[280px] flex-shrink-0 snap-start">
                 <LearningCard
                   content={content}
                   onClick={() => onItemClick?.(content)}
@@ -184,7 +173,7 @@ export function LearningCarousel({
             {pagedItems.map((page, pageIndex) => (
               <div
                 key={`page-${pageIndex}`}
-                className="min-w-full grid md:grid-cols-3 gap-6"
+                className="grid min-w-full grid-cols-1 gap-6 md:grid-cols-3"
               >
                 {page.map((content) => (
                   <LearningCard

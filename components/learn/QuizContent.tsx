@@ -107,7 +107,7 @@ export function QuizContent({
   // Quiz Preview Screen
   if (!quizStarted) {
     return (
-      <div className="mt-8">
+      <div className="mt-8 px-4 md:px-0">
         <LessonPreviewCard
           lessonNumber={lessonNumber}
           lessonTitle={lessonTitle}
@@ -146,7 +146,7 @@ export function QuizContent({
             onClick={() => setQuizStarted(true)}
             variant="default"
             size="lg"
-            className="inline-flex items-center gap-2 shadow-lg shadow-brand/20 hover:gap-3"
+            className="inline-flex w-full items-center justify-center gap-2 shadow-lg shadow-brand/20 hover:gap-3 sm:w-auto"
           >
             Start Test
           </Button>
@@ -228,10 +228,10 @@ export function QuizContent({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-5xl px-4 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
         {/* Header with back button, title, and timer */}
-        <div className="mb-12 flex items-start justify-between">
-          <div className="flex items-start gap-4">
+        <div className="mb-8 flex items-start justify-between gap-4 md:mb-12">
+          <div className="flex min-w-0 flex-1 items-start gap-3 md:gap-4">
             <button
               onClick={() => {
                 if (currentQuestionIndex > 0) {
@@ -240,36 +240,36 @@ export function QuizContent({
                   setQuizStarted(false);
                 }
               }}
-              className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-border transition-colors hover:bg-muted"
+              className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-border transition-colors hover:bg-muted md:h-12 md:w-12"
               aria-label="Go back"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
             </button>
-            <div>
-              <p className="mb-1 text-sm text-foreground/60">{lessonNumber}</p>
-              <h1 className="mb-1 text-2xl font-bold text-foreground md:text-3xl">
+            <div className="min-w-0 flex-1">
+              <p className="mb-1 text-xs text-foreground/60 md:text-sm">{lessonNumber}</p>
+              <h1 className="mb-1 truncate text-lg font-bold text-foreground md:text-2xl lg:text-3xl">
                 {lessonTitle}
               </h1>
-              <p className="text-sm text-foreground/60">
+              <p className="text-xs text-foreground/60 md:text-sm">
                 Question {currentQuestionIndex + 1} of {totalQuestions}
               </p>
             </div>
           </div>
 
           {/* Timer */}
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-foreground/60" />
-            <span className="text-2xl font-semibold text-foreground">
+          <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+            <Clock className="h-4 w-4 text-foreground/60 md:h-5 md:w-5" />
+            <span className="text-lg font-semibold text-foreground md:text-2xl">
               {timeRemaining}s
             </span>
           </div>
         </div>
 
         {/* Question Card */}
-        <div className="rounded-3xl bg-muted/30 p-8 md:p-10">
+        <div className="rounded-2xl bg-muted/30 p-5 md:rounded-3xl md:p-8 lg:p-10">
           {/* Question Text */}
-          <div className="mb-8">
-            <h2 className="text-lg font-normal text-foreground md:text-xl">
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-base font-normal leading-relaxed text-foreground md:text-lg lg:text-xl">
               <span className="font-medium">Question {currentQuestionIndex + 1}</span>{' '}
               {currentQuestion.question}
             </h2>
@@ -286,21 +286,21 @@ export function QuizContent({
                   key={index}
                   onClick={() => handleAnswerSelect(index)}
                   disabled={isAnswered}
-                  className={`group relative w-full rounded-xl border p-5 text-left transition-all ${
+                  className={`group relative w-full rounded-lg border p-4 text-left transition-all md:rounded-xl md:p-5 ${
                     isSelected
                       ? 'border-brand bg-brand/5'
                       : 'border-border bg-background hover:border-brand/50'
                   } ${isAnswered ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                 >
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-start justify-between gap-3 md:items-center md:gap-4">
                     {/* Option Text - Left side */}
-                    <span className="flex-1 text-base text-foreground">
+                    <span className="flex-1 text-sm leading-relaxed text-foreground md:text-base">
                       {optionLabel}. {option}
                     </span>
 
                     {/* Checkbox - Right side */}
                     <div
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all ${
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all md:mt-0 ${
                         isSelected
                           ? 'border-brand bg-brand'
                           : 'border-foreground/30'
@@ -330,13 +330,13 @@ export function QuizContent({
         </div>
 
         {/* Next Button */}
-        <div className="mt-8 flex justify-end">
+        <div className="mt-6 flex justify-end md:mt-8">
           <Button
             onClick={handleNext}
             disabled={!isAnswered}
             variant="ghost"
             size="lg"
-            className="text-sm bg-accent hover:bg-brand hover:text-background"
+            className="w-full bg-accent text-sm hover:bg-brand hover:text-background sm:w-auto"
           >
             Next
           </Button>

@@ -32,10 +32,10 @@ export function LessonPreviewCard({
   rightImageAlt = 'Lesson preview',
 }: LessonPreviewCardProps) {
   return (
-    <div className="grid items-stretch gap-5 lg:h-[420px] lg:grid-cols-[30%_70%]">
+    <div className="grid items-stretch gap-5 md:grid-cols-2 lg:h-[420px] lg:grid-cols-[30%_70%]">
       {/* Left Column - Lesson Info Card */}
-      <div className="h-full">
-        <div className={`group relative h-full transform overflow-hidden rounded-2xl ${
+      <div className="min-h-[280px] md:h-full">
+        <div className={`group relative h-full min-h-[280px] transform overflow-hidden rounded-2xl ${
           leftVariant === 'video' ? 'bg-brand' : 'bg-muted'
         }`}>
           <div className={`flex h-full flex-col justify-end p-6 md:p-8 ${
@@ -61,7 +61,7 @@ export function LessonPreviewCard({
       </div>
 
       {/* Right Column - Preview/Placeholder */}
-      <div className="relative h-full overflow-hidden rounded-2xl bg-muted/30">
+      <div className="relative min-h-[200px] overflow-hidden rounded-2xl bg-muted/30 md:h-full md:min-h-[280px]">
         {rightContent === 'image' && rightImageUrl ? (
           <>
             <Image

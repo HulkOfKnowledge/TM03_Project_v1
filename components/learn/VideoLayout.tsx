@@ -169,17 +169,17 @@ By the end of week one, they walk away with a strong, simple foundation: what cr
 
   return (
     <div className="min-h-screen bg-background pb-12">
-      <div className="mx-auto md:px-6">
+      <div className="mx-auto px-4 md:px-6">
         {/* Back Navigation + Tabs - Only show when quiz is not active */}
         {!quizActive && (
-          <div className="flex items-center gap-4 pt-8">
+          <div className="flex items-center gap-3 pt-6 md:gap-4 md:pt-8">
             {/* Back Button */}
             <Link
               href="/learn/learning-space"
               className="group inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-foreground transition-colors hover:bg-accent"
               aria-label="Back to lessons"
             >
-              <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 md:h-5 md:w-5" />
             </Link>
 
             {/* Tabs */}
@@ -196,7 +196,7 @@ By the end of week one, they walk away with a strong, simple foundation: what cr
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="overview">
             {/* Main Content */}
-            <div className="mt-8">
+            <div className="mt-6 md:mt-8">
               <LessonPreviewCard
                 lessonNumber={lessonData.number}
                 lessonTitle={lessonData.title}
@@ -239,19 +239,19 @@ By the end of week one, they walk away with a strong, simple foundation: what cr
               </div>
 
               {/* Begin Lesson Button */}
-              <div className="mt-8 max-w-3xl md:mt-12 pb-24">
+              <div className="mt-8 max-w-3xl pb-16 md:mt-12 md:pb-24">
                 <Button
                   onClick={() => setShowVideo(true)}
                   variant="default"
                   size="lg"
-                  className="inline-flex items-center gap-2 shadow-lg shadow-brand/20 transition-all hover:gap-3"
+                  className="inline-flex w-full items-center justify-center gap-2 shadow-lg shadow-brand/20 transition-all hover:gap-3 sm:w-auto"
                 >
                   Begin Lesson
                 </Button>
               </div>
 
               {/* Testimonials Section */}
-              <section className="mb-16 mt-24">
+              <section className="mb-12 mt-16 md:mb-16 md:mt-24">
                 <TestimonialCarousel testimonials={testimonials} />
               </section>
             </div>
