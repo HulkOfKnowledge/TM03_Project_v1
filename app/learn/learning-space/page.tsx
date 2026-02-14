@@ -11,6 +11,7 @@ import { Search, Filter, ChevronDown, ChevronUp, Star, ChevronRight } from 'luci
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { LearningCarousel } from '@/components/learn/LearningCarousel';
+import { LearningCard, LearningCardSkeleton } from '@/components/learn/LearningCard';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { TestimonialSkeleton } from '@/components/learn/TestimonialSkeleton';
 import { learnService } from '@/services/learn.service';
@@ -223,69 +224,15 @@ export default function LearningSpacePage() {
                         <div className="hidden md:grid md:grid-cols-3 gap-6">
                           {loading ? (
                             Array.from({ length: 3 }).map((_, index) => (
-                              <div key={index} className="group">
-                                <div className="relative aspect-video rounded-2xl mb-4 bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                                <div className="h-5 w-3/4 mb-2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                                <div className="h-4 w-full mb-2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                                <div className="h-4 w-2/3 mb-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                                <div className="flex items-center justify-between">
-                                  <div className="h-6 w-20 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                                  <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                                </div>
-                              </div>
+                              <LearningCardSkeleton key={index} />
                             ))
                           ) : (
                             module.lessons.map((lesson) => (
-                              <div
+                              <LearningCard
                                 key={lesson.id}
-                                className="group cursor-pointer"
+                                content={lesson}
                                 onClick={() => handleContentClick(lesson)}
-                              >
-                                <div className="relative aspect-video rounded-2xl overflow-hidden mb-4 bg-gray-200 dark:bg-gray-700">
-                                  {lesson.thumbnailUrl ? (
-                                    <>
-                                      <img
-                                        src={lesson.thumbnailUrl}
-                                        alt={lesson.title}
-                                        className="w-full h-full object-cover"
-                                      />
-                                      <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-20 h-20 rounded-full bg-white/30 dark:bg-black/40 backdrop-blur-xl border border-white/40 dark:border-white/30 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-2xl">
-                                          <svg className="h-10 w-10 text-white/90 dark:text-white/80 fill-none stroke-[2.5] ml-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M5 3L19 12L5 21V3Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                          </svg>
-                                        </div>
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                      <div className="w-20 h-20 rounded-full bg-white/50 dark:bg-white/20 backdrop-blur-xl border border-white/60 dark:border-white/30 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-2xl">
-                                        <svg className="h-10 w-10 text-gray-700 dark:text-white fill-none stroke-[2.5] ml-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                          <path d="M5 3L19 12L5 21V3Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                        </svg>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-brand transition-colors">
-                                  {lesson.title}
-                                </h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                  {lesson.description}
-                                </p>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className={`px-3 py-1.5 text-xs font-medium rounded-full border-2 ${
-                                    lesson.category === 'Intermediate' ? 'border-[#EC4899] text-[#EC4899]' :
-                                    lesson.category === 'Advanced' ? 'border-purple-500 text-purple-500' :
-                                    'border-brand text-brand'
-                                  }`}>
-                                    {lesson.category}
-                                  </span>
-                                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                                    {lesson.duration}
-                                  </span>
-                                </div>
-                              </div>
+                              />
                             ))
                           )}
                         </div>
