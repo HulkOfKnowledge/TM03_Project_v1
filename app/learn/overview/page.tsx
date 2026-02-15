@@ -9,14 +9,69 @@ import Link from 'next/link';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { PhoneMockup } from '@/components/learn/PhoneMockup';
+import { CreditCardMockup } from '@/components/learn/CreditCardMockup';
 import { CreditTermAccordion, type CreditTerm } from '@/components/learn/CreditTermAccordion';
 import { LearningCarousel } from '@/components/learn/LearningCarousel';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { learnService } from '@/services/learn.service';
 import type { LearningContent, Testimonial } from '@/types/learn.types';
 
-// Credit term definitions - Only items that appear in the phone interface
-const creditTerms: CreditTerm[] = [
+// Credit card terms
+const creditCardTerms: CreditTerm[] = [
+  {
+    id: 'card-holder',
+    title: "Account Holder's Name",
+    description: 'This is your name as it appears on your credit card. It identifies you as the authorized cardholder.',
+    proTip: {
+      title: 'Pro Tip',
+      content: 'Always sign the back of your card and ensure your signature matches this name.'
+    },
+    lessonLink: '/learn/card-holder'
+  },
+  {
+    id: 'card-network',
+    title: 'Credit Card Issuer',
+    description: 'This logo indicates which payment network your card uses (Visa, Mastercard, etc.). It determines where your card is accepted globally.',
+    proTip: {
+      title: 'Pro Tip',
+      content: 'Different networks have different benefits and acceptance rates worldwide.'
+    },
+    lessonLink: '/learn/card-issuer'
+  },
+  {
+    id: 'card-number',
+    title: 'Card Number',
+    description: 'This unique 16-digit number identifies your specific credit card account. Never share this number with untrusted sources.',
+    proTip: {
+      title: 'Pro Tip',
+      content: 'Memorize the last 4 digits to quickly identify your card on statements.'
+    },
+    lessonLink: '/learn/card-number'
+  },
+  {
+    id: 'cvv',
+    title: 'CVV',
+    description: "The Card Verification Value is a 3-digit security code on the back of your card. It's required for online and phone purchases to verify you physically have the card.",
+    proTip: {
+      title: 'Pro Tip',
+      content: 'Never write down or share your CVV. Legitimate companies will never ask for it via email.'
+    },
+    lessonLink: '/learn/cvv'
+  },
+  {
+    id: 'expiry-date',
+    title: 'Expiry Date',
+    description: 'This shows when your card expires and will need to be replaced. Your issuer typically sends a new card before this date.',
+    proTip: {
+      title: 'Pro Tip',
+      content: 'Update auto-pay services with your new card info when you receive a replacement.'
+    },
+    lessonLink: '/learn/expiry-date'
+  }
+];
+
+// Credit app terms - Only items that appear in the phone interface
+const creditAppTerms: CreditTerm[] = [
   {
     id: 'credit-available',
     title: 'Credit Available',
@@ -127,6 +182,9 @@ export default function OverviewPage() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Get current terms based on active view
+  const currentTerms = activeView === 'credit-card' ? creditCardTerms : creditAppTerms;
+
   useEffect(() => {
     loadPageData();
   }, []);
@@ -183,53 +241,63 @@ export default function OverviewPage() {
       {/* Main Content */}
       <main className="pt-28 lg:pt-40 pb-16">
         <div className="container mx-auto px-4 md:px-6">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
-              Credit Platform Overview
-            </h1>
-            <p className="text-base text-muted-foreground">
-              Learn what each heading in your credit card and credit app means and manage yours with confidence
-            </p>
-          </div>
+          {/* Header and View Toggle */}
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            {/* Header */}
+            <div className="flex-1">
+              <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
+                Credit Platform Overview
+              </h1>
+              <p className="text-base text-gray-600 dark:text-gray-400">
+                Learn what each heading in your credit card and credit app means and manage yours with confidence
+              </p>
+            </div>
 
-          {/* View Toggle */}
-          <div className="mb-8 inline-flex gap-2 rounded-lg bg-muted p-1">
-            <button
-              onClick={() => setActiveView('credit-app')}
-              className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors md:px-6 ${
-                activeView === 'credit-app'
-                  ? 'bg-brand text-white'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Credit App
-            </button>
-            <button
-              onClick={() => setActiveView('credit-card')}
-              className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors md:px-6 ${
-                activeView === 'credit-card'
-                  ? 'bg-brand text-white'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Credit Card
-            </button>
+            {/* View Toggle */}
+            <div className="inline-flex shrink-0 gap-1 rounded-lg bg-muted p-1">
+              <button
+                onClick={() => setActiveView('credit-app')}
+                className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors md:px-6 ${
+                  activeView === 'credit-app'
+                    ? 'bg-brand text-white'
+                    : 'text-foreground/70 hover:text-foreground'
+                }`}
+              >
+                Credit App
+              </button>
+              <button
+                onClick={() => setActiveView('credit-card')}
+                className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors md:px-6 ${
+                  activeView === 'credit-card'
+                    ? 'bg-brand text-white'
+                    : 'text-foreground/70 hover:text-foreground'
+                }`}
+              >
+                Credit Card
+              </button>
+            </div>
           </div>
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[500px_1fr] lg:gap-8">
-            {/* Left Column - Interactive Phone Mockup */}
+            {/* Left Column - Interactive Mockup */}
             <div className="lg:sticky lg:top-28 lg:self-start">
-              <PhoneMockup
-                clickedItemId={clickedPhoneItem}
-                onItemClick={handlePhoneItemClick}
-              />
+              {activeView === 'credit-card' ? (
+                <CreditCardMockup
+                  clickedItemId={clickedPhoneItem}
+                  onItemClick={handlePhoneItemClick}
+                />
+              ) : (
+                <PhoneMockup
+                  clickedItemId={clickedPhoneItem}
+                  onItemClick={handlePhoneItemClick}
+                />
+              )}
             </div>
 
             {/* Right Column - Accordion List */}
             <div className="space-y-2">
-              {creditTerms.map((term) => (
+              {currentTerms.map((term) => (
                 <CreditTermAccordion
                   key={term.id}
                   term={term}
