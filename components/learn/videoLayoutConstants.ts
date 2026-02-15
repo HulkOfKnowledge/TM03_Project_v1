@@ -189,6 +189,31 @@ export const sampleQuizQuestions = [
   },
 ];
 
+// Sample transcript data
+export const sampleTranscript = [
+  {
+    timestamp: '00:01',
+    content: 'Lesson one introduces users to the Canadian credit system in the simplest, calmest way possible. They learn what credit is, why it matters, and how their credit card affects everything. The content focuses on clarity: no stress, no deep theory, just the basics that every newcomer needs to know before they spend. They\'ll understand how limits, balances, and credit utilization work, why 30% usage matters, and what a "danger zone" really means. You also teach them how Creduman will protect them by tracking their card, warning them before they get into trouble, and showing them the safe way to use their credit card from day one. By the end of week one, they walk away with a strong, simple foundation: what credit is, how their card impacts their future, and how Creduman keeps them safe so they can build credit confidently.'
+  },
+  {
+    timestamp: '00:32',
+    content: 'Lesson one introduces users to the Canadian credit system in the simplest, calmest way possible. They learn what credit is, why it matters, and how their credit card affects everything. The content focuses on clarity: no stress, no deep theory, just the basics that every newcomer needs to know before they spend. They\'ll understand how limits, balances, and credit utilization work, why 30% usage matters, and what a "danger zone" really means. You also teach them how Creduman will protect them by tracking their card, warning them before they get into trouble, and showing them the safe way to use their credit card from day one. By the end of week one, they walk away with a strong, simple foundation: what credit is, how their card impacts their future, and how Creduman keeps them safe so they can build credit confidently.'
+  }
+];
+
+// Sample resources data
+export const sampleResources = [
+  { id: 1, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 2, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 3, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 4, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 5, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 6, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 7, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 8, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 9, title: 'Canadian Financial Laws .pdf', size: '12 mb' }
+];
+
 // Helper to group related lessons by category
 export const groupLessonsByCategory = (lessons: RelatedLesson[]) => {
   return lessons.reduce((acc, lesson) => {

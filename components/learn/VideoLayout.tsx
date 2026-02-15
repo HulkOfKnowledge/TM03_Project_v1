@@ -18,6 +18,8 @@ import {
   sampleVideoChapters,
   sampleRelatedLessons,
   sampleQuizQuestions,
+  sampleTranscript,
+  sampleResources,
 } from './videoLayoutConstants';
 import { VideoPreviewSkeleton } from '@/components/learn/VideoPreviewSkeleton';
 import { QuizContent } from '@/components/learn/QuizContent';
@@ -31,31 +33,6 @@ interface VideoLayoutProps {
   category: string;
   topic: string;
 }
-
-// Sample transcript data
-const sampleTranscript = [
-  {
-    timestamp: '00:01',
-    content: 'Lesson one introduces users to the Canadian credit system in the simplest, calmest way possible. They learn what credit is, why it matters, and how their credit card affects everything. The content focuses on clarity: no stress, no deep theory, just the basics that every newcomer needs to know before they spend. They\'ll understand how limits, balances, and credit utilization work, why 30% usage matters, and what a "danger zone" really means. You also teach them how Creduman will protect them by tracking their card, warning them before they get into trouble, and showing them the safe way to use their credit card from day one. By the end of week one, they walk away with a strong, simple foundation: what credit is, how their card impacts their future, and how Creduman keeps them safe so they can build credit confidently.'
-  },
-  {
-    timestamp: '00:32',
-    content: 'Lesson one introduces users to the Canadian credit system in the simplest, calmest way possible. They learn what credit is, why it matters, and how their credit card affects everything. The content focuses on clarity: no stress, no deep theory, just the basics that every newcomer needs to know before they spend. They\'ll understand how limits, balances, and credit utilization work, why 30% usage matters, and what a "danger zone" really means. You also teach them how Creduman will protect them by tracking their card, warning them before they get into trouble, and showing them the safe way to use their credit card from day one. By the end of week one, they walk away with a strong, simple foundation: what credit is, how their card impacts their future, and how Creduman keeps them safe so they can build credit confidently.'
-  }
-];
-
-// Sample resources data
-const sampleResources = [
-  { id: 1, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
-  { id: 2, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
-  { id: 3, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
-  { id: 4, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
-  { id: 5, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
-  { id: 6, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
-  { id: 7, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
-  { id: 8, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
-  { id: 9, title: 'Canadian Financial Laws .pdf', size: '12 mb' }
-];
 
 export function VideoLayout({ id, category: _category, topic: _topic }: VideoLayoutProps) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -198,15 +175,15 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
             <div className="min-w-0">
               {/* Video Player */}
               <div
-                className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gray-200 shadow-lg"
+                className="relative aspect-video w-full overflow-hidden rounded-2xl bg-muted shadow-lg"
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => isPlaying && setShowControls(false)}
               >
                 {/* Placeholder for video - replace with actual video element */}
-                <div className="flex h-full w-full items-center justify-center bg-gray-300">
+                <div className="flex h-full w-full items-center justify-center bg-muted-foreground/10">
                   <button
                     onClick={togglePlay}
-                    className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg transition-transform hover:scale-110"
+                    className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-lg transition-transform hover:scale-110"
                   >
                     <Play className="h-8 w-8 fill-current text-brand" />
                   </button>
@@ -279,16 +256,16 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
               {/* Tabs below video */}
               <div className="mt-6">
                 <Tabs value={videoTab} onValueChange={setVideoTab}>
-                  <TabsList className="justify-start">
-                    <TabsTrigger value="overview">Lesson Overview</TabsTrigger>
-                    <TabsTrigger value="transcript">Transcript</TabsTrigger>
-                    <TabsTrigger value="resources">Resources</TabsTrigger>
+                  <TabsList className="justify-start overflow-x-auto">
+                    <TabsTrigger value="overview" className="flex-shrink-0">Lesson Overview</TabsTrigger>
+                    <TabsTrigger value="transcript" className="flex-shrink-0">Transcript</TabsTrigger>
+                    <TabsTrigger value="resources" className="flex-shrink-0">Resources</TabsTrigger>
                   </TabsList>
 
                   {/* Lesson Overview Tab */}
-                  <TabsContent value="overview" className="mt-6">
+                  <TabsContent value="overview" className="mt-4 md:mt-6">
                     {/* Video Chapters */}
-                    <div className="space-y-2 rounded-xl border border-border p-4">
+                    <div className="space-y-2 rounded-xl border border-border bg-card p-3 md:p-4">
                       {videoChapters.map((chapter) => (
                         <VideoChapterItem
                           key={chapter.id}
@@ -302,18 +279,18 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
                     </div>
 
                     {/* About This Lesson */}
-                    <div className="mt-8">
-                      <h2 className="mb-4 text-xl font-bold text-foreground">
+                    <div className="mt-6 md:mt-8">
+                      <h2 className="mb-3 text-lg font-bold text-foreground md:mb-4 md:text-xl">
                         About This Lesson
                       </h2>
-                      <p className="text-sm leading-relaxed text-foreground/70 md:text-base">
+                      <p className="text-sm leading-relaxed text-muted-foreground md:text-base">
                         {lessonData.description}
                       </p>
                     </div>
 
                     {/* What You'll Learn */}
-                    <div className="mt-8">
-                      <h3 className="mb-4 text-xl font-bold text-foreground">
+                    <div className="mt-6 md:mt-8">
+                      <h3 className="mb-3 text-lg font-bold text-foreground md:mb-4 md:text-xl">
                         What you'll learn
                       </h3>
                       <div className="space-y-3">
@@ -329,14 +306,14 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
                   </TabsContent>
 
                   {/* Transcript Tab */}
-                  <TabsContent value="transcript" className="mt-6">
-                    <div className="space-y-6">
+                  <TabsContent value="transcript" className="mt-4 md:mt-6">
+                    <div className="space-y-4 md:space-y-6">
                       {sampleTranscript.map((entry, index) => (
-                        <div key={index} className="flex gap-4">
-                          <div className="shrink-0 text-sm font-medium text-foreground/60">
+                        <div key={index} className="flex flex-col gap-2 md:flex-row md:gap-4">
+                          <div className="shrink-0 text-sm font-medium text-muted-foreground">
                             {entry.timestamp}
                           </div>
-                          <div className="text-sm leading-relaxed text-foreground/70">
+                          <div className="text-sm leading-relaxed text-muted-foreground md:text-base">
                             {entry.content}
                           </div>
                         </div>
@@ -345,27 +322,27 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
                   </TabsContent>
 
                   {/* Resources Tab */}
-                  <TabsContent value="resources" className="mt-6">
-                    <div className="space-y-6">
+                  <TabsContent value="resources" className="mt-4 md:mt-6">
+                    <div className="space-y-4 md:space-y-6">
                       {/* Sort Options */}
-                      <div className="inline-flex items-center gap-1 border border-border rounded-lg p-2">
-                        <span className="text-base font-medium text-foreground">Sort by:</span>
+                      <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-card p-2">
+                        <span className="text-sm font-medium text-foreground md:text-base">Sort by:</span>
                         <button
                           onClick={() => setResourceSortBy('suggested')}
-                          className={`px-4 py-1.5 text-base transition-colors ${
+                          className={`px-3 py-1.5 text-sm transition-colors md:px-4 md:text-base ${
                             resourceSortBy === 'suggested'
                               ? 'text-foreground underline decoration-2 underline-offset-4'
-                              : 'text-foreground/60 hover:text-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
                           }`}
                         >
                           Suggested
                         </button>
                         <button
                           onClick={() => setResourceSortBy('newest')}
-                          className={`px-4 py-1.5 text-base transition-colors ${
+                          className={`px-3 py-1.5 text-sm transition-colors md:px-4 md:text-base ${
                             resourceSortBy === 'newest'
                               ? 'text-foreground underline decoration-2 underline-offset-4'
-                              : 'text-foreground/60 hover:text-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
                           }`}
                         >
                           Newest
@@ -373,26 +350,26 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
                       </div>
 
                       {/* Resources Grid */}
-                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-3">
                         {sampleResources.map((resource) => (
                           <div
                             key={resource.id}
-                            className="flex flex-col gap-4 rounded-lg bg-gray-50 p-5"
+                            className="flex flex-col gap-3 rounded-lg bg-muted/50 p-4 md:gap-4 md:p-5"
                           >
                             {/* File Preview Placeholder */}
-                            <div className="aspect-square w-[20%] rounded-md bg-white bg-[linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0),linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0)] bg-[length:20px_20px] bg-[position:0_0,10px_10px]" />
+                            <div className="aspect-square w-[20%] rounded-md bg-card shadow-sm" />
 
                             {/* File Info */}
                             <div className="space-y-2">
-                              <h4 className="text-base font-medium text-foreground">
+                              <h4 className="text-sm font-medium text-foreground md:text-base">
                                 {resource.title}
                               </h4>
-                              <div className="flex items-center gap-3 text-sm text-foreground/60">
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:gap-3 md:text-sm">
                                 <span className="flex items-center gap-1">
-                                  <FileText className="h-4 w-4" />
+                                  <FileText className="h-3 w-3 md:h-4 md:w-4" />
                                   {resource.size}
                                 </span>
-                                <span className="text-foreground/40">|</span>
+                                <span className="text-border">|</span>
                                 <button
                                   onClick={() => handleDownload(resource.title)}
                                   className="font-medium text-foreground underline hover:no-underline"
@@ -465,12 +442,14 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
             </Link>
 
             {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="quiz">Take Quiz</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex-1 overflow-hidden">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="w-full justify-start">
+                  <TabsTrigger value="overview" className="flex-shrink-0">Overview</TabsTrigger>
+                  <TabsTrigger value="quiz" className="flex-shrink-0">Take Quiz</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
         )}
 
@@ -498,15 +477,15 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
               />
 
               {/* Lesson Description */}
-              <div className="prose prose-sm mt-12 max-w-none lg:mt-16">
-                <p className="text-sm leading-relaxed text-foreground/70 md:text-base">
+              <div className="prose prose-sm mt-8 max-w-none md:mt-12 lg:mt-16">
+                <p className="text-sm leading-relaxed text-muted-foreground md:text-base">
                   {lessonData.description}
                 </p>
               </div>
 
               {/* What You'll Learn Section */}
-              <div className="mt-12 lg:mt-16">
-                <h3 className="mb-6 text-xl font-bold text-foreground md:mb-8 md:text-2xl">
+              <div className="mt-8 md:mt-12 lg:mt-16">
+                <h3 className="mb-4 text-lg font-bold text-foreground md:mb-6 md:text-xl lg:text-2xl">
                   What you'll learn
                 </h3>
                 <div className="space-y-3 md:space-y-4">
@@ -521,7 +500,7 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
               </div>
 
               {/* Begin Lesson Button */}
-              <div className="mt-8 max-w-3xl pb-16 md:mt-12 md:pb-24">
+              <div className="mt-6 max-w-3xl pb-12 md:mt-8 md:pb-16 lg:mt-12 lg:pb-24">
                 <Button
                   onClick={() => setShowVideo(true)}
                   variant="default"
@@ -533,7 +512,7 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
               </div>
 
               {/* Testimonials Section */}
-              <section className="mb-12 mt-16 md:mb-16 md:mt-24">
+              <section className="mb-8 mt-12 md:mb-12 md:mt-16 lg:mb-16 lg:mt-24">
                 <TestimonialCarousel testimonials={testimonials} />
               </section>
             </div>
