@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Settings } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Settings, Download, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
@@ -32,6 +32,31 @@ interface VideoLayoutProps {
   topic: string;
 }
 
+// Sample transcript data
+const sampleTranscript = [
+  {
+    timestamp: '00:01',
+    content: 'Lesson one introduces users to the Canadian credit system in the simplest, calmest way possible. They learn what credit is, why it matters, and how their credit card affects everything. The content focuses on clarity: no stress, no deep theory, just the basics that every newcomer needs to know before they spend. They\'ll understand how limits, balances, and credit utilization work, why 30% usage matters, and what a "danger zone" really means. You also teach them how Creduman will protect them by tracking their card, warning them before they get into trouble, and showing them the safe way to use their credit card from day one. By the end of week one, they walk away with a strong, simple foundation: what credit is, how their card impacts their future, and how Creduman keeps them safe so they can build credit confidently.'
+  },
+  {
+    timestamp: '00:32',
+    content: 'Lesson one introduces users to the Canadian credit system in the simplest, calmest way possible. They learn what credit is, why it matters, and how their credit card affects everything. The content focuses on clarity: no stress, no deep theory, just the basics that every newcomer needs to know before they spend. They\'ll understand how limits, balances, and credit utilization work, why 30% usage matters, and what a "danger zone" really means. You also teach them how Creduman will protect them by tracking their card, warning them before they get into trouble, and showing them the safe way to use their credit card from day one. By the end of week one, they walk away with a strong, simple foundation: what credit is, how their card impacts their future, and how Creduman keeps them safe so they can build credit confidently.'
+  }
+];
+
+// Sample resources data
+const sampleResources = [
+  { id: 1, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 2, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 3, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 4, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 5, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 6, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 7, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 8, title: 'Canadian Financial Laws .pdf', size: '12 mb' },
+  { id: 9, title: 'Canadian Financial Laws .pdf', size: '12 mb' }
+];
+
 export function VideoLayout({ id, category: _category, topic: _topic }: VideoLayoutProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [showVideo, setShowVideo] = useState(false);
@@ -39,6 +64,7 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [quizActive, setQuizActive] = useState(false);
   const [videoTab, setVideoTab] = useState('overview');
+  const [resourceSortBy, setResourceSortBy] = useState('suggested');
   
   // Video player state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -129,6 +155,11 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
         setIsPlaying(true);
       }
     }
+  };
+
+  const handleDownload = (resourceTitle: string) => {
+    // Placeholder download function
+    console.log('Downloading:', resourceTitle);
   };
 
   // Load sample data (TODO: Replace with actual API calls)
@@ -299,19 +330,80 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
 
                   {/* Transcript Tab */}
                   <TabsContent value="transcript" className="mt-6">
-                    <div className="rounded-xl border border-border p-6">
-                      <p className="text-sm text-foreground/60">
-                        Transcript content will be displayed here...
-                      </p>
+                    <div className="space-y-6">
+                      {sampleTranscript.map((entry, index) => (
+                        <div key={index} className="flex gap-4">
+                          <div className="shrink-0 text-sm font-medium text-foreground/60">
+                            {entry.timestamp}
+                          </div>
+                          <div className="text-sm leading-relaxed text-foreground/70">
+                            {entry.content}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </TabsContent>
 
                   {/* Resources Tab */}
                   <TabsContent value="resources" className="mt-6">
-                    <div className="rounded-xl border border-border p-6">
-                      <p className="text-sm text-foreground/60">
-                        Additional resources and downloads will be displayed here...
-                      </p>
+                    <div className="space-y-6">
+                      {/* Sort Options */}
+                      <div className="flex items-center gap-1 border border-border rounded-lg p-2">
+                        <span className="text-base font-medium text-foreground">Sort by:</span>
+                        <button
+                          onClick={() => setResourceSortBy('suggested')}
+                          className={`px-4 py-1.5 text-base transition-colors ${
+                            resourceSortBy === 'suggested'
+                              ? 'text-foreground underline decoration-2 underline-offset-4'
+                              : 'text-foreground/60 hover:text-foreground'
+                          }`}
+                        >
+                          Suggested
+                        </button>
+                        <button
+                          onClick={() => setResourceSortBy('newest')}
+                          className={`px-4 py-1.5 text-base transition-colors ${
+                            resourceSortBy === 'newest'
+                              ? 'text-foreground underline decoration-2 underline-offset-4'
+                              : 'text-foreground/60 hover:text-foreground'
+                          }`}
+                        >
+                          Newest
+                        </button>
+                      </div>
+
+                      {/* Resources Grid */}
+                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                        {sampleResources.map((resource) => (
+                          <div
+                            key={resource.id}
+                            className="flex flex-col gap-4 rounded-lg bg-gray-50 p-5"
+                          >
+                            {/* File Preview Placeholder */}
+                            <div className="aspect-square w-[20%] rounded-md bg-white bg-[linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0),linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0)] bg-[length:20px_20px] bg-[position:0_0,10px_10px]" />
+
+                            {/* File Info */}
+                            <div className="space-y-2">
+                              <h4 className="text-base font-medium text-foreground">
+                                {resource.title}
+                              </h4>
+                              <div className="flex items-center gap-3 text-sm text-foreground/60">
+                                <span className="flex items-center gap-1">
+                                  <FileText className="h-4 w-4" />
+                                  {resource.size}
+                                </span>
+                                <span className="text-foreground/40">|</span>
+                                <button
+                                  onClick={() => handleDownload(resource.title)}
+                                  className="font-medium text-foreground underline hover:no-underline"
+                                >
+                                  Download
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>
