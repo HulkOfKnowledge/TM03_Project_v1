@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ChevronLeft } from 'lucide-react';
 import type { Testimonial } from '@/types/learn.types';
 
 interface TestimonialCarouselProps {
@@ -21,10 +21,18 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
   }
 
   const currentTestimonial = testimonials[currentIndex];
+  const isFirst = currentIndex === 0;
+  const isLast = currentIndex === testimonials.length - 1;
 
   const nextTestimonial = () => {
     setCurrentIndex((prev) =>
       prev === testimonials.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const prevTestimonial = () => {
+    setCurrentIndex((prev) =>
+      prev === 0 ? testimonials.length - 1 : prev - 1
     );
   };
 
@@ -33,32 +41,47 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
   };
 
   return (
-    <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl overflow-hidden">
+    <div className="bg-[#FAFAFA] dark:bg-[#1A1A1A] rounded-2xl overflow-hidden md:rounded-3xl">
       <div className="grid lg:grid-cols-2">
         {/* Content Side */}
-        <div className="pl-2 pr-8 flex flex-col justify-between">
+        <div className="p-6 flex flex-col justify-between">
           <div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-2 md:mb-3">
               Testimonials
             </div>
-            <h3 className="text-2xl md:text-3xl font-bold text-brand mb-6">
+            <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-brand mb-4 md:mb-6">
               {currentTestimonial.title}
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-8">
+            <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-6 md:mb-8">
               {currentTestimonial.description}
             </p>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <button 
               onClick={() => currentTestimonial.videoUrl && window.open(currentTestimonial.videoUrl, '_blank')}
-              className="px-6 py-3 rounded-xl border-2 border-brand text-brand font-medium hover:bg-brand hover:text-white transition-colors"
+              className="w-full md:w-auto px-6 py-3 rounded-xl border-2 border-brand text-brand font-medium hover:bg-brand hover:text-white transition-colors text-sm md:text-base"
             >
               Watch Now
             </button>
 
             {/* Carousel Controls */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2 md:justify-start">
+              {/* Previous Arrow */}
+              <button
+                onClick={prevTestimonial}
+                disabled={isFirst}
+                className={`h-8 w-8 rounded-full transition-colors flex items-center justify-center ${
+                  isFirst
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-brand hover:text-white'
+                }`}
+                aria-label="Previous testimonial"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+
+              {/* Dots */}
               {testimonials.map((_, index) => (
                 <button
                   key={index}
@@ -66,14 +89,21 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
                   className={`h-2 rounded-full transition-all ${
                     index === currentIndex
                       ? 'bg-brand w-8'
-                      : 'bg-gray-300 dark:bg-gray-600 w-2'
+                      : 'bg-gray-300 dark:bg-gray-600 w-2 hover:bg-gray-400 dark:hover:bg-gray-500'
                   }`}
                   aria-label={`Go to testimonial ${index + 1}`}
                 />
               ))}
+
+              {/* Next Arrow */}
               <button
                 onClick={nextTestimonial}
-                className="ml-2 h-8 w-8 rounded-full bg-brand text-white hover:bg-[#5558E3] transition-colors flex items-center justify-center"
+                disabled={isLast}
+                className={`h-8 w-8 rounded-full transition-colors flex items-center justify-center ${
+                  isLast
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-brand hover:text-white'
+                }`}
                 aria-label="Next testimonial"
               >
                 <ChevronRight className="h-5 w-5" />
@@ -83,7 +113,7 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
         </div>
 
         {/* Image Side */}
-        <div className="relative aspect-[4/3] lg:aspect-auto">
+        <div className="relative aspect-[4/3] lg:aspect-auto lg:min-h-[400px]">
           {currentTestimonial.imageUrl ? (
             <img
               src={currentTestimonial.imageUrl}

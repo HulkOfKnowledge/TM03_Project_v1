@@ -148,7 +148,7 @@ interface HistoryCardProps {
 
 function HistoryCard({ item }: HistoryCardProps) {
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black p-4 transition-shadow hover:shadow-md md:flex-row md:items-center md:justify-between md:p-6">
+    <div className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black p-4 hover:border-brand/50 cursor-pointer md:flex-row md:items-center md:justify-between md:p-6">
       {/* Left Section - Image and Content */}
       <div className="flex flex-1 gap-3 md:gap-4">
         {/* Thumbnail Placeholder */}
