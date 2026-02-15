@@ -279,7 +279,7 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
               {/* Tabs below video */}
               <div className="mt-6">
                 <Tabs value={videoTab} onValueChange={setVideoTab}>
-                  <TabsList className="w-full justify-start">
+                  <TabsList className="justify-start">
                     <TabsTrigger value="overview">Lesson Overview</TabsTrigger>
                     <TabsTrigger value="transcript">Transcript</TabsTrigger>
                     <TabsTrigger value="resources">Resources</TabsTrigger>
@@ -348,7 +348,7 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
                   <TabsContent value="resources" className="mt-6">
                     <div className="space-y-6">
                       {/* Sort Options */}
-                      <div className="flex items-center gap-1 border border-border rounded-lg p-2">
+                      <div className="inline-flex items-center gap-1 border border-border rounded-lg p-2">
                         <span className="text-base font-medium text-foreground">Sort by:</span>
                         <button
                           onClick={() => setResourceSortBy('suggested')}
