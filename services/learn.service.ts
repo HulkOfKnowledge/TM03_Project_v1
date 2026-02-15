@@ -72,6 +72,15 @@ export class LearnService {
   }
 
   /**
+   * Get all articles (content type: 'article')
+   */
+  async getArticles(): Promise<LearningContent[]> {
+    const data = await this.fetchDashboardData();
+    const allContent = [...data.learningPath, ...data.recommendedContent];
+    return allContent.filter(content => content.type === 'article');
+  }
+
+  /**
    * Update checklist item completion
    */
   async updateChecklistItem(

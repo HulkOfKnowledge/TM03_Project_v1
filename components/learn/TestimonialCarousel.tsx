@@ -73,8 +73,8 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
                 disabled={isFirst}
                 className={`h-8 w-8 rounded-full transition-colors flex items-center justify-center ${
                   isFirst
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-brand hover:text-white'
+                    ? 'bg-gray-200 dark:bg-gray-700 text-white dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-300 dark:bg-gray-600 text-white dark:text-gray-300 hover:bg-brand hover:text-white'
                 }`}
                 aria-label="Previous testimonial"
               >
@@ -101,8 +101,8 @@ export function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) 
                 disabled={isLast}
                 className={`h-8 w-8 rounded-full transition-colors flex items-center justify-center ${
                   isLast
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-brand hover:text-white'
+                    ? 'bg-gray-200 dark:bg-gray-700 text-white dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-300 dark:bg-gray-600 text-white dark:text-gray-300 hover:bg-brand hover:text-white'
                 }`}
                 aria-label="Next testimonial"
               >
