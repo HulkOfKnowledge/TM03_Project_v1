@@ -18,27 +18,6 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
 
   return (
     <div className="rounded-2xl bg-muted p-6">
-      <style dangerouslySetInnerHTML={{__html: `
-        .phone-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .phone-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .phone-scrollbar::-webkit-scrollbar-thumb {
-          background: rgb(209 213 219);
-          border-radius: 2px;
-        }
-        .dark .phone-scrollbar::-webkit-scrollbar-thumb {
-          background: rgb(55 65 81);
-        }
-        .phone-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgb(156 163 175);
-        }
-        .dark .phone-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgb(75 85 99);
-        }
-      `}} />
       <h3 className="mb-2 text-lg font-semibold text-foreground">
         Interactive View
       </h3>
@@ -79,7 +58,7 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
             </div>
 
             {/* Tabs */}
-            <div className="mb-4 flex gap-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="mb-4 flex gap-4 border-b border-gray-200 dark:border-gray-700 justify-between">
               <button className="border-b-2 border-brand pb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Summary
               </button>
@@ -131,7 +110,7 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <div className="mb-2 flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Statement Details</h4>
-                  <button className="text-xs text-brand hover:text-brand/80">View eStatement</button>
+                  <span className="text-xs">View eStatement</span>
                 </div>
                 
                 <div className="space-y-3 text-xs">
@@ -243,7 +222,7 @@ function PhoneItem({ id, label, value, isActive, onClick }: PhoneItemProps) {
     <button
       id={`phone-item-${id}`}
       onClick={() => onClick(id)}
-      className={`relative flex w-full items-center justify-between rounded px-2 py-1 transition-colors ${
+      className={`relative flex w-full items-center justify-between rounded px-1 py-1 transition-colors ${
         isActive 
           ? 'z-20 bg-white dark:bg-gray-800 shadow-sm' 
           : 'hover:bg-gray-100 dark:hover:bg-gray-800'

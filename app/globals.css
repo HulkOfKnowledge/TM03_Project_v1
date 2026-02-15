@@ -168,4 +168,30 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Custom thin scrollbar for phone mockup */
+  .phone-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .phone-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .phone-scrollbar::-webkit-scrollbar-thumb {
+    background: rgb(209 213 219);
+    border-radius: 2px;
+  }
+
+  .dark .phone-scrollbar::-webkit-scrollbar-thumb {
+    background: rgb(55 65 81);
+  }
+
+  .phone-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgb(156 163 175);
+  }
+
+  .dark .phone-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgb(75 85 99);
+  }
 }

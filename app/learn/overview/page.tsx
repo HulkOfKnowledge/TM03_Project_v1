@@ -164,6 +164,16 @@ export default function OverviewPage() {
     const newExpandedState = expandedTerm === termId ? null : termId;
     setExpandedTerm(newExpandedState);
     setClickedPhoneItem(newExpandedState);
+    
+    // Scroll to the phone item
+    if (newExpandedState) {
+      setTimeout(() => {
+        const phoneItem = document.getElementById(`phone-item-${termId}`);
+        if (phoneItem) {
+          phoneItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
   };
 
   return (
@@ -208,7 +218,7 @@ export default function OverviewPage() {
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_1fr] lg:gap-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[500px_1fr] lg:gap-8">
             {/* Left Column - Interactive Phone Mockup */}
             <div className="lg:sticky lg:top-28 lg:self-start">
               <PhoneMockup
