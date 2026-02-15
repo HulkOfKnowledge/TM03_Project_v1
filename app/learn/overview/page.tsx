@@ -254,27 +254,29 @@ export default function OverviewPage() {
             </div>
 
             {/* View Toggle */}
-            <div className="inline-flex shrink-0 gap-1 rounded-lg bg-muted p-1">
-              <button
-                onClick={() => setActiveView('credit-app')}
-                className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors md:px-6 ${
-                  activeView === 'credit-app'
-                    ? 'bg-brand text-white'
-                    : 'text-foreground/70 hover:text-foreground'
-                }`}
-              >
-                Credit App
-              </button>
-              <button
-                onClick={() => setActiveView('credit-card')}
-                className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors md:px-6 ${
-                  activeView === 'credit-card'
-                    ? 'bg-brand text-white'
-                    : 'text-foreground/70 hover:text-foreground'
-                }`}
-              >
-                Credit Card
-              </button>
+            <div className="self-start">
+              <div className="inline-flex shrink-0 gap-1 rounded-lg bg-muted p-1">
+                <button
+                  onClick={() => setActiveView('credit-app')}
+                  className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors md:px-6 ${
+                    activeView === 'credit-app'
+                      ? 'bg-brand text-white'
+                      : 'text-foreground/70 hover:text-foreground'
+                  }`}
+                >
+                  Credit App
+                </button>
+                <button
+                  onClick={() => setActiveView('credit-card')}
+                  className={`rounded-md px-4 py-2.5 text-sm font-medium transition-colors md:px-6 ${
+                    activeView === 'credit-card'
+                      ? 'bg-brand text-white'
+                      : 'text-foreground/70 hover:text-foreground'
+                  }`}
+                >
+                  Credit Card
+                </button>
+              </div>
             </div>
           </div>
 
