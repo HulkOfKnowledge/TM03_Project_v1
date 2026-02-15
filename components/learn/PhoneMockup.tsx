@@ -18,56 +18,69 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
 
   return (
     <div className="rounded-2xl bg-muted p-6">
+      <style dangerouslySetInnerHTML={{__html: `
+        .phone-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .phone-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .phone-scrollbar::-webkit-scrollbar-thumb {
+          background: rgb(209 213 219);
+          border-radius: 2px;
+        }
+        .dark .phone-scrollbar::-webkit-scrollbar-thumb {
+          background: rgb(55 65 81);
+        }
+        .phone-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgb(156 163 175);
+        }
+        .dark .phone-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgb(75 85 99);
+        }
+      `}} />
       <h3 className="mb-2 text-lg font-semibold text-foreground">
         Interactive View
       </h3>
-      <p className="mb-6 text-sm text-muted-foreground">
+      <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
         Click on each <Info className="inline h-3 w-3" /> point to learn what it means
       </p>
 
       {/* Phone Mockup - iPhone Style */}
       <div className="relative mx-auto w-full max-w-[280px]">
-        <div className="relative aspect-[9/19] overflow-hidden rounded-[2.5rem] border-[14px] border-foreground bg-background shadow-2xl">
+        {/* Phone Frame */}
+        <div className="relative aspect-[9/19] overflow-hidden rounded-[2.5rem] border-[12px] border-gray-900 dark:border-black shadow-2xl shadow-black/50">
           {/* iPhone Notch */}
-          <div className="absolute left-1/2 top-0 z-30 h-7 w-36 -translate-x-1/2 rounded-b-3xl bg-foreground" />
+          <div className="absolute left-1/2 top-0 z-30 h-7 w-36 -translate-x-1/2 rounded-b-3xl bg-gray-900 dark:bg-gray-950" />
           
-          {/* iPhone Status Bar */}
-          <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-8 pt-2 text-[11px] text-foreground">
-            <span className="font-semibold">12:17</span>
-            <div className="flex items-center gap-1">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-                <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-                <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-                <path d="M12 20h.01" />
-              </svg>
-              <svg className="h-3.5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="1" y="6" width="18" height="12" rx="2" ry="2" />
-                <path d="M23 13v-2" />
-              </svg>
-            </div>
-          </div>
+          {/* Screen Background - Light mode white, Dark mode dark gray */}
+          <div className="absolute inset-0 bg-white dark:bg-gray-900" />
+          
+         
 
           {/* Gray Overlay */}
           {clickedItemId && (
             <div 
-              className="absolute inset-0 z-10 bg-foreground/60 backdrop-blur-[1px] cursor-pointer"
+              className="absolute inset-0 z-10 bg-black/60 backdrop-blur-[1px] cursor-pointer"
               onClick={() => onItemClick(clickedItemId)}
               aria-label="Close details"
             />
           )}
 
-          {/* Phone Content */}
-          <div ref={phoneContentRef} className="relative h-full overflow-y-auto px-4 pb-6 pt-10">
+          {/* Phone Content - Scrollable area with app-like background */}
+          <div 
+            ref={phoneContentRef} 
+            className="phone-scrollbar relative h-full overflow-y-auto px-4 pb-6 pt-10 bg-gradient-to-b from-white via-gray-50/50 to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-900"
+          >
             {/* App Header */}
             <div className="mb-4 flex items-center justify-between">
-              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-              <button className="h-6 w-6 rounded-full border-2 border-border" />
+              <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <button className="h-6 w-6 rounded-full border-2 border-gray-300 dark:border-gray-600" />
             </div>
 
             {/* Tabs */}
-            <div className="mb-4 flex gap-4 border-b border-border">
-              <button className="border-b-2 border-foreground pb-2 text-sm font-medium text-foreground">
+            <div className="mb-4 flex gap-4 border-b border-gray-200 dark:border-gray-700">
+              <button className="border-b-2 border-brand pb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Summary
               </button>
               <button 
@@ -75,8 +88,8 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
                 onClick={() => onItemClick('transactions')}
                 className={`pb-2 text-sm font-medium flex items-center gap-1 transition-colors rounded px-2 ${
                   clickedItemId === 'transactions' 
-                    ? 'z-20 bg-background shadow-sm text-foreground' 
-                    : 'text-muted-foreground hover:bg-muted/50'
+                    ? 'z-20 bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white' 
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
               >
                 Transactions
@@ -86,7 +99,7 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
 
             {/* Credit Details Section */}
             <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-foreground">Credit Details</h4>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Credit Details</h4>
               
               <div className="space-y-3 text-xs">
                 <PhoneItem
@@ -115,10 +128,10 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
               </div>
 
               {/* Statement Details */}
-              <div className="border-t border-border pt-4">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-foreground">Statement Details</h4>
-                  <button className="text-xs text-brand">View eStatement</button>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Statement Details</h4>
+                  <button className="text-xs text-brand hover:text-brand/80">View eStatement</button>
                 </div>
                 
                 <div className="space-y-3 text-xs">
@@ -157,8 +170,8 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
               </div>
 
               {/* Payment Details */}
-              <div className="border-t border-border pt-4">
-                <h4 className="mb-3 text-sm font-semibold text-foreground">Payment Details</h4>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Payment Details</h4>
                 
                 <div className="space-y-3 text-xs">
                   <PhoneItem
@@ -180,28 +193,28 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
               </div>
 
               {/* More Options */}
-              <div className="border-t border-border pt-4">
-                <h4 className="mb-3 text-sm font-semibold text-foreground">More Options</h4>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">More Options</h4>
                 <div className="relative z-20 space-y-2">
-                  <button className="flex w-full items-center justify-between rounded-lg bg-muted px-3 py-2.5 text-xs text-foreground hover:bg-muted/80 transition-colors">
+                  <button className="flex w-full items-center justify-between rounded-lg bg-gray-100 dark:bg-gray-800 px-3 py-2.5 text-xs text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     <span className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded bg-background" />
+                      <div className="h-4 w-4 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700" />
                       Make a Payment
                     </span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                   
-                  <button className="flex w-full items-center justify-between rounded-lg bg-muted px-3 py-2.5 text-xs text-foreground hover:bg-muted/80 transition-colors">
+                  <button className="flex w-full items-center justify-between rounded-lg bg-gray-100 dark:bg-gray-800 px-3 py-2.5 text-xs text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     <span className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded bg-background" />
+                      <div className="h-4 w-4 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700" />
                       Manage My Card
                     </span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                   
-                  <button className="flex w-full items-center justify-between rounded-lg bg-muted px-3 py-2.5 text-xs text-foreground hover:bg-muted/80 transition-colors">
+                  <button className="flex w-full items-center justify-between rounded-lg bg-gray-100 dark:bg-gray-800 px-3 py-2.5 text-xs text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     <span className="flex items-center gap-2">
-                      <div className="h-4 w-4 rounded bg-background" />
+                      <div className="h-4 w-4 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700" />
                       Choose PIN
                     </span>
                     <ChevronRight className="h-4 w-4" />
@@ -231,14 +244,16 @@ function PhoneItem({ id, label, value, isActive, onClick }: PhoneItemProps) {
       id={`phone-item-${id}`}
       onClick={() => onClick(id)}
       className={`relative flex w-full items-center justify-between rounded px-2 py-1 transition-colors ${
-        isActive ? 'z-20 bg-background shadow-sm' : 'hover:bg-muted/50'
+        isActive 
+          ? 'z-20 bg-white dark:bg-gray-800 shadow-sm' 
+          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
       }`}
     >
-      <span className="flex items-center gap-1 text-muted-foreground">
+      <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
         {label}
         <Info className="h-3 w-3" />
       </span>
-      <span className={`${isActive ? 'font-semibold' : ''} text-foreground`}>{value}</span>
+      <span className={`${isActive ? 'font-semibold' : ''} text-gray-900 dark:text-white`}>{value}</span>
     </button>
   );
 }
