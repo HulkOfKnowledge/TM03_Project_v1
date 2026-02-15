@@ -444,7 +444,7 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
             {/* Tabs */}
             <div className="flex-1 overflow-hidden">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="w-full justify-start">
+                <TabsList className="justify-start">
                   <TabsTrigger value="overview" className="flex-shrink-0">Overview</TabsTrigger>
                   <TabsTrigger value="quiz" className="flex-shrink-0">Take Quiz</TabsTrigger>
                 </TabsList>

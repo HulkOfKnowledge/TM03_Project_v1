@@ -61,7 +61,7 @@ export function LessonPreviewCard({
       </div>
 
       {/* Right Column - Preview/Placeholder */}
-      <div className="relative min-h-[200px] overflow-hidden rounded-2xl bg-muted/30 md:h-full md:min-h-[280px]">
+      <div className="relative min-h-[200px] overflow-hidden rounded-2xl bg-muted md:h-full md:min-h-[280px]">
         {rightContent === 'image' && rightImageUrl ? (
           <>
             <Image
