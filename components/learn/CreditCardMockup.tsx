@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Info, RotateCcw } from 'lucide-react';
 
 interface CreditCardMockupProps {
@@ -26,6 +26,15 @@ export function CreditCardMockup({ clickedItemId, onItemClick }: CreditCardMocku
     onItemClick(termId);
   };
 
+  // Handle external clicks from accordion - flip to appropriate side
+  useEffect(() => {
+    if (clickedItemId === 'cvv') {
+      setIsFlipped(true);
+    } else if (clickedItemId) {
+      setIsFlipped(false);
+    }
+  }, [clickedItemId]);
+
   return (
     <div className="rounded-2xl bg-muted p-6">
       <h3 className="mb-2 text-lg font-semibold text-foreground">
@@ -35,17 +44,6 @@ export function CreditCardMockup({ clickedItemId, onItemClick }: CreditCardMocku
         Click on each <Info className="inline h-3 w-3" /> point to learn what it means
       </p>
 
-      {/* Flip Toggle Button */}
-      <div className="mb-4 flex justify-center">
-        <button
-          onClick={() => setIsFlipped(!isFlipped)}
-          className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90 transition-colors"
-        >
-          <RotateCcw className="h-4 w-4" />
-          {isFlipped ? 'Show Front' : 'Show Back'}
-        </button>
-      </div>
-
       {/* Card Container */}
       <div className="relative mx-auto w-full max-w-[400px] perspective-1000">
         <div
@@ -54,7 +52,7 @@ export function CreditCardMockup({ clickedItemId, onItemClick }: CreditCardMocku
           }`}
         >
           {/* Front of Card */}
-          <div className={`${isFlipped ? 'hidden' : 'block'}`}>
+          <div className="backface-hidden">
             <div className="relative aspect-[1.586/1] w-full overflow-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl">
               {/* Gray Overlay */}
               {clickedItemId && clickedItemId !== 'cvv' && (
@@ -112,7 +110,7 @@ export function CreditCardMockup({ clickedItemId, onItemClick }: CreditCardMocku
                 >
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-xl tracking-wider text-white">
-                      4532  1234  5678  9010
+                      1111-2222-3333-4444
                     </span>
                     <Info className="h-4 w-4 text-white" />
                   </div>
@@ -136,7 +134,7 @@ export function CreditCardMockup({ clickedItemId, onItemClick }: CreditCardMocku
                         <Info className="h-3 w-3 text-white" />
                       </div>
                       <p className="font-medium uppercase tracking-wide text-white">
-                        John Smith
+                        John Doe
                       </p>
                     </div>
                   </CardItem>
@@ -165,7 +163,7 @@ export function CreditCardMockup({ clickedItemId, onItemClick }: CreditCardMocku
           </div>
 
           {/* Back of Card */}
-          <div className={`${isFlipped ? 'block' : 'hidden'}`}>
+          <div className="absolute top-0 left-0 w-full backface-hidden rotate-y-180">
             <div className="relative aspect-[1.586/1] w-full overflow-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl">
               {/* Gray Overlay */}
               {clickedItemId && clickedItemId === 'cvv' && (
@@ -217,10 +215,18 @@ export function CreditCardMockup({ clickedItemId, onItemClick }: CreditCardMocku
         </div>
       </div>
 
-      {/* Help Text */}
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        {isFlipped ? 'Viewing back of card' : 'Viewing front of card'}
-      </p>
+
+      {/* Flip Toggle Button */}
+      <div className="mt-4 flex justify-center">
+        <button
+          onClick={() => setIsFlipped(!isFlipped)}
+          className="inline-flex items-center gap-2 rounded-lg bg-gray-400 px-4 py-2 text-sm font-medium text-white hover:bg-brand/90 transition-colors"
+        >
+          <RotateCcw className="h-4 w-4" />
+          {isFlipped ? 'Show Front' : 'Show Back'}
+        </button>
+      </div>
+
     </div>
   );
 }
