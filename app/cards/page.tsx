@@ -48,7 +48,7 @@ export default function CardDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-black">
+      <div className="min-h-screen bg-background">
         <Navigation />
         <main className="pt-28 lg:pt-40 pb-16">
           <div className="container mx-auto px-4 md:px-6">
@@ -61,7 +61,7 @@ export default function CardDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
+    <div className="min-h-screen bg-background">
       <Navigation />
 
       {/* Main Content */}

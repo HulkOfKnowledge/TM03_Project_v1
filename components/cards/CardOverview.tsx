@@ -5,8 +5,9 @@
 
 'use client';
 
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Info, Download, Search, Filter, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Info, Search, Filter, X } from 'lucide-react';
+import { CreditCardDisplay } from './CreditCardDisplay';
 
 interface ConnectedCard {
   id: string;
@@ -19,7 +20,7 @@ interface ConnectedCard {
 interface CardOverviewProps {
   card: ConnectedCard;
   onAddCard: () => void;
-  onDisconnectCard?: () => void;
+  onDisconnectCard?: (cardId: string) => void;
   allCards?: ConnectedCard[];
 }
 
@@ -46,34 +47,12 @@ const historyData = [
   { month: 'January', date: '01/01/2024', totalBalance: '$12,000.45', creditInterest: '$10,000', feeCharge: '$750', payment: '-$200', status: 'sample-redacted' },
 ];
 
-const recommendedArticles = [
-  {
-    id: '1',
-    title: 'Credit Counseling Services in Canada',
-    subtitle: 'Who to expect',
-    tag: 'Debt Recovery & Crisis Management',
-    readTime: '2 min read',
-    image: '/placeholder-1.jpg',
-  },
-  {
-    id: '2',
-    title: 'How Mortgage Pre-Approvals Affect Your Credit',
-    subtitle: 'Understanding the home-buying credit impact',
-    tag: 'Advanced Learn',
-    readTime: '3 segs quick',
-    image: '/placeholder-2.jpg',
-  },
-  {
-    id: '3',
-    title: "Warning Signs You're Heading into Debt Trouble",
-    subtitle: 'and help you shouldn\'t ignore',
-    tag: 'Debt Recovery & Crisis Management',
-    readTime: '1 min warning post',
-    image: '/placeholder-3.jpg',
-  },
-];
-
-// Volume-style progress bar component
+/**
+ * Volume-style progress bar component
+ * 0-25% = Safe (Green)
+ * 25-29% = Warning (Yellow/Orange)
+ * 30%+ = Danger (Red)
+ */
 function VolumeProgressBar({ percentage = 20 }: { percentage?: number }) {
   // Create 40 bars with varying heights
   const bars = Array.from({ length: 40 }, (_, i) => {
@@ -81,31 +60,36 @@ function VolumeProgressBar({ percentage = 20 }: { percentage?: number }) {
     let height = 'h-2';
     let color = 'bg-gray-300 dark:bg-gray-700';
     
-    // Green zone (0-30%)
-    if (position < 30) {
-      if (i % 4 === 0) height = 'h-6';
-      else if (i % 2 === 0) height = 'h-4';
-      else height = 'h-3';
+    // Green zone (0-25%)
+    if (position < 25) {
+      // Gradually increase height
+      if (i % 4 === 0) height = 'h-4';
+      else if (i % 3 === 0) height = 'h-3';
+      else if (i % 2 === 0) height = 'h-3';
+      else height = 'h-2';
       
       if (position <= percentage) {
         color = 'bg-green-500';
       }
     }
-    // Yellow zone (30-60%)
-    else if (position < 60) {
-      if (i % 4 === 0) height = 'h-8';
-      else if (i % 2 === 0) height = 'h-6';
+    // Warning zone (25-30%)
+    else if (position < 30) {
+      // Medium height bars
+      if (i % 3 === 0) height = 'h-5';
+      else if (i % 2 === 0) height = 'h-4';
       else height = 'h-4';
       
       if (position <= percentage) {
         color = 'bg-yellow-500';
       }
     }
-    // Red zone (60-100%)
+    // Danger zone (30-100%)
     else {
-      if (i % 4 === 0) height = 'h-10';
-      else if (i % 2 === 0) height = 'h-8';
-      else height = 'h-6';
+      // Tallest bars
+      if (i % 4 === 0) height = 'h-8';
+      else if (i % 3 === 0) height = 'h-7';
+      else if (i % 2 === 0) height = 'h-6';
+      else height = 'h-5';
       
       if (position <= percentage) {
         color = 'bg-red-500';
@@ -116,7 +100,7 @@ function VolumeProgressBar({ percentage = 20 }: { percentage?: number }) {
   });
 
   return (
-    <div className="flex items-end justify-center gap-0.5 h-12 px-4">
+    <div className="flex items-end justify-center gap-0.5 h-10 px-4">
       {bars.map((bar, i) => (
         <div
           key={i}
@@ -136,6 +120,13 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   // Use allCards if provided, otherwise just use the single card
   const cards = allCards.length > 0 ? allCards : [card];
   const currentCard = cards[currentCardIndex];
+
+  // Adjust currentCardIndex if it becomes out of bounds when cards are removed
+  useEffect(() => {
+    if (currentCardIndex >= cards.length && cards.length > 0) {
+      setCurrentCardIndex(cards.length - 1);
+    }
+  }, [cards.length, currentCardIndex]);
 
   const handlePrevCard = () => {
     if (currentCardIndex > 0 && !isTransitioning) {
@@ -159,10 +150,19 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
   const handleDisconnect = () => {
     setShowDisconnectConfirm(false);
-    if (onDisconnectCard) {
-      onDisconnectCard();
+    if (onDisconnectCard && currentCard) {
+      onDisconnectCard(currentCard.id);
+      // If we're removing the last card in the list, move to the previous one
+      if (currentCardIndex >= cards.length - 1 && currentCardIndex > 0) {
+        setCurrentCardIndex(currentCardIndex - 1);
+      }
     }
   };
+
+  // Safety check: if no current card, don't render
+  if (!currentCard) {
+    return null;
+  }
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -217,7 +217,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
       {/* Card Carousel */}
       <div className="mb-8">
-        <div className="relative max-w-2xl mx-auto">
+        <div className="relative max-w-lg mx-auto">
           {/* Navigation Buttons */}
           {cards.length > 1 && (
             <>
@@ -239,43 +239,42 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             </>
           )}
 
-          {/* Card with 3D effect */}
-          <div className="perspective-1000">
-            {/* Card back (shadow layer) */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-20 bg-gray-400 dark:bg-gray-700 rounded-t-2xl -z-10"></div>
-            <div className="absolute top-5 left-1/2 -translate-x-1/2 w-[95%] h-16 bg-gray-300 dark:bg-gray-800 rounded-t-2xl -z-20"></div>
+          {/* 3-Card Stack */}
+          <div className="relative">
+            {/* Back card (third in stack) - only show if there's a next card */}
+            {currentCardIndex < cards.length - 1 && (
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[85%] pointer-events-none">
+                <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-t-2xl opacity-60"></div>
+              </div>
+            )}
 
-            {/* Main Card Display */}
+            {/* Middle card (second in stack) - only show if there are at least 2 cards */}
+            {cards.length > 1 && currentCardIndex < cards.length - 1 && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[92%] pointer-events-none">
+                <div className="h-20 bg-gray-300 dark:bg-gray-700 rounded-t-2xl opacity-80"></div>
+              </div>
+            )}
+
+            {/* Front card (current card) */}
             <div 
-              className={`bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 rounded-2xl p-6 md:p-8 shadow-2xl aspect-[1.586/1] relative overflow-hidden transition-opacity duration-300 ${
+              className={`relative transition-opacity duration-300 ${
                 isTransitioning ? 'opacity-0' : 'opacity-100'
               }`}
             >
-              {/* Decorative wave element */}
-              <div className="absolute top-0 right-0 w-96 h-96 opacity-20">
-                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white to-transparent rounded-full -translate-y-48 translate-x-48 rotate-45"></div>
-              </div>
-              
-              <div className="relative z-10 flex flex-col justify-between h-full">
-                <div className="flex items-start justify-between">
-                  <p className="text-white/90 text-base md:text-lg font-medium">Credit</p>
-                  <div className="text-right">
-                    <p className="text-white font-bold text-xl md:text-2xl">{currentCard.type.toUpperCase()}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-white/90 text-base md:text-lg mb-3">Kristin Mumbi</p>
-                  <p className="text-white text-lg md:text-xl tracking-[0.2em] font-medium">
-                    4556 - 5642 - 0695 - {currentCard.lastFour}
-                  </p>
-                </div>
-              </div>
+              <CreditCardDisplay
+                bank={currentCard.bank}
+                name="Kristin Mumbi"
+                type={currentCard.type}
+                lastFour={currentCard.lastFour}
+                gradientIndex={currentCardIndex}
+                size="large"
+              />
 
               {/* Disconnect button on card */}
               {cards.length > 1 && (
                 <button
                   onClick={() => setShowDisconnectConfirm(true)}
-                  className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+                  className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-20"
                   title="Disconnect card"
                 >
                   <X className="h-4 w-4 text-white" />
@@ -309,7 +308,12 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
       {/* Metrics Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Metrics</h2>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Metrics</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              Sample data for {currentCard.bank} {currentCard.name}
+            </p>
+          </div>
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
@@ -340,7 +344,12 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
       {/* History Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">History</h2>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">History</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              Currently showing sample data for {currentCard.bank} {currentCard.name} (****{currentCard.lastFour})
+            </p>
+          </div>
           <button className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             Download Statement
           </button>
