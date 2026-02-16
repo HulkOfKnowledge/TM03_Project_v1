@@ -24,6 +24,223 @@ interface CardOverviewProps {
   allCards?: ConnectedCard[];
 }
 
+// Add these interfaces at the top with other interfaces
+interface HistoryRow {
+  month: string;
+  zone: 'Safe' | 'Caution' | 'Danger';
+  startBalance: string;
+  endingBalance: string;
+  peakUsage: string;
+  payment: string;
+}
+
+type SortField = 'zone' | 'month' | 'startBalance' | 'endingBalance' | 'peakUsage' | 'payment';
+type SortDirection = 'asc' | 'desc' | null;
+
+// Updated history data
+const updatedHistoryData: HistoryRow[] = [
+  { month: 'December', zone: 'Safe', startBalance: '$900.45', endingBalance: '$700', peakUsage: '$200', payment: '-$200' },
+  { month: 'November', zone: 'Danger', startBalance: '$1100', endingBalance: '$900.45', peakUsage: '$200', payment: '-$200' },
+  { month: 'October', zone: 'Safe', startBalance: '$1300', endingBalance: '$1100', peakUsage: '$200', payment: '-$200' },
+  { month: 'September', zone: 'Safe', startBalance: '$1000', endingBalance: '$1000', peakUsage: '-$200', payment: '-$200' },
+  { month: 'August', zone: 'Caution', startBalance: '$1100', endingBalance: '$900.45', peakUsage: '$200', payment: '-$200' },
+  { month: 'July', zone: 'Safe', startBalance: '$900.45', endingBalance: '$700', peakUsage: '-$200', payment: '-$200' },
+  { month: 'June', zone: 'Safe', startBalance: '$500', endingBalance: '$300', peakUsage: '$200', payment: '-$200' },
+  { month: 'May', zone: 'Safe', startBalance: '$800', endingBalance: '$800', peakUsage: '$0.00', payment: '-$200' },
+  { month: 'April', zone: 'Safe', startBalance: '$1100', endingBalance: '$1499', peakUsage: '-$200', payment: '-$200' },
+  { month: 'March', zone: 'Safe', startBalance: '$500', endingBalance: '$700', peakUsage: '$200', payment: '-$200' },
+];
+
+
+function HistoryTable() {
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Cycle through: asc -> desc -> null
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null);
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const toggleRow = (index: number) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedRows(newSelected);
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    if (sortDirection === 'asc') return '↑';
+    if (sortDirection === 'desc') return '↓';
+    return null;
+  };
+
+  // Month order for sorting
+  const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  // Zone order for sorting (Safe -> Caution -> Danger)
+  const zoneOrder = { 'Safe': 1, 'Caution': 2, 'Danger': 3 };
+
+  const sortedData = [...updatedHistoryData];
+  if (sortField && sortDirection) {
+    sortedData.sort((a, b) => {
+      let comparison = 0;
+
+      if (sortField === 'zone') {
+        // Sort by zone: Safe -> Caution -> Danger (asc) or reverse (desc)
+        comparison = zoneOrder[a.zone] - zoneOrder[b.zone];
+      } else if (sortField === 'month') {
+        // Sort by month chronologically
+        comparison = monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
+      } else {
+        // Convert currency strings to numbers for sorting
+        let aVal: any = a[sortField];
+        let bVal: any = b[sortField];
+
+        if (typeof aVal === 'string' && aVal.startsWith('$')) {
+          aVal = parseFloat(aVal.replace(/[$,]/g, ''));
+          bVal = parseFloat(bVal.replace(/[$,]/g, ''));
+        }
+
+        if (aVal < bVal) comparison = -1;
+        else if (aVal > bVal) comparison = 1;
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }
+
+  const getZoneColor = (zone: string) => {
+    switch (zone) {
+      case 'Safe':
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+      case 'Caution':
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'Danger':
+        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      default:
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+    }
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+      <table className="w-full">
+        <thead>
+          <tr className="bg-gray-100 text-left text-sm dark:bg-gray-900">
+            <th 
+              className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => handleSort('zone')}
+            >
+              <div className="flex items-center gap-2">
+                Zone {getSortIcon('zone') && <span className="text-xs">{getSortIcon('zone')}</span>}
+              </div>
+            </th>
+            <th 
+              className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => handleSort('month')}
+            >
+              <div className="flex items-center gap-2">
+                Month {getSortIcon('month') && <span className="text-xs">{getSortIcon('month')}</span>}
+              </div>
+            </th>
+            <th 
+              className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => handleSort('startBalance')}
+            >
+              <div className="flex items-center gap-2">
+                Start Balance {getSortIcon('startBalance') && <span className="text-xs">{getSortIcon('startBalance')}</span>}
+              </div>
+            </th>
+            <th 
+              className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => handleSort('endingBalance')}
+            >
+              <div className="flex items-center gap-2">
+                Ending Balance {getSortIcon('endingBalance') && <span className="text-xs">{getSortIcon('endingBalance')}</span>}
+              </div>
+            </th>
+            <th 
+              className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => handleSort('peakUsage')}
+            >
+              <div className="flex items-center gap-2">
+                Peak Usage {getSortIcon('peakUsage') && <span className="text-xs">{getSortIcon('peakUsage')}</span>}
+              </div>
+            </th>
+            <th 
+              className="px-4 py-3 font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => handleSort('payment')}
+            >
+              <div className="flex items-center gap-2">
+                Payment {getSortIcon('payment') && <span className="text-xs">{getSortIcon('payment')}</span>}
+              </div>
+            </th>
+            <th className="px-4 py-3 font-medium">Action</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white dark:bg-gray-950">
+          {sortedData.map((row, index) => (
+            <tr
+              key={index}
+              className="border-b border-gray-200 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50"
+            >
+              <td className="px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.has(index)}
+                    onChange={() => toggleRow(index)}
+                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className={`inline-block rounded px-3 py-1 text-xs font-medium ${getZoneColor(row.zone)}`}>
+                    {row.zone}
+                  </span>
+                </div>
+              </td>
+              <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                {row.month}
+              </td>
+              <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                {row.startBalance}
+              </td>
+              <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                {row.endingBalance}
+              </td>
+              <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                {row.peakUsage}
+              </td>
+              <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                {row.payment}
+              </td>
+              <td className="px-4 py-4">
+                <button className="text-sm text-gray-900 underline hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400">
+                  View Note
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // Sample data
 const metrics = [
   { label: 'Credit balance', value: '$2,000', info: true, description: '$2,000 to be paid' },
@@ -32,20 +249,6 @@ const metrics = [
   { label: 'Payment Amount', value: '$200', info: true, description: '+$125 this month' },
 ];
 
-const historyData = [
-  { month: 'December', date: '12/12/2024', totalBalance: '$10,000.45', creditInterest: '$10,000', feeCharge: '$250', payment: '$200', status: 'paid' },
-  { month: 'November', date: '11/11/2024', totalBalance: '$12,000.45', creditInterest: '$10,000', feeCharge: '$250', payment: '$200', status: 'sample-redacted' },
-  { month: 'October', date: '10/10/2024', totalBalance: '$900.45', creditInterest: '$10,000', feeCharge: '$250', payment: '-$250', status: 'sample-redacted' },
-  { month: 'September', date: '09/09/2024', totalBalance: '$700.45', creditInterest: '$10,000', feeCharge: '$250', payment: '$200', status: 'sample-redacted' },
-  { month: 'August', date: '08/08/2024', totalBalance: '$800.15', creditInterest: '$10,000', feeCharge: '$250', payment: '-$250', status: 'sample-redacted' },
-  { month: 'July', date: '07/07/2024', totalBalance: '$12,000.40', creditInterest: '$10,000', feeCharge: '$250', payment: '$200', status: 'sample-redacted' },
-  { month: 'June', date: '06/06/2024', totalBalance: '$17,000.45', creditInterest: '$10,000', feeCharge: '$350', payment: '$200', status: 'sample-redacted' },
-  { month: 'May', date: '05/05/2024', totalBalance: '$12,000.40', creditInterest: '$10,000', feeCharge: '$10.00', payment: '$200', status: 'sample-redacted' },
-  { month: 'April', date: '04/04/2024', totalBalance: '$900.45', creditInterest: '$10,000', feeCharge: '$250', payment: '$200', status: 'sample-redacted' },
-  { month: 'March', date: '03/03/2024', totalBalance: '$12,000.45', creditInterest: '$10,000', feeCharge: '$200', payment: '-$200', status: 'sample-redacted' },
-  { month: 'February', date: '02/02/2024', totalBalance: '$900.45', creditInterest: '$10,000', feeCharge: '$250', payment: '$200', status: 'sample-redacted' },
-  { month: 'January', date: '01/01/2024', totalBalance: '$12,000.45', creditInterest: '$10,000', feeCharge: '$750', payment: '-$200', status: 'sample-redacted' },
-];
 
 /**
  * Volume-style progress bar component
@@ -272,7 +475,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
             {/* Second card in stack - show if there's a card at +1 position */}
             {currentCardIndex + 1 < cards.length && !isTransitioning && (
-              <div className="pointer-events-none absolute left-1/2 top-4 z-10 w-[94%] -translate-x-1/2">
+              <div className="pointer-events-none absolute left-1/2 top-5 z-10 w-[94%] -translate-x-1/2">
                 <div className="h-40 overflow-hidden rounded-t-2xl opacity-80 shadow-md">
                   <CreditCardDisplay
                     bank={cards[currentCardIndex + 1].bank}
@@ -288,7 +491,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
             {/* Front card (current card) */}
             <div
-              className={`relative z-20 transition-opacity duration-300 ${
+              className={`relative z-20 top-5 transition-opacity duration-300 ${
                 isTransitioning ? 'opacity-0' : 'opacity-100'
               }`}
             >
@@ -416,89 +619,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-900 text-left text-sm text-white dark:bg-gray-950">
-                <th className="px-4 py-3 font-medium">Month</th>
-                <th className="px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">Total Balance</th>
-                <th className="px-4 py-3 font-medium">Credit Interest</th>
-                <th className="px-4 py-3 font-medium">Fee Charge</th>
-                <th className="px-4 py-3 font-medium">Payment</th>
-                <th className="px-4 py-3 font-medium">
-                  Status <span className="text-orange-400">Activity</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-950">
-              {historyData.map((row, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-200 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50"
-                >
-                  <td className="px-4 py-4">
-                    <span
-                      className={`inline-block rounded px-3 py-1 text-xs font-medium ${
-                        row.month === 'December'
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          : row.month === 'November'
-                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                            : row.month === 'October'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : row.month === 'September'
-                                ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
-                                : row.month === 'August'
-                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                  : row.month === 'July'
-                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                    : row.month === 'June'
-                                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                                      : row.month === 'May'
-                                        ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
-                                        : row.month === 'April'
-                                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                          : row.month === 'March'
-                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                            : row.month === 'February'
-                                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      }`}
-                    >
-                      {row.month.substring(0, 3)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
-                    {row.date}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
-                    {row.totalBalance}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
-                    {row.creditInterest}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
-                    {row.feeCharge}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
-                    {row.payment}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span
-                      className={`inline-block rounded px-3 py-1 text-xs font-medium ${
-                        row.status === 'paid'
-                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                      }`}
-                    >
-                      {row.status === 'paid' ? 'paid' : 'Sample redacted'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <HistoryTable />
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
