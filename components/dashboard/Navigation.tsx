@@ -200,7 +200,7 @@ export function Navigation() {
 
   // Check if subnav item is active
   const isSubNavActive = (href: string) => {
-    return pathname === href || pathname?.startsWith(href);
+    return pathname === href;
   };
 
   return (
