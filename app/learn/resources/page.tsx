@@ -102,7 +102,6 @@ const faqData: FAQItem[] = [
 
 export default function ResourcesPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'recommended' | 'newest'>('recommended');
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>('1');
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,57 +143,34 @@ export default function ResourcesPage() {
       <main className="pt-28 lg:pt-40 pb-16">
         <div className="container mx-auto px-4 md:px-6">
           {/* Header Section */}
-          <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
-              Resources
-            </h1>
-            <p className="text-base text-gray-600 dark:text-gray-400 max-w-2xl">
-              When you learn with Creduman, we'll be right by your side. Explore all the resources we've developed to help you to learn faster.
-            </p>
-          </div>
-
-          {/* Search and Sort Section */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-            {/* Search Bar */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent dark:border-gray-800 dark:bg-black dark:text-white dark:placeholder:text-gray-500"
-              />
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 lg:gap-8 mb-8">
+            {/* Left: Title and Description */}
+            <div className="flex-1">
+              <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
+                Resources
+              </h1>
+              <p className="text-base text-gray-600 dark:text-gray-400 max-w-2xl">
+                When you learn with Creduman, we'll be right by your side. Explore all the resources we've developed to help you to learn faster.
+              </p>
             </div>
 
-            {/* Sort Options */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Sort by:</span>
-              <button
-                onClick={() => setSortBy('recommended')}
-                className={`text-sm font-medium transition-colors ${
-                  sortBy === 'recommended'
-                    ? 'text-brand underline'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-brand'
-                }`}
-              >
-                Recommended
-              </button>
-              <button
-                onClick={() => setSortBy('newest')}
-                className={`text-sm font-medium transition-colors ${
-                  sortBy === 'newest'
-                    ? 'text-brand underline'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-brand'
-                }`}
-              >
-                Newest
-              </button>
+            {/* Search Bar */}
+            <div className="lg:pt-1">
+              <div className="relative w-full lg:w-[400px]">
+                <input
+                  type="text"
+                  placeholder="Search.."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-4 pr-10 py-2.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 transition-shadow"
+                />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+              </div>
             </div>
           </div>
 
           {/* Resources Grid */}
-          <section className="mb-16">
+          <section className="mb-16 mt-16">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredResources.map((resource) => (
                 <ResourceCard

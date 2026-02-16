@@ -5,7 +5,6 @@
 
 'use client';
 
-import { FileText, Video, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 export interface Resource {
@@ -25,44 +24,40 @@ interface ResourceCardProps {
 
 export function ResourceCard({ resource, onClick }: ResourceCardProps) {
   const isDocument = resource.type === 'document';
-  const Icon = isDocument ? FileText : Video;
 
   return (
     <div
       onClick={onClick}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all hover:border-gray-300 hover:shadow-md dark:border-gray-800 dark:bg-black dark:hover:border-gray-700 cursor-pointer"
+      className="group grid grid-cols-2 gap-0 overflow-hidden rounded-lg bg-gray-100 transition-all hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800 cursor-pointer min-h-[200px] sm:min-h-[240px]"
     >
-      {/* Thumbnail/Icon Area */}
-      <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
-        {resource.thumbnailUrl ? (
-          <img
-            src={resource.thumbnailUrl}
-            alt={resource.title}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-            <Icon className="h-16 w-16 text-gray-400 dark:text-gray-600" />
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex flex-1 flex-col justify-between p-4">
+      {/* Left: Content */}
+      <div className="flex flex-col justify-between p-4 sm:p-6">
         <div>
-          <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-normal mb-2 sm:mb-3 block">
             {resource.category || (isDocument ? 'Documents' : 'Videos')}
           </span>
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-brand transition-colors">
+          <h3 className="text-lg sm:text-xl md:text-2xl text-gray-900 dark:text-white leading-tight">
             {resource.title}
           </h3>
         </div>
 
-        {/* Action Button */}
-        <button className="mt-4 flex items-center justify-center gap-2 text-sm font-medium text-brand hover:underline">
+        {/* Explore Link at bottom */}
+        <button className="flex items-center gap-1.5 text-sm sm:text-base font-normal text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors self-start underline mt-4">
           Explore
-          <ArrowRight className="h-4 w-4" />
         </button>
+      </div>
+
+      {/* Right: Image Placeholder */}
+      <div className="relative bg-white/40 dark:bg-gray-950/40 flex items-center justify-center overflow-hidden">
+        {resource.thumbnailUrl ? (
+          <img
+            src={resource.thumbnailUrl}
+            alt={resource.title}
+            className="h-full w-full object-cover opacity-20"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_25%,rgba(255,255,255,0.05)_50%,transparent_50%,transparent_75%,rgba(255,255,255,0.05)_75%)] bg-[length:20px_20px] opacity-30" />
+        )}
       </div>
     </div>
   );
@@ -70,16 +65,16 @@ export function ResourceCard({ resource, onClick }: ResourceCardProps) {
 
 export function ResourceCardSkeleton() {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
-      <Skeleton className="aspect-[4/3]" />
-      <div className="flex flex-1 flex-col justify-between p-4">
+    <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-900 min-h-[200px] sm:min-h-[240px]">
+      <div className="flex flex-col justify-between p-4 sm:p-6">
         <div>
-          <Skeleton className="h-3 w-20 mb-2" />
-          <Skeleton className="h-5 w-full mb-1" />
-          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-3 w-20 mb-2 sm:mb-3" />
+          <Skeleton className="h-6 w-full mb-2" />
+          <Skeleton className="h-6 w-4/5" />
         </div>
-        <Skeleton className="h-4 w-24 mt-4" />
+        <Skeleton className="h-4 w-16 mt-4" />
       </div>
+      <Skeleton className="w-full h-full" />
     </div>
   );
 }
