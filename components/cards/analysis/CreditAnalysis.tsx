@@ -5,8 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Info, TrendingUp, TrendingDown, ChevronUp, Search } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -20,7 +19,11 @@ import {
   Filler,
   ChartOptions,
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
+import { useIsDarkMode } from '@/hooks/useTheme';
+import { MetricCard } from './MetricCard';
+import { ChartSection } from './ChartSection';
+import { PaymentHistoryTable } from './PaymentHistoryTable';
 
 // Register Chart.js components
 ChartJS.register(
@@ -61,39 +64,26 @@ const paymentHistory = [
 
 export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
   const [selectedPeriod, setSelectedPeriod] = useState('Yearly');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const isDark = useIsDarkMode();
 
-  // Detect theme changes
-  useEffect(() => {
-    const checkTheme = () => {
-      const isDark = document.documentElement.classList.contains('dark');
-      setTheme(isDark ? 'dark' : 'light');
-    };
-
-    checkTheme();
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-    return () => observer.disconnect();
-  }, []);
-
-  const isDark = theme === 'dark';
-  const textColor = isDark ? '#9CA3AF' : '#6B7280';
-  const gridColor = isDark ? '#374151' : '#E5E7EB';
-  const lineColors = {
+  // Memoize theme-dependent values
+  const themeColors = useMemo(() => ({
+    text: isDark ? '#9CA3AF' : '#6B7280',
+    grid: isDark ? '#374151' : '#E5E7EB',
     safe: isDark ? '#D1D5DB' : '#9CA3AF',
     caution: isDark ? '#6B7280' : '#4B5563',
     danger: isDark ? '#1F2937' : '#111827',
-  };
+    spending: isDark ? '#6B7280' : '#111827',
+  }), [isDark]);
 
   // Utilization Rate Chart Data
-  const utilizationChartData = {
+  const utilizationChartData = useMemo(() => ({
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     datasets: [
       {
         label: 'Safe',
         data: [100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300],
-        borderColor: lineColors.safe,
+        borderColor: themeColors.safe,
         backgroundColor: 'transparent',
         borderWidth: 2,
         tension: 0.4,
@@ -102,7 +92,7 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       {
         label: 'Caution',
         data: [80, 100, 120, 130, 140, 150, 160, 180, 200, 220, 240, 260],
-        borderColor: lineColors.caution,
+        borderColor: themeColors.caution,
         backgroundColor: 'transparent',
         borderWidth: 2,
         tension: 0.4,
@@ -111,16 +101,16 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       {
         label: 'Danger',
         data: [60, 80, 100, 110, 120, 130, 140, 160, 180, 200, 220, 240],
-        borderColor: lineColors.danger,
+        borderColor: themeColors.danger,
         backgroundColor: 'transparent',
         borderWidth: 2,
         tension: 0.4,
         pointRadius: 0,
       },
     ],
-  };
+  }), [themeColors]);
 
-  const utilizationChartOptions: ChartOptions<'line'> = {
+  const utilizationChartOptions: ChartOptions<'line'> = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -136,11 +126,11 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
     scales: {
       x: {
         grid: {
-          color: gridColor,
+          color: themeColors.grid,
           drawTicks: false,
         },
         ticks: {
-          color: textColor,
+          color: themeColors.text,
           font: {
             size: 12,
           },
@@ -153,11 +143,11 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
         min: 0,
         max: 500,
         grid: {
-          color: gridColor,
+          color: themeColors.grid,
           drawTicks: false,
         },
         ticks: {
-          color: textColor,
+          color: themeColors.text,
           font: {
             size: 12,
           },
@@ -175,16 +165,16 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       mode: 'index',
       intersect: false,
     },
-  };
+  }), [themeColors]);
 
   // Spending Patterns Chart Data
-  const spendingChartData = {
+  const spendingChartData = useMemo(() => ({
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     datasets: [
       {
         label: 'Spending',
         data: [80, 120, 150, 180, 200, 170, 160, 200, 250, 300, 350, 400],
-        borderColor: isDark ? '#6B7280' : '#111827',
+        borderColor: themeColors.spending,
         backgroundColor: 'transparent',
         borderWidth: 2,
         tension: 0.4,
@@ -192,9 +182,9 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
         fill: false,
       },
     ],
-  };
+  }), [themeColors]);
 
-  const spendingChartOptions: ChartOptions<'line'> = {
+  const spendingChartOptions: ChartOptions<'line'> = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -210,11 +200,11 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
     scales: {
       x: {
         grid: {
-          color: gridColor,
+          color: themeColors.grid,
           drawTicks: false,
         },
         ticks: {
-          color: textColor,
+          color: themeColors.text,
           font: {
             size: 12,
           },
@@ -227,11 +217,11 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
         min: 0,
         max: 500,
         grid: {
-          color: gridColor,
+          color: themeColors.grid,
           drawTicks: false,
         },
         ticks: {
-          color: textColor,
+          color: themeColors.text,
           font: {
             size: 12,
           },
@@ -245,7 +235,14 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
         },
       },
     },
-  };
+  }), [themeColors]);
+
+  // Chart legend configuration
+  const utilizationLegend = useMemo(() => [
+    { color: themeColors.safe, label: 'Safe' },
+    { color: themeColors.caution, label: 'Caution' },
+    { color: themeColors.danger, label: 'Danger' },
+  ], [themeColors]);
 
   return (
     <div className="mx-auto">
@@ -273,37 +270,19 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       {/* Top Metrics */}
       <div className="mb-6 grid grid-cols-1 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-2">
         {/* Top Row - Two Cards */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6">
-          <div className="mb-3 flex items-start justify-between">
-            <span className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-              Total Credit Available
-            </span>
-            <Info className="h-3 w-3 flex-shrink-0 text-gray-400 dark:text-gray-600 sm:h-4 sm:w-4" />
-          </div>
-          <p className="mb-2 text-3xl text-gray-900 dark:text-white sm:text-4xl md:text-5xl">
-            ${totalCreditAvailable.toLocaleString()}
-          </p>
-          <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-500">
-            <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm">0.5% Increase</span>
-          </div>
-        </div>
+        <MetricCard
+          label="Total Credit Available"
+          value={`$${totalCreditAvailable.toLocaleString()}`}
+          trend={{ value: '0.5% Increase', isPositive: true }}
+          showInfo
+        />
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6">
-          <div className="mb-3 flex items-start justify-between">
-            <span className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-              Total Amount Owed
-            </span>
-            <Info className="h-3 w-3 flex-shrink-0 text-gray-400 dark:text-gray-600 sm:h-4 sm:w-4" />
-          </div>
-          <p className="mb-2 text-3xl text-gray-900 dark:text-white sm:text-4xl md:text-5xl">
-            ${totalAmountOwed.toLocaleString()}
-          </p>
-          <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-500">
-            <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm">0.5% Increase</span>
-          </div>
-        </div>
+        <MetricCard
+          label="Total Amount Owed"
+          value={`$${totalAmountOwed.toLocaleString()}`}
+          trend={{ value: '0.5% Increase', isPositive: true }}
+          showInfo
+        />
 
         {/* Bottom Row - Full Width Card with Split Layout */}
         <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:col-span-2">
@@ -323,11 +302,11 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
             </div>
 
             {/* Right side - Card balances with dividers */}
-            <div className="flex items-center gap-0">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-0">
               {cardBalances.map((card, index) => (
                 <div key={index} className="flex items-center">
                   {index > 0 && (
-                    <div className="mx-4 h-12 w-px bg-gray-200 dark:bg-gray-800 sm:mx-6 sm:h-16"></div>
+                    <div className="mx-4 hidden h-12 w-px bg-gray-200 dark:bg-gray-800 sm:block sm:mx-6 sm:h-16"></div>
                   )}
                   <div className="flex flex-col items-center">
                     <p className="mb-1 text-[10px] text-gray-500 dark:text-gray-500 sm:text-xs">
@@ -345,259 +324,47 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       </div>
 
       {/* Overall Utilization Rate */}
-      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
-        <div className="mb-6">
-          {/* Title */}
-          <h2 className="mb-4 text-base text-gray-700 dark:text-gray-300 sm:text-lg">
-            Overall Utilization Rate
-          </h2>
-
-          {/* Separator */}
-          <div className="mb-4 h-px w-full bg-gray-300 dark:bg-gray-800"></div>
-
-          {/* Content Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[auto_auto_1fr] sm:items-center">
-            {/* Left: Percentage and increase */}
-            <div>
-              <div className="mb-1 flex items-center gap-2">
-                <span className="text-4xl text-gray-900 dark:text-white sm:text-5xl">
-                  {creditUtilizationRate}%
-                </span>
-                <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
-                  <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800 sm:text-sm">
-                    0.5%
-                  </span>
-                </div>
-              </div>
-              <span className="text-xs text-gray-500 dark:text-gray-500 sm:text-sm">
-                Utilization percentage
-              </span>
-            </div>
-
-            {/* Middle: Legend */}
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="h-16 w-px bg-gray-300 dark:bg-gray-800"></div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full bg-gray-300 dark:bg-gray-600 sm:h-3 sm:w-3"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-                  Safe
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full bg-gray-500 dark:bg-gray-500 sm:h-3 sm:w-3"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-                  Caution
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full bg-gray-900 dark:bg-gray-200 sm:h-3 sm:w-3"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-                  Danger
-                </span>
-              </div>
-            </div>
-
-            {/* Right: Dropdown */}
-            <div className="flex justify-end">
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:text-sm"
-              >
-                <option>Yearly</option>
-                <option>Monthly</option>
-                <option>Last 3 months</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Chart */}
-        <div className="h-64 sm:h-80">
-          <Line data={utilizationChartData} options={utilizationChartOptions} />
-        </div>
-      </div>
+      <ChartSection
+        title="Overall Utilization Rate"
+        primaryValue={`${creditUtilizationRate}%`}
+        primaryLabel="Utilization percentage"
+        trend={{ value: '0.5%' }}
+        legend={utilizationLegend}
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={setSelectedPeriod}
+        periodOptions={['Yearly', 'Monthly', 'Last 3 months']}
+      >
+        <Line data={utilizationChartData} options={utilizationChartOptions} />
+      </ChartSection>
 
       {/* Spending Patterns */}
-      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
-        <div className="mb-6">
-          {/* Title */}
-          <h2 className="mb-4 text-base text-gray-700 dark:text-gray-300 sm:text-lg">
-            Spending Patterns
-          </h2>
-
-          {/* Separator */}
-          <div className="mb-4 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-
-          {/* Content Grid */}
-          <div className="flex items-center justify-between">
-            {/* Left: Amount and labels */}
-            <div>
-              <div className="mb-1 flex items-center gap-2">
-                <span className="text-4xl text-gray-900 dark:text-white sm:text-5xl">
-                  $400
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-500 sm:text-sm">
-                  Spent
-                </span>
-              </div>
-              <span className="text-xs text-gray-500 dark:text-gray-500 sm:text-sm">
-                Average Amount
-              </span>
-            </div>
-
-            {/* Right: Dropdown */}
-            <div>
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:text-sm"
-              >
-                <option>Yearly</option>
-                <option>Monthly</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Chart */}
-        <div className="h-64 sm:h-80">
-          <Line data={spendingChartData} options={spendingChartOptions} />
-        </div>
-      </div>
+      <ChartSection
+        title="Spending Patterns"
+        primaryValue="$400"
+        primaryLabel="Average Amount"
+        secondaryLabel="Spent"
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={setSelectedPeriod}
+        periodOptions={['Yearly', 'Monthly']}
+      >
+        <Line data={spendingChartData} options={spendingChartOptions} />
+      </ChartSection>
 
       {/* Payment History */}
-      <div className="mb-6 sm:mb-8">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
-            Payment History
-          </h2>
-          <div className="flex gap-2">
-            <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900 sm:px-4 sm:text-sm">
-              2025
-              <svg
-                className="h-3 w-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-            <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900 sm:px-4 sm:text-sm">
-              Filter
-              <svg
-                className="h-3 w-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by name, transaction, anything"
-            className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:placeholder-gray-500"
-          />
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
-          <table className="w-full min-w-[800px]">
-            <thead>
-              <tr className="bg-gray-100 text-left text-xs dark:bg-gray-900 sm:text-sm">
-                <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                  <div className="flex items-center gap-1.5">
-                    Month
-                    <ChevronUp className="h-3 w-3" />
-                  </div>
-                </th>
-                <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                  Statement Balance
-                </th>
-                <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                  Amount Paid
-                </th>
-                <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                  Payment Status
-                </th>
-                <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                  Peak Usage
-                </th>
-                <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                  Alerts
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-950">
-              {paymentHistory.map((row, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-200 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50"
-                >
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
-                    {row.month}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
-                    {row.statementBalance}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
-                    {row.amountPaid}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs sm:px-4 sm:py-4 sm:text-sm">
-                    <span
-                      className={`${
-                        row.paymentStatus === 'Late'
-                          ? 'text-gray-400 dark:text-gray-500'
-                          : 'text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      {row.paymentStatus}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-500 dark:text-gray-400 sm:px-4 sm:py-4 sm:text-sm">
-                    {row.peakUsage}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
-                    {row.alerts}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <PaymentHistoryTable data={paymentHistory} />
 
       {/* Recommended Actions */}
-      <div className="grid grid-cols-1 gap-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mt-8 sm:p-6 lg:grid-cols-2 lg:gap-6">
         {/* Left side - Content */}
         <div>
           <h2 className="mb-2 text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
             Recommended Actions
           </h2>
-          <p className="mb-6 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
+          <p className="mb-4 text-xs text-gray-600 dark:text-gray-400 sm:mb-6 sm:text-sm">
             Here is what you need to do based on your credit analysis
           </p>
 
-          <p className="mb-6 text-xs leading-relaxed text-gray-700 dark:text-gray-300 sm:text-sm">
+          <p className="mb-4 text-xs leading-relaxed text-gray-700 dark:text-gray-300 sm:mb-6 sm:text-sm">
             Suspendisse potenti. Ut molestie, risus vel egestas convallis, diam
             nisi posuere quam, ac egestas risus sapien sit amet lorem.
             Suspendisse non dignissim felis. In ac ligula sem. Donec suscipit
@@ -607,11 +374,11 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
             et ultrices posuere cubilia curae; Nunc viverra vulputate justo.
           </p>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 dark:bg-indigo-600">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 sm:h-12 sm:w-12">
                 <svg
-                  className="h-6 w-6 text-white"
+                  className="h-5 w-5 text-white sm:h-6 sm:w-6"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -625,7 +392,7 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
                 </svg>
               </div>
               <div className="flex-1">
-                <div className="mb-1 flex items-center gap-2">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white sm:text-base">
                     Enable payment reminders
                   </h3>
@@ -640,9 +407,9 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 dark:bg-indigo-600">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 sm:h-12 sm:w-12">
                 <svg
-                  className="h-6 w-6 text-white"
+                  className="h-5 w-5 text-white sm:h-6 sm:w-6"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -656,7 +423,7 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
                 </svg>
               </div>
               <div className="flex-1">
-                <div className="mb-1 flex items-center gap-2">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white sm:text-base">
                     Set usage alerts
                   </h3>

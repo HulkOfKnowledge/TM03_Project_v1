@@ -6,33 +6,58 @@
 'use client';
 
 interface VolumeProgressBarProps {
-  zone: 'Safe' | 'Caution' | 'Danger';
+  percentage: number; // 0-100
 }
 
-export function VolumeProgressBar({ zone }: VolumeProgressBarProps) {
-  const getBarConfig = () => {
-    switch (zone) {
-      case 'Safe':
-        return { width: '33%', color: 'bg-gray-500', label: 'Safe Zone (0-30%)' };
-      case 'Caution':
-        return { width: '66%', color: 'bg-yellow-500', label: 'Caution Zone (31-70%)' };
-      case 'Danger':
-        return { width: '100%', color: 'bg-red-500', label: 'Danger Zone (71-100%)' };
+export function VolumeProgressBar({ percentage }: VolumeProgressBarProps) {
+  // Create bars that span the full width
+  const barCount = 60;
+  const bars = Array.from({ length: barCount }, (_, i) => {
+    const position = (i / (barCount - 1)) * 100; // Use barCount - 1 for accurate positioning
+    
+    // Determine if this is a boundary marker bar (tall)
+    const isBoundaryMarker = 
+      Math.abs(position - 30) < 1 || // 30% boundary
+      Math.abs(position - 70) < 1;   // 70% boundary
+    
+    // Determine height and color
+    let heightClass: string;
+    let colorClass: string;
+    
+    if (position <= percentage && !isBoundaryMarker) {
+      // Active bars (green and tall)
+      heightClass = 'h-8';
+      colorClass = 'bg-green-500';
+    } else if (isBoundaryMarker) {
+      // Boundary markers (gray and tallest)
+      heightClass = 'h-10';
+      colorClass = 'bg-gray-300 dark:bg-gray-600';
+    } else {
+      // Inactive bars (gray and short)
+      heightClass = 'h-2';
+      colorClass = 'bg-gray-300 dark:bg-gray-600';
     }
-  };
-
-  const config = getBarConfig();
+    
+    return { heightClass, colorClass };
+  });
 
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="text-gray-700 dark:text-gray-300">{config.label}</span>
+    <div className="w-full">
+      {/* Volume Bars */}
+      <div className="flex items-center justify-between h-12 mb-3 px-1">
+        {bars.map((bar, i) => (
+          <div
+            key={i}
+            className={`w-1 rounded-full transition-all duration-300 ${bar.heightClass} ${bar.colorClass}`}
+          />
+        ))}
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
-        <div
-          className={`h-full transition-all duration-500 ${config.color}`}
-          style={{ width: config.width }}
-        />
+      
+      {/* Labels */}
+      <div className="grid grid-cols-3 text-xs text-gray-600 dark:text-gray-400">
+        <span className="font-medium text-left">0-30% Safe</span>
+        <span className="font-medium text-center">Caution</span>
+        <span className="font-medium text-right">Danger</span>
       </div>
     </div>
   );
