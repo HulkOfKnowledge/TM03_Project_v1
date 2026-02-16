@@ -10,6 +10,7 @@ import { Search } from 'lucide-react';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { ResourceCard, type Resource } from '@/components/learn/ResourceCard';
+import { ResourceDetail } from '@/components/learn/ResourceDetail';
 import { FAQAccordion, type FAQItem } from '@/components/learn/FAQAccordion';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { TestimonialSkeleton } from '@/components/learn/TestimonialSkeleton';
@@ -78,26 +79,6 @@ const faqData: FAQItem[] = [
     question: 'Should I carry a balance to build credit?',
     answer: "No, carrying a balance is not necessary to build credit. Paying your full balance each month is actually better because it helps you avoid interest charges while still building a positive payment history. The myth that you need to carry a balance is false and can cost you money in interest.",
   },
-  {
-    id: '5',
-    question: 'Should I carry a balance to build credit?',
-    answer: "No, carrying a balance is not necessary to build credit. Paying your full balance each month is actually better because it helps you avoid interest charges while still building a positive payment history. The myth that you need to carry a balance is false and can cost you money in interest.",
-  },
-  {
-    id: '6',
-    question: 'Should I carry a balance to build credit?',
-    answer: "No, carrying a balance is not necessary to build credit. Paying your full balance each month is actually better because it helps you avoid interest charges while still building a positive payment history. The myth that you need to carry a balance is false and can cost you money in interest.",
-  },
-  {
-    id: '7',
-    question: 'Should I carry a balance to build credit?',
-    answer: "No, carrying a balance is not necessary to build credit. Paying your full balance each month is actually better because it helps you avoid interest charges while still building a positive payment history. The myth that you need to carry a balance is false and can cost you money in interest.",
-  },
-  {
-    id: '8',
-    question: 'Should I carry a balance to build credit?',
-    answer: "No, carrying a balance is not necessary to build credit. Paying your full balance each month is actually better because it helps you avoid interest charges while still building a positive payment history. The myth that you need to carry a balance is false and can cost you money in interest.",
-  },
 ];
 
 export default function ResourcesPage() {
@@ -105,6 +86,7 @@ export default function ResourcesPage() {
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>('1');
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
   useEffect(() => {
     loadTestimonials();
@@ -127,8 +109,11 @@ export default function ResourcesPage() {
   };
 
   const handleResourceClick = (resource: Resource) => {
-    // Navigate to detailed resource view
-    console.log('Resource clicked:', resource);
+    setSelectedResource(resource);
+  };
+
+  const handleBackToResources = () => {
+    setSelectedResource(null);
   };
 
   const filteredResources = resourcesData.filter((resource) =>
@@ -142,67 +127,78 @@ export default function ResourcesPage() {
       {/* Main Content */}
       <main className="pt-28 lg:pt-40 pb-16">
         <div className="container mx-auto px-4 md:px-6">
-          {/* Header Section */}
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 lg:gap-8 mb-8">
-            {/* Left: Title and Description */}
-            <div className="flex-1">
-              <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
-                Resources
-              </h1>
-              <p className="text-base text-gray-600 dark:text-gray-400 max-w-2xl">
-                When you learn with Creduman, we'll be right by your side. Explore all the resources we've developed to help you to learn faster.
-              </p>
-            </div>
+          {selectedResource ? (
+            /* Resource Detail View */
+            <ResourceDetail
+              resource={selectedResource}
+              onBack={handleBackToResources}
+            />
+          ) : (
+            /* Resources List View */
+            <>
+              {/* Header Section */}
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-8 mb-8">
+                {/* Left: Title and Description */}
+                <div className="flex-1">
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-indigo-600 dark:text-indigo-500 mb-3">
+                    Resources
+                  </h1>
+                  <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 max-w-xl">
+                    When you learn with Creduman, we'll be right by your side. Explore all the resources we've developed to help you to learn faster.
+                  </p>
+                </div>
 
-            {/* Search Bar */}
-            <div className="lg:pt-1">
-              <div className="relative w-full lg:w-[400px]">
-                <input
-                  type="text"
-                  placeholder="Search.."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-4 pr-10 py-2.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 transition-shadow"
-                />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                {/* Right: Search Bar */}
+                <div className="lg:pt-1">
+                  <div className="relative w-full lg:w-[400px]">
+                    <input
+                      type="text"
+                      placeholder="Search.."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-4 pr-10 py-2.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 transition-shadow"
+                    />
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Resources Grid */}
-          <section className="mb-16 mt-16">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredResources.map((resource) => (
-                <ResourceCard
-                  key={resource.id}
-                  resource={resource}
-                  onClick={() => handleResourceClick(resource)}
-                />
-              ))}
-            </div>
-          </section>
+              {/* Resources Grid */}
+              <section className="mb-16 mt-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredResources.map((resource) => (
+                    <ResourceCard
+                      key={resource.id}
+                      resource={resource}
+                      onClick={() => handleResourceClick(resource)}
+                    />
+                  ))}
+                </div>
+              </section>
 
-          {/* FAQ Section */}
-          <section className="mb-16">
-            <h2 className="text-2xl md:text-3xl font-bold text-brand mb-6">
-              Frequently Asked Questions
-            </h2>
-            <div className="space-y-3">
-              {faqData.map((faq) => (
-                <FAQAccordion
-                  key={faq.id}
-                  faq={faq}
-                  isExpanded={expandedFAQ === faq.id}
-                  onClick={handleFAQClick}
-                />
-              ))}
-            </div>
-          </section>
+              {/* FAQ Section */}
+              <section className="mb-16">
+                <h2 className="text-2xl md:text-3xl font-bold text-indigo-600 dark:text-indigo-500 mb-6">
+                  Frequently Asked Questions
+                </h2>
+                <div className="space-y-3">
+                  {faqData.map((faq) => (
+                    <FAQAccordion
+                      key={faq.id}
+                      faq={faq}
+                      isExpanded={expandedFAQ === faq.id}
+                      onClick={handleFAQClick}
+                    />
+                  ))}
+                </div>
+              </section>
 
-          {/* Testimonials Section */}
-          <section className="mb-16">
-            {loading ? <TestimonialSkeleton /> : <TestimonialCarousel testimonials={testimonials} />}
-          </section>
+              {/* Testimonials Section */}
+              <section className="mb-16">
+                {loading ? <TestimonialSkeleton /> : <TestimonialCarousel testimonials={testimonials} />}
+              </section>
+            </>
+          )}
         </div>
       </main>
 
