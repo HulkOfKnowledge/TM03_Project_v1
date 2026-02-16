@@ -271,15 +271,13 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
               />
 
               {/* Disconnect button on card */}
-              {cards.length > 1 && (
-                <button
-                  onClick={() => setShowDisconnectConfirm(true)}
-                  className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-20"
-                  title="Disconnect card"
-                >
-                  <X className="h-4 w-4 text-white" />
-                </button>
-              )}
+              <button
+                onClick={() => setShowDisconnectConfirm(true)}
+                className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-20"
+                title="Disconnect card"
+              >
+                <X className="h-4 w-4 text-white" />
+              </button>
             </div>
           </div>
 
