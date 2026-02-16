@@ -10,33 +10,84 @@ import type {
 } from '@/types/learn.types';
 
 export class LearnService {
-  private async fetchDashboardData(): Promise<{
+  private cache: {
+    learningPath: LearningContent[];
+    recommendedContent: LearningContent[];
+    checklistItems: ChecklistItem[];
+    testimonials: Testimonial[];
+  } | null = null;
+  private cacheTimestamp: number = 0;
+  private inFlightRequest: Promise<{
+    learningPath: LearningContent[];
+    recommendedContent: LearningContent[];
+    checklistItems: ChecklistItem[];
+    testimonials: Testimonial[];
+  }> | null = null;
+  private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
+  private async fetchDashboardData(forceRefresh: boolean = false): Promise<{
     learningPath: LearningContent[];
     recommendedContent: LearningContent[];
     checklistItems: ChecklistItem[];
     testimonials: Testimonial[];
   }> {
-    const response = await fetch('/api/learn/dashboard', {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-    });
+    const now = Date.now();
 
-    if (!response.ok) {
-      throw new Error('Failed to load learning dashboard data');
+    // Return cached data if available and fresh
+    if (!forceRefresh && this.cache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
+      return this.cache;
     }
 
-    const result = await response.json();
-    return {
-      learningPath: result?.data?.learningPath ?? [],
-      recommendedContent: result?.data?.recommendedContent ?? [],
-      checklistItems: result?.data?.checklistItems ?? [],
-      testimonials: result?.data?.testimonials ?? [],
-    };
+    // If there's already a request in flight, wait for it
+    if (this.inFlightRequest) {
+      return this.inFlightRequest;
+    }
+
+    this.inFlightRequest = (async () => {
+      const response = await fetch('/api/learn/dashboard', {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load learning dashboard data');
+      }
+
+      const result = await response.json();
+      const data = {
+        learningPath: result?.data?.learningPath ?? [],
+        recommendedContent: result?.data?.recommendedContent ?? [],
+        checklistItems: result?.data?.checklistItems ?? [],
+        testimonials: result?.data?.testimonials ?? [],
+      };
+
+      // Update cache
+      this.cache = data;
+      this.cacheTimestamp = Date.now();
+      
+      return data;
+    })();
+
+    try {
+      const data = await this.inFlightRequest;
+      return data;
+    } finally {
+      this.inFlightRequest = null;
+    }
   }
 
-  async getDashboardData() {
-    return this.fetchDashboardData();
+  /**
+   * Clear the dashboard data cache
+   */
+  clearCache(): void {
+    this.cache = null;
+    this.cacheTimestamp = 0;
+    this.inFlightRequest = null;
+  }
+
+  async getDashboardData(forceRefresh: boolean = false) {
+    return this.fetchDashboardData(forceRefresh);
   }
 
   /**

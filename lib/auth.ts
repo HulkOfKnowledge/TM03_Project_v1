@@ -11,11 +11,12 @@ import { clearAuthCache } from './api/auth-client';
  */
 export function handleLogout(): void {
   try {
-    // Clear the auth cache
-    clearAuthCache();
     
     // Redirect immediately
     window.location.replace('/login');
+
+    // Clear the auth cache
+    clearAuthCache();
 
     // Fire-and-forget logout call to clear cookies
     void fetch('/api/auth/logout', {
