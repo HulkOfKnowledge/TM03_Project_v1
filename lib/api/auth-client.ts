@@ -7,7 +7,7 @@ import type { User } from '@supabase/supabase-js';
 // In-memory cache for auth requests
 let authCache: { user: User | null; profile: any | null } | null = null;
 let authCacheTimestamp: number = 0;
-const AUTH_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const AUTH_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 export async function fetchAuthMe(forceRefresh: boolean = false): Promise<{ user: User | null; profile: any | null }> {
   const now = Date.now();
