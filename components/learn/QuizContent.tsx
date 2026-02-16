@@ -6,10 +6,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { ArrowLeft, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { LessonPreviewCard } from '@/components/learn/LessonPreviewCard';
 import { InfoListItem } from '@/components/learn/InfoListItem';
+import { quizService } from '@/services/quiz.service';
 
 interface QuizQuestion {
   id: string;
@@ -34,11 +36,14 @@ export function QuizContent({
   timeLimit = 20,
   onQuizStateChange 
 }: QuizContentProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [quizStarted, setQuizStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
   const [showResults, setShowResults] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
+  const [startTime] = useState<Date>(new Date());
 
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
@@ -78,14 +83,6 @@ export function QuizContent({
     });
   };
 
-  const handleNext = () => {
-    if (currentQuestionIndex < totalQuestions - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      setShowResults(true);
-    }
-  };
-
   const calculateScore = () => {
     let correct = 0;
     questions.forEach((question) => {
@@ -94,6 +91,51 @@ export function QuizContent({
       }
     });
     return correct;
+  };
+
+  const saveQuizResults = async () => {
+    try {
+      const correct = calculateScore();
+      const score = Math.round((correct / questions.length) * 100);
+      const timeSpent = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+      
+      // Extract lesson ID from pathname
+      const pathParts = pathname.split('/');
+      const lessonId = pathParts[pathParts.length - 1];
+
+      // Save quiz results to API
+      await quizService.saveQuizResults({
+        lessonId,
+        score,
+        correctAnswers: correct,
+        totalQuestions: questions.length,
+        answers: selectedAnswers,
+        timeSpent,
+        completedAt: new Date(),
+      });
+    } catch (error) {
+      console.error('Error saving quiz results:', error);
+      // Continue even if save fails - user can still see their results
+    }
+  };
+
+  const handleViewDetailedAnswers = () => {
+    // Navigate to detailed result page
+    // URL structure: /learn/[category]/[topic]/[type]/[id]
+    // Replace 'video' or 'quiz' type with 'result'
+    const resultPath = pathname.replace(/\/(video|quiz)\//, '/result/');
+    console.log('Navigating from:', pathname, 'to:', resultPath);
+    router.push(resultPath);
+  };
+
+  const handleNext = () => {
+    if (currentQuestionIndex < totalQuestions - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      // Show results inline and save in background
+      setShowResults(true);
+      saveQuizResults();
+    }
   };
 
   const resetQuiz = () => {
@@ -188,9 +230,7 @@ export function QuizContent({
               You answered {score} out of {totalQuestions} questions correctly.{' '}
               <button 
                 className="font-medium text-foreground underline hover:no-underline"
-                onClick={() => {
-                  // This would toggle the answer review section
-                }}
+                onClick={handleViewDetailedAnswers}
               >
                 View Answers
               </button>
@@ -340,7 +380,7 @@ export function QuizContent({
             size="lg"
             className="w-full bg-accent text-sm hover:bg-brand hover:text-background sm:w-auto"
           >
-            Next
+            {currentQuestionIndex === totalQuestions - 1 ? 'Submit' : 'Next'}
           </Button>
         </div>
       </div>

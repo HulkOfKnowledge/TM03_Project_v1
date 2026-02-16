@@ -13,6 +13,7 @@ interface VideoPlayerProps {
   thumbnailUrl?: string;
   onTimeUpdate?: (currentTime: number) => void;
   onDurationChange?: (duration: number) => void;
+  onEnded?: () => void;
   className?: string;
 }
 
@@ -40,7 +41,7 @@ function getYouTubeVideoId(url: string): string | null {
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
-  ({ videoUrl, thumbnailUrl, onTimeUpdate, onDurationChange, className = '' }, ref) => {
+  ({ videoUrl, thumbnailUrl, onTimeUpdate, onDurationChange, onEnded, className = '' }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -50,10 +51,16 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     const [showControls, setShowControls] = useState(true);
     const [volume, setVolume] = useState(1);
     const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+    const hasEndedRef = useRef(false); // Track if ended event has been fired
 
     // Determine if URL is YouTube
     const youtubeVideoId = getYouTubeVideoId(videoUrl);
     const isYouTube = !!youtubeVideoId;
+
+    // Reset ended flag when video URL changes
+    useEffect(() => {
+      hasEndedRef.current = false;
+    }, [videoUrl]);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -158,18 +165,33 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
       const handleTimeUpdate = () => {
         const time = video.currentTime;
+        const dur = video.duration;
         setCurrentTime(time);
         onTimeUpdate?.(time);
+        
+        // Check if video is near the end (within 1 second) or has ended
+        // This handles both natural playback ending and user seeking to the end
+        if (dur > 0 && time >= dur - 1 && !hasEndedRef.current) {
+          hasEndedRef.current = true;
+          setIsPlaying(false);
+          onEnded?.();
+        }
       };
 
       const handleLoadedMetadata = () => {
         const dur = video.duration;
         setDuration(dur);
         onDurationChange?.(dur);
+        // Reset ended flag when video metadata loads (new video or reload)
+        hasEndedRef.current = false;
       };
 
       const handleEnded = () => {
-        setIsPlaying(false);
+        if (!hasEndedRef.current) {
+          hasEndedRef.current = true;
+          setIsPlaying(false);
+          onEnded?.();
+        }
       };
 
       video.addEventListener('timeupdate', handleTimeUpdate);
@@ -181,7 +203,53 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         video.removeEventListener('loadedmetadata', handleLoadedMetadata);
         video.removeEventListener('ended', handleEnded);
       };
-    }, [onTimeUpdate, onDurationChange]);
+    }, [onTimeUpdate, onDurationChange, onEnded]);
+
+    // Listen for YouTube player state changes
+    useEffect(() => {
+      if (!isYouTube) return;
+
+      const handleYouTubeMessage = (event: MessageEvent) => {
+        try {
+          // YouTube IFrame API sends string messages
+          if (typeof event.data === 'string' && event.data.includes('infoDelivery')) {
+            const data = JSON.parse(event.data);
+            
+            if (data.event === 'infoDelivery' && data.info) {
+              const { currentTime, duration, playerState } = data.info;
+              
+              // Update time and duration if available
+              if (currentTime !== undefined) {
+                setCurrentTime(currentTime);
+                onTimeUpdate?.(currentTime);
+              }
+              if (duration !== undefined && duration > 0) {
+                setDuration(duration);
+                onDurationChange?.(duration);
+              }
+              
+              // Check if video has ended (playerState: 0)
+              // Or if currentTime is very close to duration
+              if (playerState === 0 || (duration > 0 && currentTime >= duration - 1)) {
+                if (!hasEndedRef.current) {
+                  hasEndedRef.current = true;
+                  setIsPlaying(false);
+                  onEnded?.();
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      };
+
+      window.addEventListener('message', handleYouTubeMessage);
+
+      return () => {
+        window.removeEventListener('message', handleYouTubeMessage);
+      };
+    }, [isYouTube, youtubeVideoId, onTimeUpdate, onDurationChange, onEnded]);
 
     // For YouTube videos, use iframe embed with enablejsapi
     if (isYouTube) {
@@ -189,7 +257,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         <div className={`relative aspect-video w-full overflow-hidden rounded-2xl bg-muted shadow-lg ${className}`}>
           <iframe
             ref={iframeRef}
-            src={`https://www.youtube.com/embed/${youtubeVideoId}?enablejsapi=1&rel=0&modestbranding=1`}
+            src={`https://www.youtube.com/embed/${youtubeVideoId}?enablejsapi=1&rel=0&modestbranding=1&widget_referrer=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : '')}`}
             title="YouTube video player"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen

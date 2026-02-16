@@ -6,10 +6,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
+import { Button } from '@/components/ui/Button';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { learnService } from '@/services/learn.service';
 import type { Testimonial } from '@/types/learn.types';
 
@@ -20,42 +23,16 @@ interface LearningHistoryItem {
   type: '3-step guide' | 'video' | 'article';
   progress: number;
   status: 'complete' | 'in-progress';
+  category: string;
+  topic: string;
   imageUrl?: string;
   completedAt?: Date;
 }
 
-// Sample data - replace with actual API call
-const sampleHistory: LearningHistoryItem[] = [
-  {
-    id: '1',
-    title: 'Guide to Adding Your First Credit Card',
-    subtitle: 'No jargon. No pressure. Just clarity.',
-    type: '3-step guide',
-    progress: 100,
-    status: 'complete',
-    completedAt: new Date('2024-02-10')
-  },
-  {
-    id: '2',
-    title: 'Guide to Adding Your First Credit Card',
-    subtitle: 'No jargon. No pressure. Just clarity.',
-    type: '3-step guide',
-    progress: 0,
-    status: 'in-progress'
-  },
-  {
-    id: '3',
-    title: 'Guide to Adding Your First Credit Card',
-    subtitle: 'No jargon. No pressure. Just clarity.',
-    type: '3-step guide',
-    progress: 21,
-    status: 'in-progress'
-  }
-];
-
 export default function HistoryPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [historyItems] = useState<LearningHistoryItem[]>(sampleHistory);
+  const [historyItems, setHistoryItems] = useState<LearningHistoryItem[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,8 +43,13 @@ export default function HistoryPage() {
   const loadPageData = async () => {
     try {
       setLoading(true);
-      const data = await learnService.getDashboardData();
-      setTestimonials(data.testimonials || []);
+      const [dashboardData, historyData] = await Promise.all([
+        learnService.getDashboardData(),
+        learnService.getLearningHistory(),
+      ]);
+      
+      setTestimonials(dashboardData.testimonials || []);
+      setHistoryItems(historyData || []);
     } catch (error) {
       console.error('Error loading page data:', error);
     } finally {
@@ -115,9 +97,47 @@ export default function HistoryPage() {
 
           {/* Learning History List */}
           <div className="space-y-6 mb-16">
-            {filteredItems.length === 0 ? (
+            {loading ? (
+              <div className="space-y-6">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black p-4 md:flex-row md:items-center md:justify-between md:p-6"
+                  >
+                    {/* Left Section Skeleton */}
+                    <div className="flex flex-1 gap-3 md:gap-4">
+                      <Skeleton className="h-16 w-16 shrink-0 rounded-lg md:h-20 md:w-20" />
+                      <div className="flex flex-1 flex-col justify-center min-w-0 space-y-2">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-2 w-full max-w-xs rounded-full" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </div>
+                    
+                    {/* Right Section Skeleton */}
+                    <div className="flex items-center justify-between border-t border-gray-200 dark:border-white/10 pt-4 md:border-t-0 md:pt-0 md:flex-col md:items-end md:min-w-[100px]">
+                      <Skeleton className="h-10 w-20 md:h-12 md:w-24" />
+                      <Skeleton className="h-4 w-28 md:mt-2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredItems.length === 0 ? (
               <div className="rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-12 text-center">
-                <p className="text-gray-500 dark:text-gray-400">No learning history found</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">
+                  {searchQuery ? 'No learning history found matching your search' : 'No learning history found'}
+                </p>
+                {!searchQuery && historyItems.length === 0 && (
+                  <Button
+                    onClick={() => router.push('/learn/learning-space')}
+                    variant="default"
+                    size="lg"
+                    className="mx-auto"
+                  >
+                    Start Learning
+                  </Button>
+                )}
               </div>
             ) : (
               filteredItems.map((item) => (
@@ -147,8 +167,17 @@ interface HistoryCardProps {
 }
 
 function HistoryCard({ item }: HistoryCardProps) {
+  const router = useRouter();
+  
+  const handleClick = () => {
+    router.push(`/learn/${item.category}/${item.topic}/result/${item.id}`);
+  };
+  
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black p-4 hover:border-brand/50 cursor-pointer md:flex-row md:items-center md:justify-between md:p-6">
+    <div 
+      onClick={handleClick}
+      className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black p-4 hover:border-brand/50 hover:shadow-md transition-all cursor-pointer md:flex-row md:items-center md:justify-between md:p-6"
+    >
       {/* Left Section - Image and Content */}
       <div className="flex flex-1 gap-3 md:gap-4">
         {/* Thumbnail Placeholder */}

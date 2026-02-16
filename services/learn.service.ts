@@ -223,6 +223,29 @@ export class LearnService {
     //   completed_at: new Date().toISOString(),
     // });
   }
+
+  /**
+   * Get user's learning history
+   */
+  async getLearningHistory(): Promise<any[]> {
+    try {
+      const response = await fetch('/api/learn/history', {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load learning history');
+      }
+
+      const result = await response.json();
+      return result?.data ?? [];
+    } catch (error) {
+      console.error('Error fetching learning history:', error);
+      return [];
+    }
+  }
 }
 
 export const learnService = new LearnService();

@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Play, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { VideoChapterItem } from '@/components/learn/VideoChapterItem';
@@ -20,6 +21,7 @@ import { LessonPreviewCard } from '@/components/learn/LessonPreviewCard';
 import { InfoListItem } from '@/components/learn/InfoListItem';
 import { VideoPlayer, VideoPlayerRef } from '@/components/learn/VideoPlayer';
 import { learnService } from '@/services/learn.service';
+import { quizService } from '@/services/quiz.service';
 import { getContentUrl } from '@/lib/learn-navigation';
 import type { Testimonial, LearningContent } from '@/types/learn.types';
 
@@ -39,6 +41,8 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
   const [quizActive, setQuizActive] = useState(false);
   const [videoTab, setVideoTab] = useState('overview');
   const [resourceSortBy, setResourceSortBy] = useState('suggested');
+  const [showQuizPrompt, setShowQuizPrompt] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
   const videoPlayerRef = useRef<VideoPlayerRef>(null);
 
   useEffect(() => {
@@ -55,6 +59,17 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
       
       setVideo(contentData);
       setTestimonials(dashboardData.testimonials || []);
+      
+      // Check if user has completed the quiz - don't fail if API is not available
+      try {
+        const quizAttemptsData = await quizService.getQuizAttempts(id);
+        if (quizAttemptsData.success && quizAttemptsData.data && quizAttemptsData.data.length > 0) {
+          setQuizCompleted(true);
+        }
+      } catch (error) {
+        console.log('Quiz attempts not available yet:', error);
+        // Continue without quiz completion status
+      }
     } catch (error) {
       console.error('Error loading lesson data:', error);
     } finally {
@@ -82,6 +97,19 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
       videoPlayerRef.current.seekTo(timestamp);
       videoPlayerRef.current.play();
     }
+  };
+
+  const handleVideoEnded = () => {
+    // Show quiz prompt if user hasn't completed the quiz
+    if (!quizCompleted) {
+      setShowQuizPrompt(true);
+    }
+  };
+
+  const handleTakeQuiz = () => {
+    setShowQuizPrompt(false);
+    setActiveTab('quiz');
+    setShowVideo(false);
   };
 
   const parseTimestampToSeconds = (timestamp: string | number | undefined): number => {
@@ -188,7 +216,32 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
                 ref={videoPlayerRef}
                 videoUrl={lessonData.videoUrl}
                 thumbnailUrl={lessonData.thumbnailUrl}
+                onEnded={handleVideoEnded}
               />
+
+              {/* Quiz Call-to-Action Banner */}
+              {!quizCompleted && (
+                <div className="mt-4 rounded-xl border border-brand/30 bg-gradient-to-r from-brand/5 to-brand/10 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="mb-1 text-sm font-semibold text-foreground md:text-base">
+                        Ready to test your knowledge?
+                      </h3>
+                      <p className="text-xs text-foreground/60 md:text-sm">
+                        Take the quiz to reinforce what you've learned
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleTakeQuiz}
+                      variant="default"
+                      size="sm"
+                      className="shrink-0 bg-brand hover:bg-brand/90"
+                    >
+                      Take Quiz
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Tabs below video */}
               <div className="mt-6">
@@ -390,6 +443,32 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
             <TestimonialCarousel testimonials={testimonials} />
           </section>
         </div>
+
+        {/* Quiz Prompt Modal */}
+        <Modal
+          isOpen={showQuizPrompt}
+          onClose={() => setShowQuizPrompt(false)}
+          title="Great job completing the video!"
+          description="Would you like to test your knowledge with a quiz? It only takes a few minutes."
+          size="md"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <Button
+              onClick={() => setShowQuizPrompt(false)}
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              Maybe Later
+            </Button>
+            <Button
+              onClick={handleTakeQuiz}
+              variant="default"
+              className="w-full sm:w-auto"
+            >
+              Take Quiz
+            </Button>
+          </div>
+        </Modal>
       </div>
     );
   }
