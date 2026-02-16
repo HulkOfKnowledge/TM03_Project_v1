@@ -12,6 +12,7 @@ import { EmptyCardState } from '@/components/cards/EmptyCardState';
 import { CardOverviewSkeleton } from '@/components/cards/CardOverviewSkeleton';
 import { CardSelectionModal } from '@/components/cards/CardSelectionModal';
 import { SuccessModal } from '@/components/cards/SuccessModal';
+import { CreditAnalysis } from '@/components/cards/analysis/CreditAnalysis';
 import { useCard } from '@/contexts/CardContext';
 
 interface CardOption {
@@ -61,26 +62,13 @@ export default function CreditAnalysisPage() {
 
       {/* Main Content */}
       <main className="pt-28 lg:pt-40 pb-16">
-        <div className="container mx-auto px-4 md:px-6">
+        <div className="container mx-auto">
           {connectedCards.length === 0 ? (
-            <EmptyCardState onAddCard={handleAddCard} />
-          ) : (
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-indigo-600 dark:text-indigo-500 mb-6">
-                Credit Analysis
-              </h1>
-              {/* Add your actual analysis content here */}
-              <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-8">
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Connected Cards: {connectedCards.length}
-                </p>
-                {connectedCards.map((card, index) => (
-                  <p key={card.id} className="text-gray-600 dark:text-gray-400">
-                    {index + 1}. {card.bank} {card.name} •••• {card.lastFour}
-                  </p>
-                ))}
-              </div>
+            <div className="px-4 md:px-6">
+              <EmptyCardState onAddCard={handleAddCard} />
             </div>
+          ) : (
+            <CreditAnalysis connectedCardsCount={connectedCards.length} />
           )}
         </div>
       </main>
