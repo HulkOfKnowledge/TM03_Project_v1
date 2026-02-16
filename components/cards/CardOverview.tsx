@@ -91,10 +91,10 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex-1">
-          <h1 className="mb-2 text-2xl font-bold text-brand md:text-3xl">
+          <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
             Card Overview
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-base text-gray-600 dark:text-gray-400">
             Information shown here is based on the card data you connected.
             Always double-check important details with your bank to be sure
             everything is accurate.
