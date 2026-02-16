@@ -132,6 +132,33 @@ export class LearnService {
   }
 
   /**
+   * Get all videos (content type: 'video')
+   */
+  async getVideos(): Promise<LearningContent[]> {
+    const data = await this.fetchDashboardData();
+    const allContent = [...data.learningPath, ...data.recommendedContent];
+    return allContent.filter(content => content.type === 'video');
+  }
+
+  /**
+   * Get resources (mix of videos and documents for learning)
+   */
+  async getResources(): Promise<LearningContent[]> {
+    const data = await this.fetchDashboardData();
+    // Return recommended content as resources
+    return data.recommendedContent;
+  }
+
+  /**
+   * Get content by ID
+   */
+  async getContentById(contentId: string): Promise<LearningContent | null> {
+    const data = await this.fetchDashboardData();
+    const allContent = [...data.learningPath, ...data.recommendedContent];
+    return allContent.find(content => content.id === contentId) || null;
+  }
+
+  /**
    * Update checklist item completion
    */
   async updateChecklistItem(

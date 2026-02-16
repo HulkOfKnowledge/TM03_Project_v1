@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
-import { ResourceCard, type Resource } from '@/components/learn/ResourceCard';
+import { ResourceCard } from '@/components/learn/ResourceCard';
 import { ResourceDetail } from '@/components/learn/ResourceDetail';
 import { FAQAccordion, type FAQItem } from '@/components/learn/FAQAccordion';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
@@ -17,40 +17,50 @@ import { TestimonialSkeleton } from '@/components/learn/TestimonialSkeleton';
 import { learnService } from '@/services/learn.service';
 import type { Testimonial } from '@/types/learn.types';
 
-// Sample resources data
-const resourcesData: Resource[] = [
+interface ResourceCategory {
+  id: string;
+  title: string;
+  type: 'document' | 'video';
+  category: string;
+  thumbnailUrl?: string;
+}
+
+
+
+// Resource Categories
+const resourceCategories: ResourceCategory[] = [
   {
-    id: '1',
+    id: 'first-3-months',
     title: 'Materials for First 3 Months',
     type: 'document',
-    category: 'Documents',
+    category: 'Beginner',
   },
   {
-    id: '2',
+    id: 'months-4-6',
     title: 'Materials for Months 4-6',
     type: 'document',
-    category: 'Documents',
+    category: 'Intermediate',
   },
   {
-    id: '3',
+    id: 'months-7-12',
     title: 'Materials for Months 7-12',
     type: 'document',
-    category: 'Documents',
+    category: 'Advanced',
   },
   {
-    id: '4',
+    id: 'quick-reads',
     title: 'Articles & Quick Reads',
     type: 'document',
-    category: 'Documents',
+    category: 'Beginner',
   },
   {
-    id: '5',
+    id: 'newcomer-essentials',
     title: 'Canadian Newcomer Essentials',
     type: 'document',
-    category: 'Documents',
+    category: 'Beginner',
   },
   {
-    id: '6',
+    id: 'success-stories',
     title: "Immigrant's Success Stories",
     type: 'video',
     category: 'Videos',
@@ -86,19 +96,19 @@ export default function ResourcesPage() {
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>('1');
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<ResourceCategory | null>(null);
 
   useEffect(() => {
-    loadTestimonials();
+    loadPageData();
   }, []);
 
-  const loadTestimonials = async () => {
+  const loadPageData = async () => {
     try {
       setLoading(true);
-      const data = await learnService.getDashboardData();
-      setTestimonials(data.testimonials);
+      const dashboardData = await learnService.getDashboardData();
+      setTestimonials(dashboardData.testimonials);
     } catch (error) {
-      console.error('Error loading testimonials:', error);
+      console.error('Error loading page data:', error);
     } finally {
       setLoading(false);
     }
@@ -108,16 +118,16 @@ export default function ResourcesPage() {
     setExpandedFAQ(expandedFAQ === id ? null : id);
   };
 
-  const handleResourceClick = (resource: Resource) => {
-    setSelectedResource(resource);
+  const handleCategoryClick = (category: ResourceCategory) => {
+    setSelectedCategory(category);
   };
 
   const handleBackToResources = () => {
-    setSelectedResource(null);
+    setSelectedCategory(null);
   };
 
-  const filteredResources = resourcesData.filter((resource) =>
-    resource.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCategories = resourceCategories.filter((category) =>
+    category.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -127,10 +137,10 @@ export default function ResourcesPage() {
       {/* Main Content */}
       <main className="pt-28 lg:pt-40 pb-16">
         <div className="container mx-auto px-4 md:px-6">
-          {selectedResource ? (
+          {selectedCategory ? (
             /* Resource Detail View */
             <ResourceDetail
-              resource={selectedResource}
+              category={selectedCategory}
               onBack={handleBackToResources}
             />
           ) : (
@@ -165,15 +175,39 @@ export default function ResourcesPage() {
 
               {/* Resources Grid */}
               <section className="mb-16 mt-16">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredResources.map((resource) => (
-                    <ResourceCard
-                      key={resource.id}
-                      resource={resource}
-                      onClick={() => handleResourceClick(resource)}
-                    />
-                  ))}
-                </div>
+                {loading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <div key={index} className="animate-pulse">
+                        <div className="h-[200px] sm:h-[240px] rounded-lg bg-muted"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : filteredCategories.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {searchQuery
+                        ? 'No categories found matching your search.'
+                        : 'No resource categories available yet.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredCategories.map((category) => (
+                      <ResourceCard
+                        key={category.id}
+                        resource={{
+                          id: category.id,
+                          title: category.title,
+                          type: category.type,
+                          category: category.category,
+                          thumbnailUrl: category.thumbnailUrl,
+                        }}
+                        onClick={() => handleCategoryClick(category)}
+                      />
+                    ))}
+                  </div>
+                )}
               </section>
 
               {/* FAQ Section */}

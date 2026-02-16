@@ -14,6 +14,7 @@ interface RelatedLessonCardProps {
   duration: string;
   category: string;
   thumbnailUrl?: string;
+  type?: 'video' | 'article' | 'guide';
 }
 
 export function RelatedLessonCard({
@@ -22,10 +23,20 @@ export function RelatedLessonCard({
   duration,
   category,
   thumbnailUrl,
+  type = 'video',
 }: RelatedLessonCardProps) {
+  // Generate proper URL based on content type
+  const topicSlug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const categorySlug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const contentType = type || 'video';
+  const href = `/learn/${categorySlug}/${topicSlug}/${contentType}/${id}`;
+
   return (
     <Link
-      href={`/learn/lesson/${id}`}
+      href={href}
       className="block rounded-xl bg-muted p-3 transition-colors hover:bg-accent"
     >
       <div className="flex items-start gap-3">

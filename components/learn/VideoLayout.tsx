@@ -6,15 +6,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Settings, Download, FileText } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Settings, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { VideoChapterItem } from '@/components/learn/VideoChapterItem';
 import { RelatedLessonsSection } from '@/components/learn/RelatedLessonsSection';
 import {
-  getSampleLessonData,
   sampleVideoChapters,
   sampleRelatedLessons,
   sampleQuizQuestions,
@@ -26,7 +25,8 @@ import { QuizContent } from '@/components/learn/QuizContent';
 import { LessonPreviewCard } from '@/components/learn/LessonPreviewCard';
 import { InfoListItem } from '@/components/learn/InfoListItem';
 import { learnService } from '@/services/learn.service';
-import type { Testimonial } from '@/types/learn.types';
+import { getContentUrl } from '@/lib/learn-navigation';
+import type { Testimonial, LearningContent } from '@/types/learn.types';
 
 interface VideoLayoutProps {
   id: string;
@@ -35,10 +35,13 @@ interface VideoLayoutProps {
 }
 
 export function VideoLayout({ id, category: _category, topic: _topic }: VideoLayoutProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [showVideo, setShowVideo] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [video, setVideo] = useState<LearningContent | null>(null);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [recommendedContent, setRecommendedContent] = useState<LearningContent[]>([]);
   const [quizActive, setQuizActive] = useState(false);
   const [videoTab, setVideoTab] = useState('overview');
   const [resourceSortBy, setResourceSortBy] = useState('suggested');
@@ -59,13 +62,24 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
   const loadLessonData = async () => {
     try {
       setLoading(true);
-      const data = await learnService.getDashboardData();
-      setTestimonials(data.testimonials || []);
+      const [contentData, dashboardData] = await Promise.all([
+        learnService.getContentById(id),
+        learnService.getDashboardData(),
+      ]);
+      
+      setVideo(contentData);
+      setTestimonials(dashboardData.testimonials || []);
+      setRecommendedContent(dashboardData.recommendedContent || []);
     } catch (error) {
       console.error('Error loading lesson data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleContentClick = (item: LearningContent) => {
+    const url = getContentUrl(item);
+    router.push(url);
   };
 
   // Video player controls
@@ -139,8 +153,7 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
     console.log('Downloading:', resourceTitle);
   };
 
-  // Load sample data (TODO: Replace with actual API calls)
-  const lessonData = getSampleLessonData(id, _topic);
+  // Load sample data for features not yet in API
   const videoChapters = sampleVideoChapters;
   const relatedLessons = sampleRelatedLessons;
   const quizQuestions = sampleQuizQuestions;
@@ -149,6 +162,56 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
   if (loading) {
     return <VideoPreviewSkeleton />;
   }
+
+  if (!video) {
+    return (
+      <div className="min-h-screen">
+        <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
+          <button
+            onClick={() => router.back()}
+            className="group inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-foreground transition-colors hover:bg-accent"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 md:h-5 md:w-5" />
+          </button>
+          <div className="mt-8 text-center">
+            <h1 className="text-2xl font-bold text-foreground">Video not found</h1>
+            <p className="mt-2 text-muted-foreground">The video you're looking for doesn't exist.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Generate lesson data from video content
+  const lessonData = {
+    number: `Lesson ${id}`,
+    title: video.title,
+    description: video.description,
+    thumbnailUrl: video.thumbnailUrl,
+    videoUrl: video.videoUrl || '/videos/sample.mp4',
+    duration: video.duration,
+    learningPoints: [
+      {
+        text: 'A simple explanation of how the system works and why newcomers start with no credit file.',
+      },
+      {
+        text: 'How limits, balances, and spending behavior shape your credit growth.',
+      },
+      {
+        text: 'What a credit limit actually is, how to check it, and how it affects your risk level.',
+      },
+      {
+        text: 'Why staying under 30% is the safest way to grow your credit score.',
+      },
+      {
+        text: 'What triggers red flags: high usage, near-limit spending, missed payments.',
+      },
+      {
+        text: 'How the app tracks your card, warns you early, and keeps you from making costly mistakes.',
+      },
+    ],
+  };
 
   // Video Viewing Screen
   if (showVideo) {
@@ -433,13 +496,13 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
         {!quizActive && (
           <div className="flex items-center gap-3 pt-6 md:gap-4 md:pt-8">
             {/* Back Button */}
-            <Link
-              href="/learn/learning-space"
+            <button
+              onClick={() => router.back()}
               className="group inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-foreground transition-colors hover:bg-accent"
-              aria-label="Back to lessons"
+              aria-label="Go back"
             >
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 md:h-5 md:w-5" />
-            </Link>
+            </button>
 
             {/* Tabs */}
             <div className="flex-1 overflow-hidden">

@@ -5,6 +5,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
@@ -14,6 +15,7 @@ import { CreditTermAccordion, type CreditTerm } from '@/components/learn/CreditT
 import { LearningCarousel } from '@/components/learn/LearningCarousel';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { learnService } from '@/services/learn.service';
+import { getContentUrl } from '@/lib/learn-navigation';
 import type { LearningContent, Testimonial } from '@/types/learn.types';
 
 // Credit card terms
@@ -175,6 +177,7 @@ const creditAppTerms: CreditTerm[] = [
 ];
 
 export default function OverviewPage() {
+  const router = useRouter();
   const [activeView, setActiveView] = useState<'credit-app' | 'credit-card'>('credit-app');
   const [expandedTerm, setExpandedTerm] = useState<string | null>(null);
   const [clickedPhoneItem, setClickedPhoneItem] = useState<string | null>(null);
@@ -334,8 +337,8 @@ export default function OverviewPage() {
             <LearningCarousel
               items={recommendedContent}
               onItemClick={(content) => {
-                // Handle navigation
-                window.location.href = `/learn/${content.category}/${content.id}`;
+                const url = getContentUrl(content);
+                router.push(url);
               }}
               isLoading={loading}
               skeletonCount={3}

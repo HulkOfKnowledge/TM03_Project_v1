@@ -36,6 +36,7 @@ export function RelatedLessonsSection({ lessons, categories }: RelatedLessonsSec
                   duration={lesson.duration}
                   category={lesson.category}
                   thumbnailUrl={lesson.thumbnailUrl}
+                  type={lesson.type}
                 />
               ))}
             </div>

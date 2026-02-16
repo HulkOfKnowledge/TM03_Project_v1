@@ -8,7 +8,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Clock } from 'lucide-react';
-import Link from 'next/link';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
@@ -62,10 +61,10 @@ export default function ArticlesPage() {
 
           {/* Header with Back Button */}
           <div className="flex items-center gap-3 mb-8">
-            <Link
-              href="/learn/learning-space"
+            <button
+              onClick={() => router.back()}
               className="group inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-foreground transition-colors hover:bg-accent"
-              aria-label="Back to learning space"
+              aria-label="Go back"
             >
               <svg
                 className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 md:h-5 md:w-5"
@@ -75,7 +74,7 @@ export default function ArticlesPage() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-            </Link>
+            </button>
             <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">Articles</h1>
           </div>
 

@@ -63,4 +63,5 @@ export interface RelatedLesson {
   duration: string;
   category: string;
   thumbnailUrl?: string;
+  type?: 'video' | 'article' | 'guide';
 }
