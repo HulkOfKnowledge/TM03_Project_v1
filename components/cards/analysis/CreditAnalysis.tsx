@@ -252,7 +252,7 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:mb-8 md:flex-row md:items-start md:justify-between">
         <div className="flex-1">
-          <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
+          <h1 className="mb-3 text-3xl font-bold text-brand md:text-4xl">
             Credit Analysis
           </h1>
           <p className="text-base text-gray-600 dark:text-gray-400">
@@ -347,50 +347,67 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       {/* Overall Utilization Rate */}
       <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
         <div className="mb-6">
-          <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
+          {/* Title */}
+          <h2 className="mb-4 text-base text-gray-700 dark:text-gray-300 sm:text-lg">
             Overall Utilization Rate
           </h2>
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl">
+
+          {/* Separator */}
+          <div className="mb-4 h-px w-full bg-gray-300 dark:bg-gray-800"></div>
+
+          {/* Content Grid */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[auto_auto_1fr] sm:items-center">
+            {/* Left: Percentage and increase */}
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-4xl text-gray-900 dark:text-white sm:text-5xl">
                   {creditUtilizationRate}%
                 </span>
-                <div className="flex items-center gap-1 text-gray-500 dark:text-gray-500">
+                <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
                   <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="text-xs sm:text-sm">0.5%</span>
+                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800 sm:text-sm">
+                    0.5%
+                  </span>
                 </div>
               </div>
               <span className="text-xs text-gray-500 dark:text-gray-500 sm:text-sm">
                 Utilization percentage
               </span>
             </div>
-            <div className="flex items-center gap-4">
+
+            {/* Middle: Legend */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="h-16 w-px bg-gray-300 dark:bg-gray-800"></div>
               <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500 sm:h-3 sm:w-3"></div>
-                <span className="text-[10px] text-gray-600 dark:text-gray-400 sm:text-xs">
+                <div className="h-2 w-2 rounded-full bg-gray-300 dark:bg-gray-600 sm:h-3 sm:w-3"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
                   Safe
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full bg-gray-600 dark:bg-gray-700 sm:h-3 sm:w-3"></div>
-                <span className="text-[10px] text-gray-600 dark:text-gray-400 sm:text-xs">
+                <div className="h-2 w-2 rounded-full bg-gray-500 dark:bg-gray-500 sm:h-3 sm:w-3"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
                   Caution
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full bg-gray-900 dark:bg-gray-300 sm:h-3 sm:w-3"></div>
-                <span className="text-[10px] text-gray-600 dark:text-gray-400 sm:text-xs">
+                <div className="h-2 w-2 rounded-full bg-gray-900 dark:bg-gray-200 sm:h-3 sm:w-3"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
                   Danger
                 </span>
               </div>
+            </div>
+
+            {/* Right: Dropdown */}
+            <div className="flex justify-end">
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:px-3"
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:text-sm"
               >
                 <option>Yearly</option>
                 <option>Monthly</option>
+                <option>Last 3 months</option>
               </select>
             </div>
           </div>
@@ -405,29 +422,42 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       {/* Spending Patterns */}
       <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
         <div className="mb-6">
-          <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
+          {/* Title */}
+          <h2 className="mb-4 text-base text-gray-700 dark:text-gray-300 sm:text-lg">
             Spending Patterns
           </h2>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl">
-                $400
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-500 sm:text-sm">
-                Spent
-              </span>
+
+          {/* Separator */}
+          <div className="mb-4 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+          {/* Content Grid */}
+          <div className="flex items-center justify-between">
+            {/* Left: Amount and labels */}
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-4xl text-gray-900 dark:text-white sm:text-5xl">
+                  $400
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-500 sm:text-sm">
+                  Spent
+                </span>
+              </div>
               <span className="text-xs text-gray-500 dark:text-gray-500 sm:text-sm">
                 Average Amount
               </span>
             </div>
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="self-start rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:self-auto sm:px-3"
-            >
-              <option>Yearly</option>
-              <option>Monthly</option>
-            </select>
+
+            {/* Right: Dropdown */}
+            <div>
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:text-sm"
+              >
+                <option>Yearly</option>
+                <option>Monthly</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -557,53 +587,94 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       </div>
 
       {/* Recommended Actions */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900 sm:p-6">
-        <h2 className="mb-2 text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
-          Recommended Actions
-        </h2>
-        <p className="mb-4 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-          Here is what you need to do based on your credit analysis
-        </p>
-
-        <div className="space-y-4">
-          <p className="text-xs leading-relaxed text-gray-700 dark:text-gray-300 sm:text-sm">
-            Suspendisse potenti. Id molestie, mus vel egestas consilis, psum nec
-            pariatis lacus, sit egestas mus sapien at amet lobortis. Suspendisse
-            non dignissim felis. In ac ligula orci. In vitae consequat enim,
-            eges get eros sodales sagittis. Nunc consectetur lacus fusce, at
-            semper massa sempor quam. Vestibulum ante ipsum placibus in faucibus
-            neque odio dales portiter lorem utrum nec dictrus ulicies purus.
+      <div className="grid grid-cols-1 gap-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:grid-cols-2">
+        {/* Left side - Content */}
+        <div>
+          <h2 className="mb-2 text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
+            Recommended Actions
+          </h2>
+          <p className="mb-6 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
+            Here is what you need to do based on your credit analysis
           </p>
 
-          <div className="space-y-3">
+          <p className="mb-6 text-xs leading-relaxed text-gray-700 dark:text-gray-300 sm:text-sm">
+            Suspendisse potenti. Ut molestie, risus vel egestas convallis, diam
+            nisi posuere quam, ac egestas risus sapien sit amet lorem.
+            Suspendisse non dignissim felis. In ac ligula sem. Donec suscipit
+            sodales tempus. Ut vel metus arcu. Praesent sodales mi eget felis
+            iaculis sagittis. Nunc condimentum luctus libero, et semper massa
+            suscipit quis. Vestibulum ante ipsum primis in faucibus orci luctus
+            et ultrices posuere cubilia curae; Nunc viverra vulputate justo.
+          </p>
+
+          <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 sm:h-10 sm:w-10">
-                <TrendingUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400 sm:h-5 sm:w-5" />
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 dark:bg-indigo-600">
+                <svg
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
               </div>
-              <div>
-                <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-white sm:text-base">
-                  Enable payment reminders - Get Started
-                </h3>
+              <div className="flex-1">
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white sm:text-base">
+                    Enable payment reminders
+                  </h3>
+                  <button className="text-xs text-gray-600 underline hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400">
+                    Get Started
+                  </button>
+                </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-                  Never miss a due date and increase your score effortlessly
+                  Never miss a due date and protect your score effortlessly.
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 sm:h-10 sm:w-10">
-                <TrendingDown className="h-4 w-4 text-indigo-600 dark:text-indigo-400 sm:h-5 sm:w-5" />
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 dark:bg-indigo-600">
+                <svg
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
+                </svg>
               </div>
-              <div>
-                <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-white sm:text-base">
-                  Set usage alerts - Get Started
-                </h3>
+              <div className="flex-1">
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white sm:text-base">
+                    Set usage alerts
+                  </h3>
+                  <button className="text-xs text-gray-600 underline hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400">
+                    Get Started
+                  </button>
+                </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-                  Choose when Creduman warns you about high spending
+                  Choose when Creduman warns you about high spending.
                 </p>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Right side - Placeholder/Image area */}
+        <div className="hidden rounded-lg bg-gray-100 dark:bg-gray-900 lg:block">
+          {/* This would be where an illustration or graphic goes */}
         </div>
       </div>
     </div>
