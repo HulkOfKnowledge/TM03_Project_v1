@@ -165,20 +165,22 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-bold text-indigo-600 dark:text-indigo-500 mb-2">
+          <h1 className="mb-2 text-2xl font-bold text-indigo-600 dark:text-indigo-500 md:text-3xl">
             Card Overview
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Information shown here is based on the card data you connected. Always double-check important details with your bank to be sure everything is accurate.
+            Information shown here is based on the card data you connected.
+            Always double-check important details with your bank to be sure
+            everything is accurate.
           </p>
         </div>
         <button
           onClick={onAddCard}
-          className="px-4 py-2 rounded-lg border-2 border-indigo-600 dark:border-indigo-500 text-indigo-600 dark:text-indigo-500 font-medium hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors flex items-center gap-2 whitespace-nowrap self-start"
+          className="flex items-center gap-2 self-start whitespace-nowrap rounded-lg border-2 border-indigo-600 px-4 py-2 font-medium text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-500 dark:hover:bg-indigo-950/30"
         >
           <Plus className="h-4 w-4" />
           Add Card
@@ -186,30 +188,39 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
       </div>
 
       {/* Description Box */}
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 md:p-6 mb-8 border border-gray-200 dark:border-gray-800">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Description</h3>
-        <div className="flex flex-wrap gap-2 mb-4">
-          <span className="px-3 py-1 bg-green-500 text-white rounded text-xs font-medium">
+      <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900 md:p-6">
+        <h3 className="mb-3 font-semibold text-gray-900 dark:text-white">
+          Description
+        </h3>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <span className="rounded bg-green-500 px-3 py-1 text-xs font-medium text-white">
             0-10% is safe
           </span>
-          <span className="px-3 py-1 bg-orange-500 text-white rounded text-xs font-medium">
+          <span className="rounded bg-orange-500 px-3 py-1 text-xs font-medium text-white">
             10-25% is caution
           </span>
-          <span className="px-3 py-1 bg-red-500 text-white rounded text-xs font-medium">
+          <span className="rounded bg-red-500 px-3 py-1 text-xs font-medium text-white">
             25-28% is danger!
           </span>
         </div>
         <div className="space-y-3 text-sm">
           <div>
-            <span className="font-semibold text-gray-900 dark:text-white">Credit utilization rate</span>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              The reason for the scale is because anything above 30% lowers points every month as recommended by the Canadian credit system.
+            <span className="font-semibold text-gray-900 dark:text-white">
+              Credit utilization rate
+            </span>
+            <p className="mt-1 text-gray-600 dark:text-gray-400">
+              The reason for the scale is because anything above 30% lowers
+              points every month as recommended by the Canadian credit system.
             </p>
           </div>
           <div>
-            <span className="font-semibold text-gray-900 dark:text-white">Note</span>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Even if you stay below 30% utilization rate, if there is a sharp increase in your utilization rate (within 30%), you are at higher risk of losing credit points.
+            <span className="font-semibold text-gray-900 dark:text-white">
+              Note
+            </span>
+            <p className="mt-1 text-gray-600 dark:text-gray-400">
+              Even if you stay below 30% utilization rate, if there is a sharp
+              increase in your utilization rate (within 30%), you are at higher
+              risk of losing credit points.
             </p>
           </div>
         </div>
@@ -217,47 +228,67 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
       {/* Card Carousel */}
       <div className="mb-8">
-        <div className="relative max-w-lg mx-auto">
-          {/* Navigation Buttons */}
+        <div className="relative mx-auto max-w-2xl px-4 sm:px-8 md:px-16 lg:px-20">
+          {/* Navigation Buttons - Centered on the stack */}
           {cards.length > 1 && (
             <>
               <button
                 onClick={handlePrevCard}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 lg:-translate-x-16 z-10 w-12 h-12 bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                className="absolute left-0 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:h-12 sm:w-12"
                 disabled={currentCardIndex === 0 || isTransitioning}
               >
-                <ChevronLeft className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+                <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-400 sm:h-6 sm:w-6" />
               </button>
 
               <button
                 onClick={handleNextCard}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 lg:translate-x-16 z-10 w-12 h-12 bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                disabled={currentCardIndex === cards.length - 1 || isTransitioning}
+                className="absolute right-0 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:h-12 sm:w-12"
+                disabled={
+                  currentCardIndex === cards.length - 1 || isTransitioning
+                }
               >
-                <ChevronRight className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+                <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400 sm:h-6 sm:w-6" />
               </button>
             </>
           )}
 
-          {/* 3-Card Stack */}
-          <div className="relative">
-            {/* Back card (third in stack) - only show if there's a next card */}
-            {currentCardIndex < cards.length - 1 && (
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[85%] pointer-events-none">
-                <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-t-2xl opacity-60"></div>
+          {/* Card Stack Container */}
+          <div className="relative pb-4 pt-8">
+            {/* Third card in stack - show if there's a card at +2 position */}
+            {currentCardIndex + 2 < cards.length && !isTransitioning && (
+              <div className="pointer-events-none absolute left-1/2 top-0 z-0 w-[88%] -translate-x-1/2">
+                <div className="h-32 overflow-hidden rounded-t-2xl opacity-60 shadow-sm">
+                  <CreditCardDisplay
+                    bank={cards[currentCardIndex + 2].bank}
+                    name="Kristin Mumbi"
+                    type={cards[currentCardIndex + 2].type}
+                    lastFour={cards[currentCardIndex + 2].lastFour}
+                    gradientIndex={currentCardIndex + 2}
+                    size="large"
+                  />
+                </div>
               </div>
             )}
 
-            {/* Middle card (second in stack) - only show if there are at least 2 cards */}
-            {cards.length > 1 && currentCardIndex < cards.length - 1 && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[92%] pointer-events-none">
-                <div className="h-20 bg-gray-300 dark:bg-gray-700 rounded-t-2xl opacity-80"></div>
+            {/* Second card in stack - show if there's a card at +1 position */}
+            {currentCardIndex + 1 < cards.length && !isTransitioning && (
+              <div className="pointer-events-none absolute left-1/2 top-4 z-10 w-[94%] -translate-x-1/2">
+                <div className="h-40 overflow-hidden rounded-t-2xl opacity-80 shadow-md">
+                  <CreditCardDisplay
+                    bank={cards[currentCardIndex + 1].bank}
+                    name="Kristin Mumbi"
+                    type={cards[currentCardIndex + 1].type}
+                    lastFour={cards[currentCardIndex + 1].lastFour}
+                    gradientIndex={currentCardIndex + 1}
+                    size="large"
+                  />
+                </div>
               </div>
             )}
 
             {/* Front card (current card) */}
-            <div 
-              className={`relative transition-opacity duration-300 ${
+            <div
+              className={`relative z-20 transition-opacity duration-300 ${
                 isTransitioning ? 'opacity-0' : 'opacity-100'
               }`}
             >
@@ -273,7 +304,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
               {/* Disconnect button on card */}
               <button
                 onClick={() => setShowDisconnectConfirm(true)}
-                className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-20"
+                className="absolute right-4 top-4 z-30 rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
                 title="Disconnect card"
               >
                 <X className="h-4 w-4 text-white" />
@@ -281,23 +312,20 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             </div>
           </div>
 
-          {/* Card Status */}
-          <div className="text-center mt-8">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              This card is in the safe zone!
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-              Remember to payback on time to keep it consistent
-            </p>
-            
-            {/* Volume-style Progress Bar */}
-            <div className="max-w-2xl mx-auto mb-2">
-              <VolumeProgressBar percentage={20} />
+          {/* Card Status and Progress */}
+          <div className="mt-6 sm:mt-8">
+            <div className="mb-4 text-center">
+              <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                This card is in the safe zone!
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">
+                Remember to payback on time to keep it consistent
+              </p>
             </div>
-            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-4">
-              <span className="font-medium">0-30% Safe</span>
-              <span>Caution</span>
-              <span>Danger</span>
+
+            {/* Volume-style Progress Bar */}
+            <div className="w-full">
+              <VolumeProgressBar percentage={20} />
             </div>
           </div>
         </div>
@@ -305,17 +333,19 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
       {/* Metrics Section */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Metrics</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              Metrics
+            </h2>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
               Sample data for {currentCard.bank} {currentCard.name}
             </p>
           </div>
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
           >
             <option>This month</option>
             <option>Last month</option>
@@ -323,17 +353,26 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {metrics.map((metric, index) => (
-            <div key={index} className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-              <div className="flex items-start justify-between mb-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{metric.label}</span>
+            <div
+              key={index}
+              className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950"
+            >
+              <div className="mb-2 flex items-start justify-between">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {metric.label}
+                </span>
                 {metric.info && (
-                  <Info className="h-4 w-4 text-gray-400 dark:text-gray-600 flex-shrink-0" />
+                  <Info className="h-4 w-4 flex-shrink-0 text-gray-400 dark:text-gray-600" />
                 )}
               </div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{metric.value}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">{metric.description}</p>
+              <p className="mb-1 text-2xl font-bold text-gray-900 dark:text-white">
+                {metric.value}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">
+                {metric.description}
+              </p>
             </div>
           ))}
         </div>
@@ -341,33 +380,36 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
       {/* History Section */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">History</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-              Currently showing sample data for {currentCard.bank} {currentCard.name} (****{currentCard.lastFour})
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              History
+            </h2>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+              Currently showing sample data for {currentCard.bank}{' '}
+              {currentCard.name} (****{currentCard.lastFour})
             </p>
           </div>
-          <button className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+          <button className="px-4 py-2 text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
             Download Statement
           </button>
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search month, date, total balance, and..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950"
             />
           </div>
           <div className="flex gap-2">
-            <button className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-800 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+            <button className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900">
               2025 <ChevronRight className="h-4 w-4" />
             </button>
-            <button className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-800 text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+            <button className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900">
               Filter <Filter className="h-4 w-4" />
             </button>
           </div>
@@ -377,7 +419,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
         <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-900 dark:bg-gray-950 text-white text-left text-sm">
+              <tr className="bg-gray-900 text-left text-sm text-white dark:bg-gray-950">
                 <th className="px-4 py-3 font-medium">Month</th>
                 <th className="px-4 py-3 font-medium">Date</th>
                 <th className="px-4 py-3 font-medium">Total Balance</th>
@@ -391,36 +433,64 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             </thead>
             <tbody className="bg-white dark:bg-gray-950">
               {historyData.map((row, index) => (
-                <tr key={index} className="border-b border-gray-200 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+                <tr
+                  key={index}
+                  className="border-b border-gray-200 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50"
+                >
                   <td className="px-4 py-4">
-                    <span className={`inline-block px-3 py-1 rounded text-xs font-medium ${
-                      row.month === 'December' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                      row.month === 'November' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                      row.month === 'October' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                      row.month === 'September' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
-                      row.month === 'August' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                      row.month === 'July' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                      row.month === 'June' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                      row.month === 'May' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
-                      row.month === 'April' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                      row.month === 'March' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                      row.month === 'February' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    }`}>
+                    <span
+                      className={`inline-block rounded px-3 py-1 text-xs font-medium ${
+                        row.month === 'December'
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          : row.month === 'November'
+                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                            : row.month === 'October'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : row.month === 'September'
+                                ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
+                                : row.month === 'August'
+                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                  : row.month === 'July'
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                    : row.month === 'June'
+                                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                      : row.month === 'May'
+                                        ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
+                                        : row.month === 'April'
+                                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                          : row.month === 'March'
+                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                            : row.month === 'February'
+                                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      }`}
+                    >
                       {row.month.substring(0, 3)}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">{row.date}</td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">{row.totalBalance}</td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">{row.creditInterest}</td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">{row.feeCharge}</td>
-                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">{row.payment}</td>
+                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                    {row.date}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                    {row.totalBalance}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                    {row.creditInterest}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                    {row.feeCharge}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                    {row.payment}
+                  </td>
                   <td className="px-4 py-4">
-                    <span className={`inline-block px-3 py-1 rounded text-xs font-medium ${
-                      row.status === 'paid' 
-                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                    }`}>
+                    <span
+                      className={`inline-block rounded px-3 py-1 text-xs font-medium ${
+                        row.status === 'paid'
+                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                      }`}
+                    >
                       {row.status === 'paid' ? 'paid' : 'Sample redacted'}
                     </span>
                   </td>
@@ -430,30 +500,35 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           </table>
         </div>
 
-        <div className="text-center mt-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Page 1 of 1</p>
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Page 1 of 1
+          </p>
         </div>
       </div>
 
-
       {/* Disconnect Confirmation Modal */}
       {showDisconnectConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-950 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Disconnect Card?</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to disconnect {currentCard.name} ending in {currentCard.lastFour}? This action will remove all associated data from your dashboard.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-950">
+            <h3 className="mb-3 text-xl font-bold text-gray-900 dark:text-white">
+              Disconnect Card?
+            </h3>
+            <p className="mb-6 text-gray-600 dark:text-gray-400">
+              Are you sure you want to disconnect {currentCard.name} ending in{' '}
+              {currentCard.lastFour}? This action will remove all associated
+              data from your dashboard.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDisconnectConfirm(false)}
-                className="flex-1 px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                className="flex-1 rounded-xl border border-gray-300 px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDisconnect}
-                className="flex-1 px-6 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors"
+                className="flex-1 rounded-xl bg-red-600 px-6 py-3 font-medium text-white transition-colors hover:bg-red-700"
               >
                 Disconnect
               </button>
