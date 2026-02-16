@@ -5,7 +5,9 @@
 
 'use client';
 
-import { Search, ChevronUp } from 'lucide-react';
+import { useMemo } from 'react';
+import { Search } from 'lucide-react';
+import { DataTable, Column } from '@/components/ui/DataTable';
 
 interface PaymentHistoryRow {
   month: string;
@@ -27,8 +29,53 @@ export function PaymentHistoryTable({
   title = 'Payment History',
   subtitle,
 }: PaymentHistoryTableProps) {
+  const columns: Column<PaymentHistoryRow>[] = useMemo(() => [
+    {
+      key: 'month',
+      header: 'Month',
+      sortable: true,
+    },
+    {
+      key: 'statementBalance',
+      header: 'Statement Balance',
+      sortable: true,
+    },
+    {
+      key: 'amountPaid',
+      header: 'Amount Paid',
+      sortable: true,
+    },
+    {
+      key: 'paymentStatus',
+      header: 'Payment Status',
+      sortable: true,
+      render: (row) => (
+        <span
+          className={`${
+            row.paymentStatus === 'Late'
+              ? 'text-gray-400 dark:text-gray-500'
+              : 'text-gray-900 dark:text-white'
+          }`}
+        >
+          {row.paymentStatus}
+        </span>
+      ),
+    },
+    {
+      key: 'peakUsage',
+      header: 'Peak Usage',
+      sortable: true,
+      className: 'text-gray-500 dark:text-gray-400',
+    },
+    {
+      key: 'alerts',
+      header: 'Alerts',
+      sortable: true,
+    },
+  ], []);
+
   return (
-    <div>
+    <div className="mb-6 sm:mb-8">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
@@ -87,70 +134,7 @@ export function PaymentHistoryTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
-        <table className="w-full min-w-[800px]">
-          <thead>
-            <tr className="bg-gray-50 text-left text-xs dark:bg-gray-900 sm:text-sm">
-              <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                <div className="flex items-center gap-1.5">
-                  Month
-                  <ChevronUp className="h-3 w-3" />
-                </div>
-              </th>
-              <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                Statement Balance
-              </th>
-              <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                Amount Paid
-              </th>
-              <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                Payment Status
-              </th>
-              <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                Peak Usage
-              </th>
-              <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">
-                Alerts
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-950">
-            {data.map((row, index) => (
-              <tr
-                key={index}
-                className="border-b border-gray-200 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50"
-              >
-                <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
-                  {row.month}
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
-                  {row.statementBalance}
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
-                  {row.amountPaid}
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 text-xs sm:px-4 sm:py-4 sm:text-sm">
-                  <span
-                    className={`${
-                      row.paymentStatus === 'Late'
-                        ? 'text-gray-400 dark:text-gray-500'
-                        : 'text-gray-900 dark:text-white'
-                    }`}
-                  >
-                    {row.paymentStatus}
-                  </span>
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-500 dark:text-gray-400 sm:px-4 sm:py-4 sm:text-sm">
-                  {row.peakUsage}
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
-                  {row.alerts}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable columns={columns} data={data} />
     </div>
   );
 }
