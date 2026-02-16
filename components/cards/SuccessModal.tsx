@@ -18,12 +18,10 @@ export function SuccessModal({ isOpen, onClose, onViewDashboard }: SuccessModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-gray-950 rounded-2xl max-w-md w-full p-8 shadow-2xl text-center">
+      <div className="bg-white dark:bg-gray-950 rounded-2xl max-w-sm w-full p-8 shadow-2xl text-center">
         {/* Icon */}
         <div className="mb-6 flex justify-center">
-          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center">
-            <Check className="h-8 w-8 text-white" strokeWidth={3} />
-          </div>
+          <img src="/favicon.svg" alt="Creduman Logo" className="h-12 w-12" />
         </div>
 
         {/* Content */}
