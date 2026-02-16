@@ -84,8 +84,16 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
     }
   };
 
-  const parseTimestampToSeconds = (timestamp: string): number => {
-    const parts = timestamp.split(':').map(Number);
+  const parseTimestampToSeconds = (timestamp: string | number | undefined): number => {
+    if (!timestamp) return 0;
+    
+    // If already a number, return it
+    if (typeof timestamp === 'number') return timestamp;
+    
+    // Convert to string and parse
+    const timestampStr = String(timestamp);
+    const parts = timestampStr.split(':').map(Number);
+    
     if (parts.length === 2) {
       return parts[0] * 60 + parts[1];
     } else if (parts.length === 3) {
@@ -196,13 +204,20 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
                     {/* Video Chapters */}
                     {videoChapters.length > 0 && (
                       <div className="space-y-2 rounded-xl border border-border bg-card p-3 md:p-4">
-                        {videoChapters.map((chapter) => (
+                        {[...videoChapters]
+                          .sort((a, b) => {
+                            // Sort by duration field which contains the timestamp
+                            const timeA = parseTimestampToSeconds(a.duration || a.timestamp);
+                            const timeB = parseTimestampToSeconds(b.duration || b.timestamp);
+                            return timeA - timeB;
+                          })
+                          .map((chapter, index) => (
                           <VideoChapterItem
                             key={chapter.id}
-                            number={chapter.number}
+                            number={String(index + 1)}
                             title={chapter.title}
                             duration={chapter.duration}
-                            timestamp={chapter.timestamp}
+                            timestamp={parseTimestampToSeconds(chapter.duration || chapter.timestamp)}
                             onSeek={handleSeekToTimestamp}
                           />
                         ))}

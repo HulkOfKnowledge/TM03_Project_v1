@@ -36,7 +36,7 @@ export function LessonPreviewCard({
       {/* Left Column - Lesson Info Card */}
       <div className="min-h-[280px] md:h-full">
         <div className={`group relative h-full min-h-[280px] transform overflow-hidden rounded-2xl ${
-          leftVariant === 'video' ? 'bg-brand' : 'bg-muted'
+          leftVariant === 'video' ? 'bg-brand' : 'bg-gray-300'
         }`}>
           <div className={`flex h-full flex-col justify-end p-6 md:p-8 ${
             leftVariant === 'video' ? 'text-white' : 'text-foreground'
@@ -63,27 +63,12 @@ export function LessonPreviewCard({
       {/* Right Column - Preview/Placeholder */}
       <div className="relative min-h-[200px] overflow-hidden rounded-2xl bg-muted md:h-full md:min-h-[280px]">
         {rightContent === 'image' && rightImageUrl ? (
-          <>
-            <Image
-              src={rightImageUrl}
-              alt={rightImageAlt}
-              fill
-              className="object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
-            />
-            {/* Fallback placeholder */}
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-              <div className="p-8 text-center">
-                <Play className="mx-auto mb-4 h-16 w-16 text-brand/20" />
-                <p className="text-sm text-muted-foreground">
-                  Video Preview
-                </p>
-              </div>
-            </div>
-          </>
+          <Image
+            src={rightImageUrl}
+            alt={rightImageAlt}
+            fill
+            className="object-cover"
+          />
         ) : (
           // Default placeholder
           <div className="absolute inset-0 flex items-center justify-center">
