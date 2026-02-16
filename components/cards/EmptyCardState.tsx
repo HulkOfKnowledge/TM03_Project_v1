@@ -6,6 +6,7 @@
 'use client';
 
 import { CreditCard, Plus, Eye, Calendar, Bell, Layers } from 'lucide-react';
+import { CreditCardDisplay } from './CreditCardDisplay';
 
 interface EmptyCardStateProps {
   onAddCard: () => void;
@@ -36,35 +37,16 @@ export function EmptyCardState({ onAddCard, showFAQButton = false }: EmptyCardSt
       <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl p-2 md:p-12 mb-8">
         <div className="max-w-md mx-auto">
           {/* Placeholder Card */}
-          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-black dark:from-gray-900 dark:via-black dark:to-gray-950 rounded-2xl p-6 md:p-8 shadow-2xl mb-6 aspect-[1.586/1] relative overflow-hidden">
-            {/* Decorative wave */}
-            <div className="absolute top-0 right-0 w-96 h-96 opacity-10">
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white to-transparent rounded-full -translate-y-48 translate-x-48 rotate-45"></div>
-            </div>
-
-            <div className="relative flex flex-col justify-between h-full">
-              <div className="flex items-start justify-between">
-                <p className="text-white/80 text-base md:text-lg font-medium">Credit</p>
-                <div className="text-right">
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-white/60 rounded-full"></div>
-                    <p className="text-white font-bold text-xl">VISA</p>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5 mb-3">
-                  <p className="text-white/80 text-base md:text-lg">John Doe</p>
-                  <div className="w-1.5 h-1.5 bg-white/60 rounded-full"></div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <p className="text-white text-lg md:text-xl tracking-wider font-medium">
-                    1111 - 2222 - 3333 - 4444
-                  </p>
-                  <div className="w-1.5 h-1.5 bg-white/60 rounded-full"></div>
-                </div>
-              </div>
-            </div>
+          <div className="mb-6">
+            <CreditCardDisplay
+              bank="Sample Bank"
+              name="John Doe"
+              type="visa"
+              lastFour="4444"
+              gradientIndex={0}
+              size="large"
+              className="opacity-80"
+            />
           </div>
 
           {/* Connect Button */}

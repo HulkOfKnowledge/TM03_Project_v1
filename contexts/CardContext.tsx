@@ -16,42 +16,57 @@ interface ConnectedCard {
 }
 
 interface CardContextType {
-  connectedCard: ConnectedCard | null;
-  setConnectedCard: (card: ConnectedCard | null) => void;
+  connectedCards: ConnectedCard[];
+  addCard: (card: ConnectedCard) => void;
+  removeCard: (cardId: string) => void;
   isLoading: boolean;
 }
 
 const CardContext = createContext<CardContextType | undefined>(undefined);
 
 export function CardProvider({ children }: { children: ReactNode }) {
-  const [connectedCard, setConnectedCard] = useState<ConnectedCard | null>(null);
+  const [connectedCards, setConnectedCards] = useState<ConnectedCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load card from localStorage on mount
+  // Load cards from localStorage on mount
   useEffect(() => {
     try {
-      const savedCard = localStorage.getItem('connectedCard');
-      if (savedCard) {
-        setConnectedCard(JSON.parse(savedCard));
+      const savedCards = localStorage.getItem('connectedCards');
+      if (savedCards) {
+        setConnectedCards(JSON.parse(savedCards));
       }
     } catch (error) {
-      console.error('Error loading card from storage:', error);
+      console.error('Error loading cards from storage:', error);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Save card to localStorage whenever it changes
+  // Save cards to localStorage whenever they change
   useEffect(() => {
-    if (connectedCard) {
-      localStorage.setItem('connectedCard', JSON.stringify(connectedCard));
+    if (connectedCards.length > 0) {
+      localStorage.setItem('connectedCards', JSON.stringify(connectedCards));
     } else {
-      localStorage.removeItem('connectedCard');
+      localStorage.removeItem('connectedCards');
     }
-  }, [connectedCard]);
+  }, [connectedCards]);
+
+  const addCard = (card: ConnectedCard) => {
+    setConnectedCards(prev => {
+      // Check if card already exists
+      if (prev.some(c => c.id === card.id)) {
+        return prev;
+      }
+      return [...prev, card];
+    });
+  };
+
+  const removeCard = (cardId: string) => {
+    setConnectedCards(prev => prev.filter(card => card.id !== cardId));
+  };
 
   return (
-    <CardContext.Provider value={{ connectedCard, setConnectedCard, isLoading }}>
+    <CardContext.Provider value={{ connectedCards, addCard, removeCard, isLoading }}>
       {children}
     </CardContext.Provider>
   );

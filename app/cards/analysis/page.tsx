@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { EmptyCardState } from '@/components/cards/EmptyCardState';
+import { CardOverviewSkeleton } from '@/components/cards/CardOverviewSkeleton';
 import { CardSelectionModal } from '@/components/cards/CardSelectionModal';
 import { SuccessModal } from '@/components/cards/SuccessModal';
 import { useCard } from '@/contexts/CardContext';
@@ -22,7 +23,7 @@ interface CardOption {
 }
 
 export default function CreditAnalysisPage() {
-  const { connectedCard, setConnectedCard, isLoading } = useCard();
+  const { connectedCards, addCard, isLoading } = useCard();
   const [showCardSelection, setShowCardSelection] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -31,7 +32,7 @@ export default function CreditAnalysisPage() {
   };
 
   const handleSelectCard = (card: CardOption) => {
-    setConnectedCard(card);
+    addCard(card);
     setShowCardSelection(false);
     setShowSuccessModal(true);
   };
@@ -46,9 +47,7 @@ export default function CreditAnalysisPage() {
         <Navigation />
         <main className="pt-28 lg:pt-40 pb-16">
           <div className="container mx-auto px-4 md:px-6">
-            <div className="flex items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            </div>
+            <CardOverviewSkeleton />
           </div>
         </main>
         <Footer />
@@ -63,7 +62,7 @@ export default function CreditAnalysisPage() {
       {/* Main Content */}
       <main className="pt-28 lg:pt-40 pb-16">
         <div className="container mx-auto px-4 md:px-6">
-          {!connectedCard ? (
+          {connectedCards.length === 0 ? (
             <EmptyCardState onAddCard={handleAddCard} />
           ) : (
             <div>
@@ -73,11 +72,13 @@ export default function CreditAnalysisPage() {
               {/* Add your actual analysis content here */}
               <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-8">
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Connected Card: {connectedCard.name}
+                  Connected Cards: {connectedCards.length}
                 </p>
-                <p className="text-gray-600 dark:text-gray-400">
-                  •••• {connectedCard.lastFour}
-                </p>
+                {connectedCards.map((card, index) => (
+                  <p key={card.id} className="text-gray-600 dark:text-gray-400">
+                    {index + 1}. {card.bank} {card.name} •••• {card.lastFour}
+                  </p>
+                ))}
               </div>
             </div>
           )}
@@ -89,6 +90,7 @@ export default function CreditAnalysisPage() {
         isOpen={showCardSelection}
         onClose={() => setShowCardSelection(false)}
         onSelectCard={handleSelectCard}
+        connectedCardIds={connectedCards.map(card => card.id)}
       />
       <SuccessModal
         isOpen={showSuccessModal}
