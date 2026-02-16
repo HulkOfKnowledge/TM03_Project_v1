@@ -36,3 +36,35 @@ export interface CardOverviewData {
   utilizationPercentage: number;
   utilizationZone: 'Safe' | 'Caution' | 'Danger';
 }
+
+// Credit Analysis Types
+
+export interface CardBalance {
+  name: string;
+  balance: number;
+}
+
+export interface PaymentHistoryRow {
+  month: string;
+  statementBalance: string;
+  amountPaid: string;
+  paymentStatus: 'On Time' | 'Late' | 'Missed';
+  peakUsage: string;
+  alerts: string;
+}
+
+export interface ChartDataPoint {
+  label: string;
+  value: number;
+}
+
+export interface CreditAnalysisData {
+  totalCreditAvailable: number;
+  totalAmountOwed: number;
+  creditUtilizationRate: number;
+  cardBalances: CardBalance[];
+  paymentHistory: PaymentHistoryRow[];
+  utilizationChartData: ChartDataPoint[];
+  spendingChartData: ChartDataPoint[];
+  averageSpending: number;
+}

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -20,7 +20,9 @@ import {
   ChartOptions,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { useIsDarkMode } from '@/hooks/useTheme';
+import { useTheme } from '@/components/ThemeProvider';
+import { cardService } from '@/services/card.service';
+import type { CreditAnalysisData } from '@/types/card.types';
 import { MetricCard } from './MetricCard';
 import { ChartSection } from './ChartSection';
 import { PaymentHistoryTable } from './PaymentHistoryTable';
@@ -42,29 +44,29 @@ interface CreditAnalysisProps {
   connectedCardsCount: number;
 }
 
-// Sample data - replace with actual data from your backend
-const totalCreditAvailable = 4000;
-const totalAmountOwed = 400;
-const creditUtilizationRate = 25;
-
-const cardBalances = [
-  { name: 'Card 1', balance: 200 },
-  { name: 'Card 2', balance: 200 },
-  { name: 'Card 3', balance: 200 },
-];
-
-// Payment history data
-const paymentHistory = [
-  { month: 'December', statementBalance: '$900.45', amountPaid: '$700', paymentStatus: 'On Time', peakUsage: '45%', alerts: 'High Usage' },
-  { month: 'November', statementBalance: '$25,000.45', amountPaid: '$900.45', paymentStatus: 'On Time', peakUsage: '45%', alerts: 'High Usage' },
-  { month: 'October', statementBalance: '$900.45', amountPaid: '$1100', paymentStatus: 'On Time', peakUsage: '45%', alerts: 'High Usage' },
-  { month: 'September', statementBalance: '$900.45', amountPaid: '$1000', paymentStatus: 'Late', peakUsage: '45%', alerts: 'High Usage' },
-  { month: 'August', statementBalance: '$900.45', amountPaid: '$900.45', paymentStatus: 'On Time', peakUsage: '18%', alerts: '-' },
-];
-
 export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
   const [selectedPeriod, setSelectedPeriod] = useState('Yearly');
-  const isDark = useIsDarkMode();
+  const [analysisData, setAnalysisData] = useState<CreditAnalysisData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
+  // Fetch credit analysis data on mount
+  useEffect(() => {
+    loadAnalysisData();
+  }, []);
+
+  const loadAnalysisData = async () => {
+    try {
+      setLoading(true);
+      const data = await cardService.getCreditAnalysisData();
+      setAnalysisData(data);
+    } catch (error) {
+      console.error('Error loading credit analysis:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Memoize theme-dependent values
   const themeColors = useMemo(() => ({
@@ -77,38 +79,52 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
   }), [isDark]);
 
   // Utilization Rate Chart Data
-  const utilizationChartData = useMemo(() => ({
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    datasets: [
-      {
-        label: 'Safe',
-        data: [100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300],
-        borderColor: themeColors.safe,
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-      },
-      {
-        label: 'Caution',
-        data: [80, 100, 120, 130, 140, 150, 160, 180, 200, 220, 240, 260],
-        borderColor: themeColors.caution,
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-      },
-      {
-        label: 'Danger',
-        data: [60, 80, 100, 110, 120, 130, 140, 160, 180, 200, 220, 240],
-        borderColor: themeColors.danger,
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-      },
-    ],
-  }), [themeColors]);
+  const utilizationChartData = useMemo(() => {
+    if (!analysisData) {
+      return {
+        labels: [],
+        datasets: [],
+      };
+    }
+
+    const labels = analysisData.utilizationChartData.map(d => d.label);
+    const safeData = analysisData.utilizationChartData.map(d => d.value);
+    const cautionData = analysisData.utilizationChartData.map(d => d.value * 0.8);
+    const dangerData = analysisData.utilizationChartData.map(d => d.value * 0.6);
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Safe',
+          data: safeData,
+          borderColor: themeColors.safe,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+        },
+        {
+          label: 'Caution',
+          data: cautionData,
+          borderColor: themeColors.caution,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+        },
+        {
+          label: 'Danger',
+          data: dangerData,
+          borderColor: themeColors.danger,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+        },
+      ],
+    };
+  }, [analysisData, themeColors]);
 
   const utilizationChartOptions: ChartOptions<'line'> = useMemo(() => ({
     responsive: true,
@@ -168,21 +184,33 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
   }), [themeColors]);
 
   // Spending Patterns Chart Data
-  const spendingChartData = useMemo(() => ({
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    datasets: [
-      {
-        label: 'Spending',
-        data: [80, 120, 150, 180, 200, 170, 160, 200, 250, 300, 350, 400],
-        borderColor: themeColors.spending,
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 0,
-        fill: false,
-      },
-    ],
-  }), [themeColors]);
+  const spendingChartData = useMemo(() => {
+    if (!analysisData) {
+      return {
+        labels: [],
+        datasets: [],
+      };
+    }
+
+    const labels = analysisData.spendingChartData.map(d => d.label);
+    const data = analysisData.spendingChartData.map(d => d.value);
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Spending',
+          data,
+          borderColor: themeColors.spending,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    };
+  }, [analysisData, themeColors]);
 
   const spendingChartOptions: ChartOptions<'line'> = useMemo(() => ({
     responsive: true,
@@ -244,6 +272,29 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
     { color: themeColors.danger, label: 'Danger' },
   ], [themeColors]);
 
+  // Show loading skeleton
+  if (loading || !analysisData) {
+    return (
+      <div className="mx-auto">
+        <div className="mb-6 flex flex-col gap-4 sm:mb-8 md:flex-row md:items-start md:justify-between">
+          <div className="flex-1">
+            <h1 className="mb-3 text-3xl font-bold text-brand md:text-4xl">
+              Credit Analysis
+            </h1>
+            <p className="text-base text-gray-600 dark:text-gray-400">
+              Understand your card breakdowns at a glance
+            </p>
+          </div>
+        </div>
+        <div className="animate-pulse space-y-4">
+          <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-xl"></div>
+          <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-xl"></div>
+          <div className="h-64 bg-gray-200 dark:bg-gray-800 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto">
       {/* Header */}
@@ -272,14 +323,14 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
         {/* Top Row - Two Cards */}
         <MetricCard
           label="Total Credit Available"
-          value={`$${totalCreditAvailable.toLocaleString()}`}
+          value={`$${analysisData.totalCreditAvailable.toLocaleString()}`}
           trend={{ value: '0.5% Increase', isPositive: true }}
           showInfo
         />
 
         <MetricCard
           label="Total Amount Owed"
-          value={`$${totalAmountOwed.toLocaleString()}`}
+          value={`$${analysisData.totalAmountOwed.toLocaleString()}`}
           trend={{ value: '0.5% Increase', isPositive: true }}
           showInfo
         />
@@ -303,7 +354,7 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
 
             {/* Right side - Card balances with dividers */}
             <div className="flex flex-wrap items-center gap-4 sm:gap-0">
-              {cardBalances.map((card, index) => (
+              {analysisData.cardBalances.map((card, index) => (
                 <div key={index} className="flex items-center">
                   {index > 0 && (
                     <div className="mx-4 hidden h-12 w-px bg-gray-200 dark:bg-gray-800 sm:block sm:mx-6 sm:h-16"></div>
@@ -326,7 +377,7 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       {/* Overall Utilization Rate */}
       <ChartSection
         title="Overall Utilization Rate"
-        primaryValue={`${creditUtilizationRate}%`}
+        primaryValue={`${analysisData.creditUtilizationRate}%`}
         primaryLabel="Utilization percentage"
         trend={{ value: '0.5%' }}
         legend={utilizationLegend}
@@ -340,7 +391,7 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       {/* Spending Patterns */}
       <ChartSection
         title="Spending Patterns"
-        primaryValue="$400"
+        primaryValue={`$${analysisData.averageSpending}`}
         primaryLabel="Average Amount"
         secondaryLabel="Spent"
         selectedPeriod={selectedPeriod}
@@ -351,7 +402,7 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
       </ChartSection>
 
       {/* Payment History */}
-      <PaymentHistoryTable data={paymentHistory} />
+      <PaymentHistoryTable data={analysisData.paymentHistory} />
 
       {/* Recommended Actions */}
       <div className="mt-6 grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mt-8 sm:p-6 lg:grid-cols-2 lg:gap-6">

@@ -3,7 +3,15 @@
  * Handles card data, metrics, and transaction history
  */
 
-import type { CardMetric, CardHistoryRow, CardOverviewData } from '@/types/card.types';
+import type { 
+  CardMetric, 
+  CardHistoryRow, 
+  CardOverviewData,
+  CreditAnalysisData,
+  PaymentHistoryRow,
+  CardBalance,
+  ChartDataPoint,
+} from '@/types/card.types';
 
 export class CardService {
   /**
@@ -43,7 +51,7 @@ export class CardService {
    * @param cardId - The ID of the card to fetch data for
    * TODO: Use cardId to fetch specific card data from API
    */
-  getCardOverviewData(cardId: string): CardOverviewData {
+  getCardOverviewData(_cardId: string): CardOverviewData {
     return {
       metrics: this.getCardMetrics(),
       history: this.getCardHistory(),
@@ -59,6 +67,74 @@ export class CardService {
     if (percentage < 25) return 'Safe';
     if (percentage < 30) return 'Caution';
     return 'Danger';
+  }
+
+  /**
+   * Get credit analysis data (sample data)
+   * TODO: Replace with real API call to /api/cards/analysis
+   */
+  async getCreditAnalysisData(): Promise<CreditAnalysisData> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Sample payment history data
+    const paymentHistory: PaymentHistoryRow[] = [
+      { month: 'December', statementBalance: '$900.45', amountPaid: '$700', paymentStatus: 'On Time', peakUsage: '45%', alerts: 'High Usage' },
+      { month: 'November', statementBalance: '$25,000.45', amountPaid: '$900.45', paymentStatus: 'On Time', peakUsage: '45%', alerts: 'High Usage' },
+      { month: 'October', statementBalance: '$900.45', amountPaid: '$1100', paymentStatus: 'On Time', peakUsage: '45%', alerts: 'High Usage' },
+      { month: 'September', statementBalance: '$900.45', amountPaid: '$1000', paymentStatus: 'Late', peakUsage: '45%', alerts: 'High Usage' },
+      { month: 'August', statementBalance: '$900.45', amountPaid: '$900.45', paymentStatus: 'On Time', peakUsage: '18%', alerts: '-' },
+    ];
+
+    // Sample card balances
+    const cardBalances: CardBalance[] = [
+      { name: 'Card 1', balance: 200 },
+      { name: 'Card 2', balance: 200 },
+      { name: 'Card 3', balance: 200 },
+    ];
+
+    // Sample utilization chart data (3 lines: Safe, Caution, Danger)
+    const utilizationChartData: ChartDataPoint[] = [
+      { label: 'Jan', value: 100 },
+      { label: 'Feb', value: 120 },
+      { label: 'Mar', value: 140 },
+      { label: 'Apr', value: 150 },
+      { label: 'May', value: 160 },
+      { label: 'Jun', value: 180 },
+      { label: 'Jul', value: 200 },
+      { label: 'Aug', value: 220 },
+      { label: 'Sep', value: 240 },
+      { label: 'Oct', value: 260 },
+      { label: 'Nov', value: 280 },
+      { label: 'Dec', value: 300 },
+    ];
+
+    // Sample spending chart data
+    const spendingChartData: ChartDataPoint[] = [
+      { label: 'Jan', value: 80 },
+      { label: 'Feb', value: 120 },
+      { label: 'Mar', value: 150 },
+      { label: 'Apr', value: 180 },
+      { label: 'May', value: 200 },
+      { label: 'Jun', value: 170 },
+      { label: 'Jul', value: 160 },
+      { label: 'Aug', value: 200 },
+      { label: 'Sep', value: 250 },
+      { label: 'Oct', value: 300 },
+      { label: 'Nov', value: 350 },
+      { label: 'Dec', value: 400 },
+    ];
+
+    return {
+      totalCreditAvailable: 4000,
+      totalAmountOwed: 400,
+      creditUtilizationRate: 25,
+      cardBalances,
+      paymentHistory,
+      utilizationChartData,
+      spendingChartData,
+      averageSpending: 400,
+    };
   }
 }
 
