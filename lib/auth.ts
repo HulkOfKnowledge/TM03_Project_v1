@@ -3,6 +3,7 @@
  * Shared authentication helper functions
  */
 
+import { clearAuthCache } from './api/auth-client';
 
 /**
  * Handle user logout
@@ -10,6 +11,9 @@
  */
 export function handleLogout(): void {
   try {
+    // Clear the auth cache
+    clearAuthCache();
+    
     // Redirect immediately
     window.location.replace('/login');
 

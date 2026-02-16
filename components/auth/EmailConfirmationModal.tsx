@@ -46,11 +46,14 @@ export function EmailConfirmationModal() {
     const publicPages = ['/login', '/signup', '/'];
     if (publicPages.includes(pathname)) return;
 
+    // Only check when user focuses window (they might have confirmed in another tab)
     const onFocus = () => refreshProfile();
     window.addEventListener('focus', onFocus);
+    
+    // Check every 2 minutes instead of every 30 seconds to reduce API calls
     const interval = window.setInterval(() => {
       void refreshProfile();
-    }, 30000);
+    }, 120000); // 2 minutes
 
     return () => {
       window.removeEventListener('focus', onFocus);

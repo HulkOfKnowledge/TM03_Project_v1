@@ -53,9 +53,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const inFlightRequest = useRef<Promise<{ user: User | null; profile: UserProfile | null }> | null>(null);
+  const hasInitialized = useRef(false);
+  const lastFetchTime = useRef<number>(0);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
-  const fetchUserAndProfile = useCallback(async () => {
+  const fetchUserAndProfile = useCallback(async (force: boolean = false) => {
     try {
+      // Check if we have a recent fetch (within cache duration) and not forced
+      const now = Date.now();
+      if (!force && lastFetchTime.current && (now - lastFetchTime.current) < CACHE_DURATION) {
+        return;
+      }
+
+      // If there's already a request in flight, wait for it
       if (inFlightRequest.current) {
         const inFlightResult = await inFlightRequest.current;
         setUser(inFlightResult.user);
@@ -64,12 +74,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       inFlightRequest.current = (async () => {
-        const { user: nextUser, profile: nextProfile } = await fetchAuthMe();
+        const { user: nextUser, profile: nextProfile } = await fetchAuthMe(force);
         return { user: nextUser, profile: nextProfile };
       })();
 
       const { user: nextUser, profile: nextProfile } = await inFlightRequest.current;
       inFlightRequest.current = null;
+      lastFetchTime.current = Date.now();
 
       setUser(nextUser);
       setProfile(nextProfile);
@@ -82,13 +93,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshProfile = useCallback(async () => {
     setLoading(true);
-    await fetchUserAndProfile();
+    await fetchUserAndProfile(true); // Force refresh
     setLoading(false);
   }, [fetchUserAndProfile]);
 
+  // Only fetch on initial mount
   useEffect(() => {
-    void refreshProfile();
-  }, [refreshProfile]);
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
+    const initializeAuth = async () => {
+      await fetchUserAndProfile();
+      setLoading(false);
+    };
+
+    void initializeAuth();
+  }, []); // Empty dependency array - only run once on mount
 
   useEffect(() => {
     if (loading) return;

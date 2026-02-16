@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { signupSchema } from '@/lib/validations';
 import { Check } from 'lucide-react';
-import { signupWithEmail, startOAuth } from '@/lib/api/auth-client';
+import { signupWithEmail, startOAuth, clearAuthCache } from '@/lib/api/auth-client';
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState('');
@@ -107,6 +107,9 @@ export default function SignupPage() {
         setIsLoading(false);
         return;
       }
+
+      // Clear auth cache to force fresh data after signup
+      clearAuthCache();
 
       // Success - redirect to onboarding immediately
       // Email confirmation modal will be shown if email is not confirmed

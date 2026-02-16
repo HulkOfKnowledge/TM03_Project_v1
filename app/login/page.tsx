@@ -17,7 +17,7 @@ import { SuccessModal } from '@/components/auth/SuccessModal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { loginSchema } from '@/lib/validations';
-import { loginWithEmail, resendConfirmationEmail, startOAuth } from '@/lib/api/auth-client';
+import { loginWithEmail, resendConfirmationEmail, startOAuth, clearAuthCache } from '@/lib/api/auth-client';
 function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -77,6 +77,9 @@ function LoginForm() {
         }
         throw new Error(message);
       }
+
+      // Clear auth cache to force fresh data after login
+      clearAuthCache();
 
       const profile = result?.data?.profile;
 
