@@ -7,23 +7,18 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Settings, FileText } from 'lucide-react';
+import { ArrowLeft, Play, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
 import { VideoChapterItem } from '@/components/learn/VideoChapterItem';
 import { RelatedLessonsSection } from '@/components/learn/RelatedLessonsSection';
-import {
-  sampleVideoChapters,
-  sampleRelatedLessons,
-  sampleQuizQuestions,
-  sampleTranscript,
-  sampleResources,
-} from './videoLayoutConstants';
+import { sampleQuizQuestions } from './videoLayoutConstants';
 import { VideoPreviewSkeleton } from '@/components/learn/VideoPreviewSkeleton';
 import { QuizContent } from '@/components/learn/QuizContent';
 import { LessonPreviewCard } from '@/components/learn/LessonPreviewCard';
 import { InfoListItem } from '@/components/learn/InfoListItem';
+import { VideoPlayer, VideoPlayerRef } from '@/components/learn/VideoPlayer';
 import { learnService } from '@/services/learn.service';
 import { getContentUrl } from '@/lib/learn-navigation';
 import type { Testimonial, LearningContent } from '@/types/learn.types';
@@ -41,19 +36,10 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
   const [loading, setLoading] = useState(true);
   const [video, setVideo] = useState<LearningContent | null>(null);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [recommendedContent, setRecommendedContent] = useState<LearningContent[]>([]);
   const [quizActive, setQuizActive] = useState(false);
   const [videoTab, setVideoTab] = useState('overview');
   const [resourceSortBy, setResourceSortBy] = useState('suggested');
-  
-  // Video player state
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [showControls, setShowControls] = useState(true);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const videoPlayerRef = useRef<VideoPlayerRef>(null);
 
   useEffect(() => {
     loadLessonData();
@@ -69,7 +55,6 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
       
       setVideo(contentData);
       setTestimonials(dashboardData.testimonials || []);
-      setRecommendedContent(dashboardData.recommendedContent || []);
     } catch (error) {
       console.error('Error loading lesson data:', error);
     } finally {
@@ -77,87 +62,60 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
     }
   };
 
-  const handleContentClick = (item: LearningContent) => {
-    const url = getContentUrl(item);
-    router.push(url);
-  };
-
-  // Video player controls
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      setCurrentTime(time);
-    }
-  };
-
-  const toggleFullscreen = () => {
-    if (videoRef.current) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        videoRef.current.requestFullscreen();
-      }
-    }
-  };
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleMouseMove = () => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) {
-        setShowControls(false);
-      }
-    }, 3000);
-  };
-
-  const seekToChapter = (timestamp: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = timestamp;
-      setCurrentTime(timestamp);
-      if (!isPlaying) {
-        videoRef.current.play();
-        setIsPlaying(true);
-      }
-    }
-  };
-
-  const handleDownload = (resourceTitle: string) => {
-    // Placeholder download function
-    console.log('Downloading:', resourceTitle);
-  };
-
   // Load sample data for features not yet in API
-  const videoChapters = sampleVideoChapters;
-  const relatedLessons = sampleRelatedLessons;
   const quizQuestions = sampleQuizQuestions;
-  const lessonCategories = ['First 3 months', 'Next: 4 - 6 Months'];
+  
+  // Use real data from API
+  const videoChapters = video?.chapters || [];
+  const transcript = video?.transcript || [];
+  const resources = video?.resources || [];
+  const relatedLessons = video?.relatedContent || [];
+  const learningPoints = video?.learningPoints || [];
+  
+  // Extract unique categories from related lessons
+  const lessonCategories = Array.from(
+    new Set(relatedLessons.map(lesson => lesson.category))
+  );
+
+  const handleSeekToTimestamp = (timestamp: number) => {
+    if (videoPlayerRef.current) {
+      videoPlayerRef.current.seekTo(timestamp);
+      videoPlayerRef.current.play();
+    }
+  };
+
+  const parseTimestampToSeconds = (timestamp: string): number => {
+    const parts = timestamp.split(':').map(Number);
+    if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    } else if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+    return 0;
+  };
+
+  const handleResourceClick = async (e: React.MouseEvent, resourceArticleId?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!resourceArticleId) {
+      console.log('No article ID provided');
+      return;
+    }
+    
+    try {
+      // Fetch the article content to get routing information
+      const articleContent = await learnService.getContentById(resourceArticleId);
+      if (articleContent) {
+        const url = getContentUrl(articleContent);
+        router.push(url);
+      } else {
+        console.error('Article content not found for ID:', resourceArticleId);
+      }
+    } catch (error) {
+      console.error('Error navigating to resource:', error);
+    }
+  };
 
   if (loading) {
     return <VideoPreviewSkeleton />;
@@ -189,28 +147,9 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
     title: video.title,
     description: video.description,
     thumbnailUrl: video.thumbnailUrl,
-    videoUrl: video.videoUrl || '/videos/sample.mp4',
+    videoUrl: video.videoUrl || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Default demo video
     duration: video.duration,
-    learningPoints: [
-      {
-        text: 'A simple explanation of how the system works and why newcomers start with no credit file.',
-      },
-      {
-        text: 'How limits, balances, and spending behavior shape your credit growth.',
-      },
-      {
-        text: 'What a credit limit actually is, how to check it, and how it affects your risk level.',
-      },
-      {
-        text: 'Why staying under 30% is the safest way to grow your credit score.',
-      },
-      {
-        text: 'What triggers red flags: high usage, near-limit spending, missed payments.',
-      },
-      {
-        text: 'How the app tracks your card, warns you early, and keeps you from making costly mistakes.',
-      },
-    ],
+    learningPoints: learningPoints.map(point => ({ text: point })),
   };
 
   // Video Viewing Screen
@@ -237,84 +176,11 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
             {/* Left Column: Video and Tabs */}
             <div className="min-w-0">
               {/* Video Player */}
-              <div
-                className="relative aspect-video w-full overflow-hidden rounded-2xl bg-muted shadow-lg"
-                onMouseMove={handleMouseMove}
-                onMouseLeave={() => isPlaying && setShowControls(false)}
-              >
-                {/* Placeholder for video - replace with actual video element */}
-                <div className="flex h-full w-full items-center justify-center bg-muted-foreground/10">
-                  <button
-                    onClick={togglePlay}
-                    className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-lg transition-transform hover:scale-110"
-                  >
-                    <Play className="h-8 w-8 fill-current text-brand" />
-                  </button>
-                </div>
-
-                {/* Video Controls Overlay */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 ${
-                    showControls ? 'opacity-100' : 'opacity-0'
-                  }`}
-                >
-                  {/* Bottom Controls */}
-                  <div className="absolute bottom-0 left-0 right-0 space-y-2 p-4">
-                    {/* Progress Bar */}
-                    <input
-                      type="range"
-                      min="0"
-                      max={duration || 0}
-                      value={currentTime}
-                      onChange={handleSeek}
-                      className="h-1 w-full cursor-pointer appearance-none rounded-full bg-white/30 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                    />
-
-                    {/* Control Buttons */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={togglePlay}
-                          className="text-white"
-                          aria-label={isPlaying ? 'Pause' : 'Play'}
-                        >
-                          {isPlaying ? (
-                            <Pause className="h-6 w-6" />
-                          ) : (
-                            <Play className="h-6 w-6" />
-                          )}
-                        </button>
-                        <button
-                          onClick={toggleMute}
-                          className="text-white"
-                          aria-label={isMuted ? 'Unmute' : 'Mute'}
-                        >
-                          {isMuted ? (
-                            <VolumeX className="h-6 w-6" />
-                          ) : (
-                            <Volume2 className="h-6 w-6" />
-                          )}
-                        </button>
-                        <div className="text-sm font-medium text-white">
-                          {formatTime(currentTime)} / {formatTime(duration)}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button className="text-white" aria-label="Settings">
-                          <Settings className="h-6 w-6" />
-                        </button>
-                        <button
-                          onClick={toggleFullscreen}
-                          className="text-white"
-                          aria-label="Fullscreen"
-                        >
-                          <Maximize className="h-6 w-6" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <VideoPlayer
+                ref={videoPlayerRef}
+                videoUrl={lessonData.videoUrl}
+                thumbnailUrl={lessonData.thumbnailUrl}
+              />
 
               {/* Tabs below video */}
               <div className="mt-6">
@@ -328,18 +194,20 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
                   {/* Lesson Overview Tab */}
                   <TabsContent value="overview" className="mt-4 md:mt-6">
                     {/* Video Chapters */}
-                    <div className="space-y-2 rounded-xl border border-border bg-card p-3 md:p-4">
-                      {videoChapters.map((chapter) => (
-                        <VideoChapterItem
-                          key={chapter.id}
-                          number={chapter.number}
-                          title={chapter.title}
-                          duration={chapter.duration}
-                          timestamp={chapter.timestamp}
-                          onSeek={seekToChapter}
-                        />
-                      ))}
-                    </div>
+                    {videoChapters.length > 0 && (
+                      <div className="space-y-2 rounded-xl border border-border bg-card p-3 md:p-4">
+                        {videoChapters.map((chapter) => (
+                          <VideoChapterItem
+                            key={chapter.id}
+                            number={chapter.number}
+                            title={chapter.title}
+                            duration={chapter.duration}
+                            timestamp={chapter.timestamp}
+                            onSeek={handleSeekToTimestamp}
+                          />
+                        ))}
+                      </div>
+                    )}
 
                     {/* About This Lesson */}
                     <div className="mt-6 md:mt-8">
@@ -370,81 +238,103 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
 
                   {/* Transcript Tab */}
                   <TabsContent value="transcript" className="mt-4 md:mt-6">
-                    <div className="space-y-4 md:space-y-6">
-                      {sampleTranscript.map((entry, index) => (
-                        <div key={index} className="flex flex-col gap-2 md:flex-row md:gap-4">
-                          <div className="shrink-0 text-sm font-medium text-muted-foreground">
-                            {entry.timestamp}
-                          </div>
-                          <div className="text-sm leading-relaxed text-muted-foreground md:text-base">
-                            {entry.content}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    {transcript.length > 0 ? (
+                      <div className="space-y-4 md:space-y-6">
+                        {transcript.map((entry, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleSeekToTimestamp(parseTimestampToSeconds(entry.timestamp))}
+                            className="group flex w-full cursor-pointer flex-col gap-2 text-left transition-colors hover:opacity-80 md:flex-row md:gap-4"
+                          >
+                            <span className="shrink-0 text-sm font-medium text-brand transition-colors group-hover:underline">
+                              {entry.timestamp}
+                            </span>
+                            <span className="text-sm leading-relaxed text-muted-foreground md:text-base">
+                              {entry.content}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center text-muted-foreground">
+                        Transcript not available for this video.
+                      </div>
+                    )}
                   </TabsContent>
 
                   {/* Resources Tab */}
                   <TabsContent value="resources" className="mt-4 md:mt-6">
-                    <div className="space-y-4 md:space-y-6">
-                      {/* Sort Options */}
-                      <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-card p-2">
-                        <span className="text-sm font-medium text-foreground md:text-base">Sort by:</span>
-                        <button
-                          onClick={() => setResourceSortBy('suggested')}
-                          className={`px-3 py-1.5 text-sm transition-colors md:px-4 md:text-base ${
-                            resourceSortBy === 'suggested'
-                              ? 'text-foreground underline decoration-2 underline-offset-4'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          Suggested
-                        </button>
-                        <button
-                          onClick={() => setResourceSortBy('newest')}
-                          className={`px-3 py-1.5 text-sm transition-colors md:px-4 md:text-base ${
-                            resourceSortBy === 'newest'
-                              ? 'text-foreground underline decoration-2 underline-offset-4'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          Newest
-                        </button>
-                      </div>
-
-                      {/* Resources Grid */}
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-3">
-                        {sampleResources.map((resource) => (
-                          <div
-                            key={resource.id}
-                            className="flex flex-col gap-3 rounded-lg bg-muted/50 p-4 md:gap-4 md:p-5"
+                    {resources.length > 0 ? (
+                      <div className="space-y-4 md:space-y-6">
+                        {/* Sort Options */}
+                        <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-card p-2">
+                          <span className="text-sm font-medium text-foreground md:text-base">Sort by:</span>
+                          <button
+                            onClick={() => setResourceSortBy('suggested')}
+                            className={`px-3 py-1.5 text-sm transition-colors md:px-4 md:text-base ${
+                              resourceSortBy === 'suggested'
+                                ? 'text-foreground underline decoration-2 underline-offset-4'
+                                : 'text-muted-foreground hover:text-foreground'
+                            }`}
                           >
-                            {/* File Preview Placeholder */}
-                            <div className="aspect-square w-[20%] rounded-md bg-card shadow-sm" />
+                            Suggested
+                          </button>
+                          <button
+                            onClick={() => setResourceSortBy('newest')}
+                            className={`px-3 py-1.5 text-sm transition-colors md:px-4 md:text-base ${
+                              resourceSortBy === 'newest'
+                                ? 'text-foreground underline decoration-2 underline-offset-4'
+                                : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            Newest
+                          </button>
+                        </div>
 
-                            {/* File Info */}
-                            <div className="space-y-2">
-                              <h4 className="text-sm font-medium text-foreground md:text-base">
-                                {resource.title}
-                              </h4>
-                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:gap-3 md:text-sm">
-                                <span className="flex items-center gap-1">
-                                  <FileText className="h-3 w-3 md:h-4 md:w-4" />
-                                  {resource.size}
-                                </span>
-                                <span className="text-border">|</span>
-                                <button
-                                  onClick={() => handleDownload(resource.title)}
-                                  className="font-medium text-foreground underline hover:no-underline"
-                                >
-                                  Download
-                                </button>
+                        {/* Resources Grid */}
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-3">
+                          {resources.map((resource) => (
+                            <button
+                              key={resource.id}
+                              onClick={(e) => handleResourceClick(e, resource.articleId)}
+                              disabled={!resource.articleId}
+                              type="button"
+                              className="flex flex-col gap-3 rounded-lg bg-muted/50 p-4 text-left transition-all hover:bg-muted hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 md:gap-4 md:p-5"
+                            >
+                              {/* File Preview with Icon */}
+                              <div className="flex h-20 w-20 items-center justify-center rounded-md bg-brand/10 shadow-sm">
+                                <FileText className="h-10 w-10 text-brand" />
                               </div>
-                            </div>
-                          </div>
-                        ))}
+
+                              {/* File Info */}
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-medium text-foreground md:text-base">
+                                  {resource.title}
+                                </h4>
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:gap-3 md:text-sm">
+                                  <span className="flex items-center gap-1">
+                                    <FileText className="h-3 w-3 md:h-4 md:w-4" />
+                                    {resource.size}
+                                  </span>
+                                  {resource.articleId && (
+                                    <>
+                                      <span className="text-border">|</span>
+                                      <span className="font-medium text-brand">
+                                        View Article →
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="py-8 text-center text-muted-foreground">
+                        No resources available for this lesson.
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               </div>
@@ -526,7 +416,7 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
                 lessonTitle={lessonData.title}
                 leftVariant="video"
                 rightContent="image"
-                rightImageUrl="/lesson-preview.jpg"
+                rightImageUrl={lessonData.thumbnailUrl || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80'}
                 rightImageAlt="Lesson preview"
                 leftAction={
                   <Button

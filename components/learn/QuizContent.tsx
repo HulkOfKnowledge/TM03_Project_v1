@@ -113,7 +113,9 @@ export function QuizContent({
           lessonTitle={lessonTitle}
           subtitle="Understanding Credit Without Fear"
           leftVariant="quiz"
-          rightContent="placeholder"
+          rightContent="image"
+          rightImageUrl="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80"
+          rightImageAlt="Quiz preview"
         />
 
         {/* Welcome Message */}

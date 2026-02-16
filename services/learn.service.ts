@@ -155,7 +155,39 @@ export class LearnService {
   async getContentById(contentId: string): Promise<LearningContent | null> {
     const data = await this.fetchDashboardData();
     const allContent = [...data.learningPath, ...data.recommendedContent];
-    return allContent.find(content => content.id === contentId) || null;
+    const content = allContent.find(content => content.id === contentId);
+    
+    if (!content) {
+      return null;
+    }
+    
+    // Fetch detailed content information
+    try {
+      const detailsResponse = await fetch(`/api/learn/content/${contentId}`, {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      
+      if (detailsResponse.ok) {
+        const detailsResult = await detailsResponse.json();
+        const details = detailsResult?.data;
+        
+        // Merge details with basic content info
+        return {
+          ...content,
+          chapters: details?.chapters,
+          transcript: details?.transcript,
+          resources: details?.resources,
+          relatedContent: details?.relatedContent,
+          learningPoints: details?.learningPoints,
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching content details:', error);
+    }
+    
+    return content;
   }
 
   /**

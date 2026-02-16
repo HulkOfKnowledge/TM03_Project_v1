@@ -40,7 +40,23 @@ export function RelatedLessonCard({
       className="block rounded-xl bg-muted p-3 transition-colors hover:bg-accent"
     >
       <div className="flex items-start gap-3">
-        <div className="h-16 w-16 shrink-0 rounded-lg bg-gray-200" />
+        {/* Thumbnail with fallback gradient */}
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-brand/20 to-brand/5">
+          {thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt={title}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <ClockIcon />
+            </div>
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <h5 className="mb-1 text-sm font-medium text-foreground line-clamp-2">
             {title}

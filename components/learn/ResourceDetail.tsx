@@ -144,13 +144,13 @@ export function ResourceDetail({ category, onBack }: ResourceDetailProps) {
           filteredResources.map((resource) => (
             <div
               key={resource.id}
+              onClick={() => handleResourceClick(resource)}
               className="group rounded-2xl bg-gray-50 dark:bg-gray-900 overflow-hidden hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-pointer"
             >
               {/* Thumbnail with rounded corners */}
               <div className="p-6 pb-4">
                 <div 
-                  onClick={() => handleResourceClick(resource)}
-                  className="aspect-square bg-white dark:bg-gray-950 rounded-2xl flex items-center justify-center relative overflow-hidden mb-6 h-20 cursor-pointer"
+                  className="aspect-square bg-white dark:bg-gray-950 rounded-2xl flex items-center justify-center relative overflow-hidden mb-6 h-20"
                 >
                   {resource.thumbnailUrl ? (
                     <img
@@ -166,8 +166,7 @@ export function ResourceDetail({ category, onBack }: ResourceDetailProps) {
                 {/* File Info */}
                 <div>
                   <h3 
-                    onClick={() => handleResourceClick(resource)}
-                    className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-4 leading-tight cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-500"
+                    className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-4 leading-tight hover:text-indigo-600 dark:hover:text-indigo-500"
                   >
                     {resource.title}
                   </h3>

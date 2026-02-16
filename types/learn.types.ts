@@ -16,6 +16,12 @@ export interface LearningContent {
   type: 'video' | 'article' | 'guide';
   order: number;
   createdAt: string;
+  // Extended video details
+  chapters?: VideoChapter[];
+  transcript?: TranscriptEntry[];
+  resources?: ResourceItem[];
+  relatedContent?: RelatedLesson[];
+  learningPoints?: string[];
 }
 
 export interface ChecklistItem {
@@ -64,4 +70,18 @@ export interface RelatedLesson {
   category: string;
   thumbnailUrl?: string;
   type?: 'video' | 'article' | 'guide';
+}
+
+export interface TranscriptEntry {
+  timestamp: string;
+  content: string;
+}
+
+export interface ResourceItem {
+  id: string;
+  title: string;
+  size: string;
+  type: 'pdf' | 'doc' | 'slide';
+  url: string;
+  articleId?: string; // Optional article ID for routing to article content
 }
