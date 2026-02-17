@@ -4,14 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:python\" --names \"next,python\" --prefix-colors \"cyan,magenta\"",
+    "dev:python": "cd credit-intelligence-service && ./venv/bin/python main.py",
     "build": "next build",
     "start": "next start",
+    "start:all": "concurrently \"npm run start\" \"npm run start:python\" --names \"next,python\" --prefix-colors \"cyan,magenta\"",
+    "start:python": "cd credit-intelligence-service && ./venv/bin/python main.py",
     "lint": "next lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "type-check": "tsc --noEmit",
     "db:migrate": "supabase migration up",
     "db:reset": "supabase db reset",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "ml:train": "cd credit-intelligence-service && ./venv/bin/python app/ml/train.py",
+    "ml:test": "cd credit-intelligence-service && ./venv/bin/python app/test_service.py"
   },
   "dependencies": {
     "@supabase/ssr": "^0.1.0",
@@ -32,6 +38,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "@types/node": "^20.12.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",

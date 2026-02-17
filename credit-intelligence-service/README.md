@@ -1,163 +1,118 @@
 # Credit Intelligence Service
 
-Python FastAPI microservice for credit analysis and recommendations.
+AI-powered credit analysis and recommendation microservice for Creduman platform. This service analyzes user credit card data and provides personalized insights and payment recommendations.
+
+## 🎯 Purpose
+
+Creduman is a **credit guidance platform**, not a credit monitoring service. We don't provide credit scores; instead, we help users make smarter credit decisions based on their transaction data, balances, limits, due dates, and utilization.
+
+### Key Features
+
+1. **Credit Analysis**
+   - Overall credit health score (0-100)
+   - Personalized insights (alerts, recommendations, achievements, tips)
+   - Multi-language support (English, French, Arabic)
+
+2. **Transaction Insights**
+   - Real-time insights per transaction
+   - "You have $X left before reaching 30% utilization"
+   - Spending pattern recognition ("You spent $300 in food this month")
+   - Payment due date reminders
+
+3. **Payment Recommendations**
+   - Handles complex scenarios: "User owes $2000 across 3 cards but has only $1000 to pay"
+   - Three optimization strategies:
+     - **Minimize Interest**: Avalanche method (pay highest APR first)
+     - **Improve Score**: Pay highest utilization cards first
+     - **Balanced**: Hybrid ML + rules approach
+   - Expected impact calculations (interest saved, utilization improvement, score impact)
+
+## 🏗️ Architecture
+
+### Hybrid Approach: Rules + Machine Learning
+
+The service uses a **hybrid system** combining rule-based logic with ML models:
+
+- **Rule-based fallback**: Works immediately without training
+- **ML enhancement**: Trained models improve accuracy and personalization
+- **Graceful degradation**: Service works even if models aren't trained
+
+### ML Models
+
+1. **Payment Priority Classifier**
+   - Predicts payment priority for multiple cards
+   - Features: balance, utilization, interest rate, days until due
+   - Algorithm: Random Forest Classifier
+
+2. **Spending Pattern Classifier**
+   - Classifies spending as: conservative, moderate, aggressive
+   - Features: monthly spending, utilization, transaction frequency, category distribution
+   - Algorithm: Random Forest Classifier
+
+3. **Utilization Predictor**
+   - Predicts next month's utilization percentage
+   - Features: current utilization, spending trend, transaction count
+   - Algorithm: Gradient Boosting Regressor
 
 ## 🚀 Quick Start
 
-### Install Dependencies
+### 1. Install Dependencies
 
 ```bash
+cd credit-intelligence-service
 pip install -r requirements.txt
 ```
 
-### Set Up Environment
+### 2. Train ML Models (Optional but Recommended)
 
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+python app/ml/train.py
 ```
 
-### Run Development Server
+This generates synthetic training data and trains all models. Models are saved to `app/ml/trained_models/`.
+
+### 3. Test the Service
+
+```bash
+python app/test_service.py
+```
+
+This runs comprehensive tests for all components.
+
+### 4. Start the Service
 
 ```bash
 python main.py
 ```
 
-The service will run on [http://localhost:8000](http://localhost:8000)
+Service runs on `http://localhost:8000`
 
-### API Documentation
+## 📊 API Endpoints
 
-Visit [http://localhost:8000/docs](http://localhost:8000/docs) for interactive API documentation (Swagger UI).
+- `GET /` - Service info
+- `GET /health` - Health check
+- `POST /api/v1/analyze` - Credit analysis
+- `POST /api/v1/recommendations` - Payment recommendations
+- `POST /api/v1/transaction-insight` - Transaction-level insights
 
-## 📡 API Endpoints
-
-### Health Check
-- `GET /health`: Check service health
-
-### Credit Analysis
-- `POST /api/v1/analyze`: Analyze credit data and generate insights
-
-### Payment Recommendations
-- `POST /api/v1/recommendations`: Get personalized payment recommendations
-
-### Payoff Simulation
-- `POST /api/v1/simulate-payoff`: Simulate loan payoff scenarios
-
-## 🔐 Authentication
-
-All endpoints (except `/` and `/health`) require API key authentication:
-
-```
-X-API-Key: your-api-key-here
-```
+Visit `http://localhost:8000/docs` for interactive API documentation.
 
 ## 🧪 Testing
 
 ```bash
-# TODO: Add pytest configuration
-pytest
+python app/test_service.py
 ```
 
-## 🐳 Docker
+Tests include:
+- ✅ Credit analysis
+- ✅ Payment recommendations (all 3 strategies)
+- ✅ Transaction insights
+- ✅ Spending pattern analysis
 
-```bash
-# Build
-docker build -t creduman-intelligence .
+## 📝 License
 
-# Run
-docker run -p 8000:8000 --env-file .env creduman-intelligence
-```
+Internal use for Creduman platform.
 
-## 📦 Project Structure
+---
 
-```
-credit-intelligence-service/
-├── app/
-│   ├── api/              # API routes
-│   │   ├── analyze.py
-│   │   ├── recommendations.py
-│   │   └── simulate.py
-│   ├── core/             # Configuration
-│   │   ├── config.py
-│   │   └── security.py
-│   ├── models/           # Pydantic schemas
-│   │   └── schemas.py
-│   └── services/         # Business logic
-│       ├── analyzer.py
-│       ├── recommender.py
-│       └── simulator.py
-├── models/               # ML models (future)
-├── main.py              # FastAPI application
-├── requirements.txt     # Dependencies
-└── Dockerfile          # Docker configuration
-```
-
-## 🔄 Integration with Next.js
-
-The service communicates with the Next.js backend:
-
-1. **Next.js → Python**: HTTP requests for analysis/recommendations
-2. **Python → Next.js**: Webhooks for async results (future)
-
-## 🛠️ TODO: Implementation
-
-### Analyzer Service
-- [ ] Implement rules-based credit scoring
-- [ ] Generate multilingual insights
-- [ ] Add alert prioritization logic
-
-### Recommender Service
-- [ ] Implement interest minimization strategy
-- [ ] Implement score improvement strategy
-- [ ] Implement balanced strategy
-- [ ] Calculate impact projections
-
-### Simulator Service
-- [ ] Implement amortization calculations
-- [ ] Generate multiple scenarios
-- [ ] Handle edge cases
-
-### ML Integration (Future)
-- [ ] Train credit scoring model
-- [ ] Train recommendation model
-- [ ] Model versioning and deployment
-- [ ] A/B testing framework
-
-## 📊 Algorithm Details
-
-### Credit Scoring (Rules-Based)
-- Utilization: 35% weight
-- Payment history: 30% weight
-- Number of accounts: 20% weight
-- Account age: 15% weight
-
-### Payment Prioritization Strategies
-
-**Minimize Interest:**
-1. Sort by APR (highest first)
-2. Pay minimums on all
-3. Allocate extra to highest APR
-
-**Improve Score:**
-1. Sort by utilization (highest first)
-2. Target <30% threshold
-3. Balance across cards
-
-**Balanced:**
-- Weighted score: (utilization * 0.6) + (APR * 0.4)
-- Optimize composite score
-
-## 🔒 Security
-
-- API key authentication
-- Webhook signature verification (HMAC-SHA256)
-- Input validation with Pydantic
-- No PII stored (stateless service)
-
-## 📝 Environment Variables
-
-See `.env.example` for all configuration options.
-
-## 📄 License
-
-[Add license]
+**Note:** This service operates in **read-only mode** on user transaction data.

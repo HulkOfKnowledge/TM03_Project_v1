@@ -115,5 +115,38 @@ class PayoffSimulationResponse(BaseModel):
     scenarios: List[PayoffScenario]
 
 
+# ==================== TRANSACTION INSIGHTS ====================
+class TransactionData(BaseModel):
+    """Transaction data for insight generation"""
+    id: str
+    card_id: str
+    date: str
+    description: str
+    amount: float
+    category: Optional[str] = None
+    merchant_name: Optional[str] = None
+
+
+class TransactionInsightRequest(BaseModel):
+    """Request for transaction-level insights"""
+    user_id: str
+    transaction: TransactionData
+    card_context: dict  # Contains current_balance, credit_limit, utilization, etc.
+
+
+class TransactionInsight(BaseModel):
+    """Individual transaction insight"""
+    type: str  # utilization_warning, spending_pattern, payment_due, etc.
+    severity: str  # urgent, high, medium, low, info
+    message: dict  # {en: str, fr: str, ar: str}
+    metadata: Optional[dict] = None
+
+
+class TransactionInsightResponse(BaseModel):
+    """Response with transaction insights"""
+    transaction_id: str
+    insights: List[TransactionInsight]
+
+
 # Update forward references
 AnalyzeCreditResponse.model_rebuild()
