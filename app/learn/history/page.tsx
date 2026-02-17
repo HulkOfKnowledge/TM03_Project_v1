@@ -180,8 +180,16 @@ function HistoryCard({ item }: HistoryCardProps) {
     >
       {/* Left Section - Image and Content */}
       <div className="flex flex-1 gap-3 md:gap-4">
-        {/* Thumbnail Placeholder */}
-        <div className="h-16 w-16 shrink-0 rounded-lg bg-[linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0),linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0)] bg-[length:20px_20px] bg-[position:0_0,10px_10px] dark:bg-[linear-gradient(45deg,#2a2a2a_25%,transparent_25%,transparent_75%,#2a2a2a_75%,#2a2a2a),linear-gradient(45deg,#2a2a2a_25%,transparent_25%,transparent_75%,#2a2a2a_75%,#2a2a2a)] md:h-20 md:w-20" />
+        {/* Thumbnail */}
+        {item.imageUrl ? (
+          <img
+            src={item.imageUrl}
+            alt={item.title}
+            className="h-16 w-16 shrink-0 rounded-lg object-cover md:h-20 md:w-20"
+          />
+        ) : (
+          <div className="h-16 w-16 shrink-0 rounded-lg bg-[linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0),linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%,#f0f0f0)] bg-[length:20px_20px] bg-[position:0_0,10px_10px] dark:bg-[linear-gradient(45deg,#2a2a2a_25%,transparent_25%,transparent_75%,#2a2a2a_75%,#2a2a2a),linear-gradient(45deg,#2a2a2a_25%,transparent_25%,transparent_75%,#2a2a2a_75%,#2a2a2a)] md:h-20 md:w-20" />
+        )}
 
         {/* Content */}
         <div className="flex flex-1 flex-col justify-center min-w-0">
