@@ -166,6 +166,17 @@ export function ResultLayout({ id, category, topic }: ResultLayoutProps) {
   const percentage = results.score;
   const isPassed = results.passed;
 
+  // Dynamic color based on score
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return { stroke: 'stroke-green-500', text: 'text-green-600 dark:text-green-500' };
+    if (score >= 70) return { stroke: 'stroke-brand', text: 'text-brand' };
+    if (score >= 50) return { stroke: 'stroke-yellow-500', text: 'text-yellow-600 dark:text-yellow-500' };
+    if (score >= 40) return { stroke: 'stroke-orange-500', text: 'text-orange-600 dark:text-orange-500' };
+    return { stroke: 'stroke-red-500', text: 'text-red-600 dark:text-red-500' };
+  };
+
+  const scoreColor = getScoreColor(percentage);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
@@ -205,7 +216,7 @@ export function ResultLayout({ id, category, topic }: ResultLayoutProps) {
                 strokeWidth="8"
                 className="stroke-muted"
               />
-              {/* Progress circle */}
+              {/* Progress circle with dynamic color */}
               <circle
                 cx="50"
                 cy="50"
@@ -214,17 +225,13 @@ export function ResultLayout({ id, category, topic }: ResultLayoutProps) {
                 strokeWidth="8"
                 strokeLinecap="round"
                 strokeDasharray={`${(percentage / 100) * 251.2} 251.2`}
-                className={`transition-all duration-1000 ${
-                  isPassed ? 'stroke-brand' : 'stroke-orange-500'
-                }`}
+                className={`transition-all duration-1000  ${scoreColor.stroke}`}
               />
             </svg>
             
             {/* Score Text */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-4xl sm:text-5xl font-bold ${
-                isPassed ? 'text-brand' : 'text-orange-500'
-              }`}>
+              <span className={`text-4xl font-bold ${scoreColor.text}`}>
                 {percentage}%
               </span>
             </div>

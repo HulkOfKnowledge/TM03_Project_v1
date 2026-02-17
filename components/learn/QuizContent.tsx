@@ -75,8 +75,7 @@ export function QuizContent({
   }, [currentQuestionIndex, timeLimit]);
 
   const handleAnswerSelect = (answerIndex: number) => {
-    if (selectedAnswers[currentQuestion.id] !== undefined) return;
-    
+    // Allow users to change their answer before moving to next question
     setSelectedAnswers({
       ...selectedAnswers,
       [currentQuestion.id]: answerIndex,
@@ -319,7 +318,7 @@ export function QuizContent({
           {/* Question Text */}
           <div className="mb-6 md:mb-8">
             <h2 className="text-base font-normal leading-relaxed text-foreground md:text-lg lg:text-xl">
-              <span className="font-medium">Question {currentQuestionIndex + 1}</span>{' '}
+              <span className="font-medium">Question {currentQuestionIndex + 1}.</span>{' '}
               {currentQuestion.question}
             </h2>
           </div>
@@ -334,12 +333,11 @@ export function QuizContent({
                 <button
                   key={index}
                   onClick={() => handleAnswerSelect(index)}
-                  disabled={isAnswered}
                   className={`group relative w-full rounded-lg border p-4 text-left transition-all md:rounded-xl md:p-5 ${
                     isSelected
                       ? 'border-brand bg-brand/5'
                       : 'border-border bg-background hover:border-brand/50'
-                  } ${isAnswered ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                  } cursor-pointer`}
                 >
                   <div className="flex items-start justify-between gap-3 md:items-center md:gap-4">
                     {/* Option Text - Left side */}
