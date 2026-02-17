@@ -8,15 +8,7 @@
 import { useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { DataTable, Column } from '@/components/ui/DataTable';
-
-interface PaymentHistoryRow {
-  month: string;
-  statementBalance: string;
-  amountPaid: string;
-  paymentStatus: string;
-  peakUsage: string;
-  alerts: string;
-}
+import type { PaymentHistoryRow } from '@/types/card.types';
 
 interface PaymentHistoryTableProps {
   data: PaymentHistoryRow[];
@@ -29,6 +21,10 @@ export function PaymentHistoryTable({
   title = 'Payment History',
   subtitle,
 }: PaymentHistoryTableProps) {
+  const formatCurrency = (amount: number) => {
+    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   const columns: Column<PaymentHistoryRow>[] = useMemo(() => [
     {
       key: 'month',
@@ -39,11 +35,13 @@ export function PaymentHistoryTable({
       key: 'statementBalance',
       header: 'Statement Balance',
       sortable: true,
+      render: (row) => formatCurrency(row.statementBalance),
     },
     {
       key: 'amountPaid',
       header: 'Amount Paid',
       sortable: true,
+      render: (row) => formatCurrency(row.amountPaid),
     },
     {
       key: 'paymentStatus',
@@ -66,6 +64,7 @@ export function PaymentHistoryTable({
       header: 'Peak Usage',
       sortable: true,
       className: 'text-gray-500 dark:text-gray-400',
+      render: (row) => `${row.utilizationPercentage.toFixed(1)}%`,
     },
     {
       key: 'alerts',

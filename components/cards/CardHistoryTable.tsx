@@ -26,6 +26,10 @@ export function CardHistoryTable({ data }: CardHistoryTableProps) {
     setSelectedRows(newSelected);
   };
 
+  const formatCurrency = (amount: number) => {
+    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   const getZoneColor = (zone: string) => {
     switch (zone) {
       case 'Safe':
@@ -82,21 +86,25 @@ export function CardHistoryTable({ data }: CardHistoryTableProps) {
       key: 'startBalance',
       header: 'Start Balance',
       sortable: true,
+      render: (row) => formatCurrency(row.startBalance),
     },
     {
       key: 'endingBalance',
       header: 'Ending Balance',
       sortable: true,
+      render: (row) => formatCurrency(row.endingBalance),
     },
     {
       key: 'peakUsage',
       header: 'Peak Usage',
       sortable: true,
+      render: (row) => formatCurrency(row.peakUsage),
     },
     {
       key: 'payment',
       header: 'Payment',
       sortable: true,
+      render: (row) => formatCurrency(row.payment),
     },
     {
       key: 'action',

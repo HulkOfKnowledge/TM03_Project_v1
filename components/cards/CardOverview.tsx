@@ -7,11 +7,12 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Info, Search, Filter, X } from 'lucide-react';
-import type { ConnectedCard } from '@/types/card.types';
+import type { ConnectedCard, CardOverviewData } from '@/types/card.types';
 import { cardService } from '@/services/card.service';
 import { CreditCardDisplay } from './CreditCardDisplay';
 import { CardHistoryTable } from './CardHistoryTable';
 import { VolumeProgressBar } from './VolumeProgressBar';
+import { CardOverviewSkeleton } from './CardOverviewSkeleton';
 
 interface CardOverviewProps {
   card: ConnectedCard;
@@ -25,15 +26,14 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   const [selectedMonth, setSelectedMonth] = useState('This month');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
   // Use allCards if provided, otherwise just use the single card
   const cards = allCards.length > 0 ? allCards : [card];
   const currentCard = cards[currentCardIndex];
 
-  // Initialize with default data
-  const [overviewData, setOverviewData] = useState<ReturnType<typeof cardService.getCardOverviewData>>(
-    cardService.getCardOverviewData(currentCard?.id || '')
-  );
+  // Initialize with empty data
+  const [overviewData, setOverviewData] = useState<CardOverviewData | null>(null);
 
   // Adjust currentCardIndex if it becomes out of bounds when cards are removed
   useEffect(() => {
@@ -45,10 +45,23 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   // Load card data when current card changes
   useEffect(() => {
     if (currentCard) {
-      const data = cardService.getCardOverviewData(currentCard.id);
-      setOverviewData(data);
+      loadCardData();
     }
-  }, [currentCard]);
+  }, [currentCard?.id]);
+
+  const loadCardData = async () => {
+    if (!currentCard) return;
+    
+    setIsLoadingData(true);
+    try {
+      const data = await cardService.getCardOverviewData(currentCard);
+      setOverviewData(data);
+    } catch (error) {
+      console.error('Error loading card data:', error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
   const handlePrevCard = () => {
     if (currentCardIndex > 0 && !isTransitioning) {
@@ -84,6 +97,11 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   // Safety check: if no current card, don't render
   if (!currentCard) {
     return null;
+  }
+
+  // Show loading state while data is being fetched
+  if (isLoadingData || !overviewData) {
+    return <CardOverviewSkeleton />;
   }
 
   return (
@@ -247,7 +265,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
             {/* Volume-style Progress Bar */}
             <div className="w-full">
-              <VolumeProgressBar zone={overviewData.utilizationZone} />
+              <VolumeProgressBar percentage={overviewData.utilizationPercentage} />
             </div>
           </div>
         </div>

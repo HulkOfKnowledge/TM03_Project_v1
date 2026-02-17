@@ -9,6 +9,19 @@ export interface ConnectedCard {
   bank: string;
   type: 'visa' | 'mastercard';
   lastFour: string;
+  // Financial details
+  currentBalance: number;
+  creditLimit: number;
+  availableCredit: number;
+  utilizationPercentage: number;
+  minimumPayment: number;
+  paymentDueDate: string | null;
+  lastPaymentAmount: number | null;
+  lastPaymentDate: string | null;
+  interestRate: number | null;
+  // Metadata
+  lastSyncedAt: string | null;
+  isActive: boolean;
 }
 
 export interface CardMetric {
@@ -21,10 +34,21 @@ export interface CardMetric {
 export interface CardHistoryRow {
   month: string;
   zone: 'Safe' | 'Caution' | 'Danger';
-  startBalance: string;
-  endingBalance: string;
-  peakUsage: string;
-  payment: string;
+  startBalance: number;
+  endingBalance: number;
+  peakUsage: number;
+  payment: number;
+  utilizationPercentage: number;
+}
+
+export interface Transaction {
+  id: string;
+  cardId: string;
+  date: string;
+  description: string;
+  amount: number;
+  category: string | null;
+  merchantName: string | null;
 }
 
 export type SortField = 'zone' | 'month' | 'startBalance' | 'endingBalance' | 'peakUsage' | 'payment';
@@ -46,10 +70,11 @@ export interface CardBalance {
 
 export interface PaymentHistoryRow {
   month: string;
-  statementBalance: string;
-  amountPaid: string;
+  statementBalance: number;
+  amountPaid: number;
   paymentStatus: 'On Time' | 'Late' | 'Missed';
-  peakUsage: string;
+  peakUsage: number;
+  utilizationPercentage: number;
   alerts: string;
 }
 

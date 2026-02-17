@@ -14,6 +14,7 @@ import { CardSelectionModal } from '@/components/cards/CardSelectionModal';
 import { SuccessModal } from '@/components/cards/SuccessModal';
 import { CreditAnalysis } from '@/components/cards/analysis/CreditAnalysis';
 import { useCard } from '@/contexts/CardContext';
+import type { ConnectedCard } from '@/types/card.types';
 
 interface CardOption {
   id: string;
@@ -32,10 +33,31 @@ export default function CreditAnalysisPage() {
     setShowCardSelection(true);
   };
 
-  const handleSelectCard = (card: CardOption) => {
-    addCard(card);
-    setShowCardSelection(false);
-    setShowSuccessModal(true);
+  const handleSelectCard = async (cardOption: CardOption) => {
+    try {
+      // Convert CardOption to ConnectedCard with default values
+      const card: ConnectedCard = {
+        ...cardOption,
+        currentBalance: 0,
+        creditLimit: 0,
+        availableCredit: 0,
+        utilizationPercentage: 0,
+        minimumPayment: 0,
+        paymentDueDate: null,
+        lastPaymentAmount: null,
+        lastPaymentDate: null,
+        interestRate: null,
+        lastSyncedAt: null,
+        isActive: true,
+      };
+      
+      await addCard(card);
+      setShowCardSelection(false);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Error adding card:', error);
+      // TODO: Show error message to user
+    }
   };
 
   const handleViewDashboard = () => {
