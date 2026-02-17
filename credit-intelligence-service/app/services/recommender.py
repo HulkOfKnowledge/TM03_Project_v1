@@ -248,7 +248,7 @@ class PaymentRecommender:
             return self._emergency_allocation(cards, remaining_funds)
         
         # Allocate funds based on ML priorities
-        for card_data in prioritized_cards:
+        for idx, card_data in enumerate(prioritized_cards):
             if remaining_funds <= 0:
                 suggested_amount = 0
             else:
@@ -256,7 +256,7 @@ class PaymentRecommender:
                 original_card = next(c for c in cards if c.card_id == card_data['card_id'])
                 
                 # Smart allocation based on priority
-                if card_data['priority'] == 1:
+                if card_data['priority'] == 1 or idx == 0:
                     # Highest priority: allocate maximum available
                     suggested_amount = min(
                         remaining_funds,
@@ -264,7 +264,12 @@ class PaymentRecommender:
                     )
                 else:
                     # Lower priority: pay minimum or proportional amount
-                    proportional = remaining_funds / (len(cards) - card_data['priority'] + 1)
+                    remaining_cards = len(prioritized_cards) - idx
+                    if remaining_cards > 0:
+                        proportional = remaining_funds / remaining_cards
+                    else:
+                        proportional = remaining_funds
+                    
                     suggested_amount = min(
                         max(original_card.minimum_payment, proportional),
                         remaining_funds,

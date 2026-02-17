@@ -26,6 +26,7 @@ import type { CreditAnalysisData, ConnectedCard } from '@/types/card.types';
 import { MetricCard } from './MetricCard';
 import { ChartSection } from './ChartSection';
 import { PaymentHistoryTable } from './PaymentHistoryTable';
+import { PaymentRecommendations } from './PaymentRecommendations';
 
 // Register Chart.js components
 ChartJS.register(
@@ -465,6 +466,11 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
 
       {/* Payment History */}
       <PaymentHistoryTable data={filteredData!.paymentHistory} />
+
+      {/* AI-Powered Payment Recommendations */}
+      <div className="mt-6 sm:mt-8">
+        <PaymentRecommendations cards={connectedCards} />
+      </div>
 
       {/* Recommended Actions */}
       <div className="mt-6 grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mt-8 sm:p-6 lg:grid-cols-2 lg:gap-6">

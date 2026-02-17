@@ -1,6 +1,6 @@
 /**
  * Credit Intelligence Service
- * Communicates with Python FastAPI microservice for AI-powered credit insights
+ * Communicates with Next.js API routes which then call the Python FastAPI microservice
  */
 
 import axios, { type AxiosInstance } from 'axios';
@@ -13,57 +13,57 @@ import type {
   PayoffSimulationResponse,
   CreditAnalysisWebhookPayload,
 } from '@/types/credit-intelligence.types';
-import crypto from 'crypto';
 
 export class CreditIntelligenceService {
   private client: AxiosInstance;
-  private apiKey: string;
-  private webhookSecret: string;
 
   constructor() {
-    this.apiKey = process.env.CREDIT_INTELLIGENCE_API_KEY!;
-    this.webhookSecret = process.env.WEBHOOK_SECRET!;
-
+    // Call Next.js API routes (not Python service directly)
     this.client = axios.create({
-      baseURL: process.env.CREDIT_INTELLIGENCE_API_URL,
+      baseURL: '/api/credit-intelligence',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': this.apiKey,
       },
       timeout: 60000, // Longer timeout for ML processing
     });
   }
 
   /**
-   * Send credit data to Python service for analysis
-   * TODO: Implement credit analysis request
-   * - Prepare credit data payload from database
-   * - Send to Python service /analyze endpoint
-   * - Handle async processing (may return job ID)
-   * - Store analysis results in credit_insights table
-   * - Return insights and recommendations
+   * Send credit data for analysis via Next.js API route
    */
   async analyzeCredit(
     payload: CreditDataPayload
   ): Promise<AnalyzeCreditResponse> {
-    // TODO: Implementation needed
-    throw new Error('Not implemented');
+    try {
+      const response = await this.client.post<AnalyzeCreditResponse>(
+        '/analyze',
+        payload
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Credit analysis failed:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get personalized payment recommendations
-   * TODO: Implement payment recommendation logic
-   * - Send user's cards and available payment amount
-   * - Specify optimization goal (minimize interest, improve score, etc.)
-   * - Receive prioritized payment allocation strategy
-   * - Calculate projected savings and score impact
-   * - Return structured recommendations for UI display
+   * Get personalized payment recommendations via Next.js API route
    */
   async getPaymentRecommendations(
     request: PaymentRecommendationRequest
   ): Promise<PaymentRecommendationResponse> {
-    // TODO: Implementation needed
-    throw new Error('Not implemented');
+    try {
+      const response = await this.client.post<PaymentRecommendationResponse>(
+        '/recommendations',
+        request
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Payment recommendations failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -76,7 +76,7 @@ export class CreditIntelligenceService {
    * - Return comparison data for user decision making
    */
   async simulatePayoff(
-    request: PayoffSimulationRequest
+    _request: PayoffSimulationRequest
   ): Promise<PayoffSimulationResponse> {
     // TODO: Implementation needed
     throw new Error('Not implemented');
@@ -91,16 +91,16 @@ export class CreditIntelligenceService {
    * - Return true if signature is valid
    */
   verifyWebhookSignature(
-    payload: string,
-    signature: string,
-    timestamp: string
+    _payload: string,
+    _signature: string,
+    _timestamp: string
   ): boolean {
     // TODO: Implementation needed
     // Example implementation:
-    // const hmac = crypto.createHmac('sha256', this.webhookSecret);
-    // hmac.update(`${timestamp}.${payload}`);
+    // const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET!);
+    // hmac.update(`${_timestamp}.${_payload}`);
     // const expectedSignature = hmac.digest('hex');
-    // return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+    // return crypto.timingSafeEqual(Buffer.from(_signature), Buffer.from(expectedSignature));
     throw new Error('Not implemented');
   }
 
@@ -114,7 +114,7 @@ export class CreditIntelligenceService {
    * - Log webhook receipt in audit_logs
    */
   async processWebhook(
-    payload: CreditAnalysisWebhookPayload
+    _payload: CreditAnalysisWebhookPayload
   ): Promise<void> {
     // TODO: Implementation needed
     throw new Error('Not implemented');
@@ -127,7 +127,7 @@ export class CreditIntelligenceService {
    * - Return status: pending, processing, completed, failed
    * - Return results if completed
    */
-  async getAnalysisStatus(jobId: string): Promise<{
+  async getAnalysisStatus(_jobId: string): Promise<{
     status: string;
     result?: AnalyzeCreditResponse;
   }> {
@@ -137,16 +137,19 @@ export class CreditIntelligenceService {
 
   /**
    * Health check for Python service
-   * TODO: Implement health check
-   * - Ping Python service health endpoint
-   * - Return service availability status
-   * - Use in dashboard to show service status
    */
   async healthCheck(): Promise<{ healthy: boolean; version?: string }> {
-    // TODO: Implementation needed
-    throw new Error('Not implemented');
+    try {
+      const response = await this.client.get('/health');
+      return {
+        healthy: response.data.status === 'healthy',
+        version: response.data.version,
+      };
+    } catch (error) {
+      return { healthy: false };
+    }
   }
 }
 
-// Singleton instance
+// Export singleton instance
 export const creditIntelligenceService = new CreditIntelligenceService();
