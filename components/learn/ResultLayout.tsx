@@ -1,12 +1,12 @@
 /**
  * Result Layout Component - Clean & Professional
  * Displays quiz results with score breakdown, correct answers, and explanations
- * Features: Minimalist design, theme-sensitive, mobile-optimized
+ * Features: Minimalist design, theme-sensitive, mobile-optimized, with caching
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, 
@@ -28,11 +28,18 @@ interface ResultLayoutProps {
   topic: string;
 }
 
+// Cache for quiz attempts to prevent unnecessary API calls
+const quizAttemptsCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export function ResultLayout({ id, category, topic }: ResultLayoutProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<QuizResults | null>(null);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+
+  // Memoize cache key to prevent recalculation
+  const cacheKey = useMemo(() => `quiz-attempts-${id}`, [id]);
 
   useEffect(() => {
     loadResults();
@@ -42,8 +49,26 @@ export function ResultLayout({ id, category, topic }: ResultLayoutProps) {
     try {
       setLoading(true);
       
-      // Get latest quiz attempt
-      const attemptsResponse = await quizService.getQuizAttempts(id);
+      // Check cache first
+      const cached = quizAttemptsCache.get(cacheKey);
+      const now = Date.now();
+      
+      let attemptsResponse;
+      
+      if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+        console.log('[ResultLayout] Using cached quiz attempts');
+        attemptsResponse = cached.data;
+      } else {
+        console.log('[ResultLayout] Fetching fresh quiz attempts');
+        // Get latest quiz attempt
+        attemptsResponse = await quizService.getQuizAttempts(id);
+        
+        // Cache the response
+        if (attemptsResponse.success && attemptsResponse.data) {
+          quizAttemptsCache.set(cacheKey, { data: attemptsResponse, timestamp: now });
+        }
+      }
+      
       if (!attemptsResponse.success || !attemptsResponse.data || attemptsResponse.data.length === 0) {
         console.error('No quiz attempts found');
         router.push(`/learn/${category}/${topic}/video/${id}`);
@@ -52,8 +77,25 @@ export function ResultLayout({ id, category, topic }: ResultLayoutProps) {
 
       const latestAttempt = attemptsResponse.data[0];
       
-      // Get quiz questions for explanations
-      const questionsResponse = await quizService.getQuizQuestions(id);
+      // Get quiz questions for explanations (also cache these)
+      const questionsCacheKey = `quiz-questions-${id}`;
+      const cachedQuestions = quizAttemptsCache.get(questionsCacheKey);
+      
+      let questionsResponse;
+      
+      if (cachedQuestions && (now - cachedQuestions.timestamp) < CACHE_DURATION) {
+        console.log('[ResultLayout] Using cached quiz questions');
+        questionsResponse = cachedQuestions.data;
+      } else {
+        console.log('[ResultLayout] Fetching fresh quiz questions');
+        questionsResponse = await quizService.getQuizQuestions(id);
+        
+        // Cache the questions
+        if (questionsResponse.success) {
+          quizAttemptsCache.set(questionsCacheKey, { data: questionsResponse, timestamp: now });
+        }
+      }
+      
       if (questionsResponse.success) {
         setQuestions(questionsResponse.data.questions);
       }
@@ -325,7 +367,10 @@ export function ResultLayout({ id, category, topic }: ResultLayoutProps) {
         {/* Actions */}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Button
-            onClick={() => router.push(`/learn/${category}/${topic}/quiz/${id}`)}
+            onClick={() => {
+              // Navigate back to video page with quiz tab - quizzes are shown via tabs, not separate routes
+              router.push(`/learn/${category}/${topic}/video/${id}?tab=quiz`);
+            }}
             variant="outline"
             size="lg"
             className="w-full sm:w-auto"

@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Play, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -33,6 +33,7 @@ interface VideoLayoutProps {
 
 export function VideoLayout({ id, category: _category, topic: _topic }: VideoLayoutProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('overview');
   const [showVideo, setShowVideo] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,18 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
   const [showQuizPrompt, setShowQuizPrompt] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const videoPlayerRef = useRef<VideoPlayerRef>(null);
+
+  // Cache for quiz completion status to prevent unnecessary API calls
+  const quizCompletionCacheRef = useRef<Map<string, { completed: boolean; timestamp: number }>>(new Map());
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  // Handle tab query parameter on mount
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'quiz') {
+      setActiveTab('quiz');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     loadLessonData();
@@ -60,15 +73,29 @@ export function VideoLayout({ id, category: _category, topic: _topic }: VideoLay
       setVideo(contentData);
       setTestimonials(dashboardData.testimonials || []);
       
-      // Check if user has completed the quiz - don't fail if API is not available
-      try {
-        const quizAttemptsData = await quizService.getQuizAttempts(id);
-        if (quizAttemptsData.success && quizAttemptsData.data && quizAttemptsData.data.length > 0) {
-          setQuizCompleted(true);
+      // Check if user has completed the quiz with caching
+      const cacheKey = `quiz-completed-${id}`;
+      const cached = quizCompletionCacheRef.current.get(cacheKey);
+      const now = Date.now();
+      
+      if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+        console.log('[VideoLayout] Using cached quiz completion status');
+        setQuizCompleted(cached.completed);
+      } else {
+        // Fetch fresh data
+        try {
+          console.log('[VideoLayout] Fetching fresh quiz completion status');
+          const quizAttemptsData = await quizService.getQuizAttempts(id);
+          const completed = quizAttemptsData.success && quizAttemptsData.data && quizAttemptsData.data.length > 0;
+          
+          // Cache the result
+          quizCompletionCacheRef.current.set(cacheKey, { completed, timestamp: now });
+          setQuizCompleted(completed);
+        } catch (error) {
+          console.log('Quiz attempts not available yet:', error);
+          // Cache negative result
+          quizCompletionCacheRef.current.set(cacheKey, { completed: false, timestamp: now });
         }
-      } catch (error) {
-        console.log('Quiz attempts not available yet:', error);
-        // Continue without quiz completion status
       }
     } catch (error) {
       console.error('Error loading lesson data:', error);

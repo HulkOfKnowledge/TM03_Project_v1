@@ -113,6 +113,13 @@ export function QuizContent({
         timeSpent,
         completedAt: new Date(),
       });
+
+      // Invalidate any cached quiz completion status
+      // This ensures the video page will refetch and show updated status
+      if (typeof window !== 'undefined') {
+        // Trigger a storage event to notify other components
+        window.dispatchEvent(new CustomEvent('quiz-completed', { detail: { lessonId } }));
+      }
     } catch (error) {
       console.error('Error saving quiz results:', error);
       // Continue even if save fails - user can still see their results

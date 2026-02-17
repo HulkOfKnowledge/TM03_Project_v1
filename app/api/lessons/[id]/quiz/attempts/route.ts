@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 import { getQuizAttemptsByLesson } from '@/lib/api/quiz-storage';
 
@@ -14,23 +15,28 @@ export async function GET(
   try {
     const lessonId = params.id;
 
-    // In production, get userId from authenticated session
-    const userId = 'demo-user';
+    // Get authenticated user
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        createErrorResponse('UNAUTHORIZED', 'User not authenticated'),
+        { status: 401 }
+      );
+    }
+
+    const userId = user.id;
     
     console.log(`[Quiz Attempts API] Fetching attempts for lesson ${lessonId}, user ${userId}`);
 
-    // Get all attempts for this lesson and user
-    const userAttempts = getQuizAttemptsByLesson(lessonId, userId);
+    // Get all attempts for this lesson and user from database
+    const userAttempts = await getQuizAttemptsByLesson(lessonId, userId);
     
     console.log(`[Quiz Attempts API] Found ${userAttempts.length} attempts`);
 
-    // Sort by most recent first
-    const sortedAttempts = userAttempts.sort(
-      (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
-    );
-
-    // Format attempts for response
-    const formattedAttempts = sortedAttempts.map((attempt) => ({
+    // Format attempts for response (already sorted by completed_at DESC from storage function)
+    const formattedAttempts = userAttempts.map((attempt) => ({
       id: attempt.id,
       attemptNumber: attempt.attemptNumber,
       score: attempt.score,

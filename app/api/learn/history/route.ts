@@ -4,6 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 import { getAllQuizAttempts } from '@/lib/api/quiz-storage';
 
@@ -61,16 +62,23 @@ const contentMap: Record<string, { title: string; subtitle: string; type: Learni
 
 export async function GET() {
   try {
-    // In production, get userId from authenticated session
-    const userId = 'demo-user';
+    // Get authenticated user
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        createErrorResponse('UNAUTHORIZED', 'User not authenticated'),
+        { status: 401 }
+      );
+    }
+
+    const userId = user.id;
     
     console.log(`[Learning History API] Fetching history for user ${userId}`);
 
-    // Get all quiz attempts for the user
-    const allAttempts = getAllQuizAttempts();
-    console.log(`[Learning History API] Total attempts in storage: ${allAttempts.length}`);
-    
-    const userAttempts = allAttempts.filter((attempt) => attempt.userId === userId);
+    // Get all quiz attempts for the user (now returns only user's attempts)
+    const userAttempts = await getAllQuizAttempts();
     console.log(`[Learning History API] User attempts: ${userAttempts.length}`);
 
     // Group attempts by lesson ID and get the latest/best attempt

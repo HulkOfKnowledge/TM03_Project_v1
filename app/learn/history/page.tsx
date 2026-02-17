@@ -176,7 +176,7 @@ function HistoryCard({ item }: HistoryCardProps) {
   return (
     <div 
       onClick={handleClick}
-      className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black p-4 hover:border-brand/50 hover:shadow-md transition-all cursor-pointer md:flex-row md:items-center md:justify-between md:p-6"
+      className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black p-4 hover:border-brand/50 transition-all cursor-pointer md:flex-row md:items-center md:justify-between md:p-6"
     >
       {/* Left Section - Image and Content */}
       <div className="flex flex-1 gap-3 md:gap-4">
