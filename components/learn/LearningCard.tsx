@@ -28,8 +28,8 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
 
   const getThumbnailBg = () => {
     if (content.thumbnailUrl) return '';
-    const colors = ['bg-gray-200 dark:bg-gray-700', 'bg-pink-100 dark:bg-pink-900/30', 'bg-blue-100 dark:bg-blue-900/30'];
-    return colors[Math.floor(Math.random() * colors.length)];
+    const colors = 'bg-gray-200 dark:bg-gray-700'
+    return colors;
   };
 
   return (
