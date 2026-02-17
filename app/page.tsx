@@ -41,7 +41,7 @@ export default function HomePage() {
 
           <p className="mb-8 text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl px-4">
             Creduman helps Canadian newcomers understand credit, manage cards
-            effectively, and build a strong financial foundation with AI-powered
+            effectively, and build a strong credit financial foundation with AI-powered
             insights.
           </p>
 
@@ -87,7 +87,7 @@ export default function HomePage() {
       <Section id="features" className="bg-muted/50">
         <SectionHeader
           title="Everything You Need to Succeed"
-          subtitle="Comprehensive tools and education designed specifically for newcomers to Canada"
+          subtitle="Comprehensive tools and education designed for anyone looking to build a healthy Canadian credit"
         />
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -108,7 +108,7 @@ export default function HomePage() {
           />
           <FeatureCard
             icon={<Shield className="h-6 w-6" />}
-            title="Bank-Level Security"
+            title="Secure & Encrypted"
             description="Your data is protected with enterprise-grade encryption and security measures."
           />
           <FeatureCard
@@ -118,7 +118,7 @@ export default function HomePage() {
           />
           <FeatureCard
             icon={<Sparkles className="h-6 w-6" />}
-            title="Smart Automation"
+            title="Real-Time Credit Monitoring"
             description="Automatic credit monitoring and alerts to help you stay on top of your finances."
           />
         </div>
