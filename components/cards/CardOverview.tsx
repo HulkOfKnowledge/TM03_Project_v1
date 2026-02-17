@@ -5,8 +5,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Info, Search, Filter, X } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Info, Search, X } from 'lucide-react';
 import type { ConnectedCard, CardOverviewData } from '@/types/card.types';
 import { cardService } from '@/services/card.service';
 import { CreditCardDisplay } from './CreditCardDisplay';
@@ -29,6 +29,13 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  
+  // Track which cards have had their data loaded
+  const loadedCardIds = useRef(new Set<string>());
+  
+  // History table filters
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [historyZoneFilter, setHistoryZoneFilter] = useState<string>('');
 
   // Use allCards if provided, otherwise just use the single card
   const cards = allCards.length > 0 ? allCards : [card];
@@ -52,37 +59,73 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     }
   }, [cards.length, currentCardIndex]);
 
-  // Pre-fetch data for ALL cards on mount or when cards change
+  // Pre-fetch data for ALL cards on mount or when cards are added/removed
   useEffect(() => {
-    const loadAllCardsData = async () => {
-      setIsLoadingData(true);
-      const dataMap = new Map<string, CardOverviewData>();
+    const loadNewCards = async () => {
+      const currentCardIds = new Set(cards.map(c => c.id));
       
-      try {
-        // Fetch data for all cards in parallel
-        await Promise.all(
-          cards.map(async (c) => {
-            try {
-              const data = await cardService.getCardOverviewData(c);
-              dataMap.set(c.id, data);
-            } catch (error) {
-              console.error(`Error loading data for card ${c.id}:`, error);
-            }
-          })
-        );
+      // Remove data for deleted cards
+      setAllCardData(prevData => {
+        const newMap = new Map(prevData);
+        for (const cardId of newMap.keys()) {
+          if (!currentCardIds.has(cardId)) {
+            newMap.delete(cardId);
+            loadedCardIds.current.delete(cardId);
+          }
+        }
+        return newMap;
+      });
+      
+      // Find cards that haven't been loaded yet
+      const cardsNeedingData = cards.filter(c => !loadedCardIds.current.has(c.id));
+      
+      if (cardsNeedingData.length > 0) {
+        setIsLoadingData(true);
         
-        setAllCardData(dataMap);
-      } catch (error) {
-        console.error('Error loading cards data:', error);
-      } finally {
+        try {
+          // Fetch data for new cards in parallel
+          const results = await Promise.all(
+            cardsNeedingData.map(async (c) => {
+              try {
+                const data = await cardService.getCardOverviewData(c);
+                loadedCardIds.current.add(c.id);
+                return { id: c.id, data };
+              } catch (error) {
+                console.error(`Error loading data for card ${c.id}:`, error);
+                return null;
+              }
+            })
+          );
+          
+          // Add new data to the map
+          setAllCardData(prevData => {
+            const newMap = new Map(prevData);
+            results.forEach(result => {
+              if (result) {
+                newMap.set(result.id, result.data);
+              }
+            });
+            return newMap;
+          });
+        } catch (error) {
+          console.error('Error loading cards data:', error);
+        } finally {
+          setIsLoadingData(false);
+        }
+      } else {
+        // No new cards to load, just ensure loading is false
         setIsLoadingData(false);
       }
     };
 
     if (cards.length > 0) {
-      loadAllCardsData();
+      loadNewCards();
+    } else {
+      setAllCardData(new Map());
+      loadedCardIds.current.clear();
+      setIsLoadingData(false);
     }
-  }, [cards.map(c => c.id).join(',')]); // Re-fetch when card IDs change
+  }, [cards.map(c => c.id).join(',')]); // Re-run when card IDs change
 
   const handlePrevCard = () => {
     if (currentCardIndex > 0 && !isTransitioning) {
@@ -115,6 +158,30 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     }
   };
 
+  // Filter history data based on search and filters
+  // Note: These useMemo hooks must come before any early returns to comply with Rules of Hooks
+  const filteredHistory = useMemo(() => {
+    if (!overviewData?.history) return [];
+    
+    return overviewData.history.filter(row => {
+      // Search filter - searches in month field
+      const matchesSearch = !historySearchQuery || 
+        row.month.toLowerCase().includes(historySearchQuery.toLowerCase());
+      
+      // Zone filter
+      const matchesZone = !historyZoneFilter || row.zone === historyZoneFilter;
+      
+      return matchesSearch && matchesZone;
+    });
+  }, [overviewData?.history, historySearchQuery, historyZoneFilter]);
+  
+  // Get available zones for filter dropdown
+  const availableZones = useMemo(() => {
+    if (!overviewData?.history) return [];
+    const zones = new Set(overviewData.history.map(row => row.zone));
+    return Array.from(zones).sort();
+  }, [overviewData?.history]);
+
   // Safety check: if no current card, don't render
   if (!currentCard) {
     return null;
@@ -124,6 +191,15 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   if (isLoadingData || !overviewData) {
     return <CardOverviewSkeleton />;
   }
+
+  // Determine zone text based on utilization percentage
+  const getZoneText = (percentage: number): string => {
+    if (percentage <= 25) return 'Safe Zone';
+    if (percentage <= 30) return 'Caution Zone';
+    return 'Danger Zone';
+  };
+  
+  const zoneText = getZoneText(overviewData.utilizationPercentage);
 
   return (
     <div className="mx-auto">
@@ -155,13 +231,13 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
         </h3>
         <div className="mb-4 flex flex-wrap gap-2">
           <span className="rounded bg-green-500 px-3 py-1 text-xs font-medium text-white">
-            0-10% is safe
+            0-25% is safe
           </span>
           <span className="rounded bg-orange-500 px-3 py-1 text-xs font-medium text-white">
-            10-25% is caution
+            26-30% is caution
           </span>
           <span className="rounded bg-red-500 px-3 py-1 text-xs font-medium text-white">
-            25-28% is danger!
+            above 30% is danger!
           </span>
         </div>
         <div className="space-y-3 text-sm">
@@ -277,7 +353,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           <div className="mt-6 sm:mt-8">
             <div className="mb-4 text-center">
               <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                This card is in the {overviewData.utilizationZone.toLowerCase()} zone!
+                This card is in the {zoneText}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-500">
                 Remember to payback on time to keep it consistent
@@ -362,22 +438,28 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
+              value={historySearchQuery}
+              onChange={(e) => setHistorySearchQuery(e.target.value)}
               placeholder="Search month, date, total balance, and..."
-              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950"
+              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:placeholder-gray-400"
             />
           </div>
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900">
-              2025 <ChevronRight className="h-4 w-4" />
-            </button>
-            <button className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900">
-              Filter <Filter className="h-4 w-4" />
-            </button>
+            <select
+              value={historyZoneFilter}
+              onChange={(e) => setHistoryZoneFilter(e.target.value)}
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900"
+            >
+              <option value="">All Zones</option>
+              {availableZones.map(zone => (
+                <option key={zone} value={zone}>{zone}</option>
+              ))}
+            </select>
           </div>
         </div>
 
         {/* Table */}
-        <CardHistoryTable data={overviewData.history} />
+        <CardHistoryTable data={filteredHistory} />
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
