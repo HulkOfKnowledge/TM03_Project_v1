@@ -54,17 +54,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const inFlightRequest = useRef<Promise<{ user: User | null; profile: UserProfile | null }> | null>(null);
   const hasInitialized = useRef(false);
-  const lastFetchTime = useRef<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
   const fetchUserAndProfile = useCallback(async (force: boolean = false) => {
     try {
-      // Check if we have a recent fetch (within cache duration) and not forced
-      const now = Date.now();
-      if (!force && lastFetchTime.current && (now - lastFetchTime.current) < CACHE_DURATION) {
-        return;
-      }
-
       // If there's already a request in flight, wait for it
       if (inFlightRequest.current) {
         const inFlightResult = await inFlightRequest.current;
@@ -80,7 +72,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const { user: nextUser, profile: nextProfile } = await inFlightRequest.current;
       inFlightRequest.current = null;
-      lastFetchTime.current = Date.now();
 
       setUser(nextUser);
       setProfile(nextProfile);

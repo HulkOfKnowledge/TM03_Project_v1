@@ -4,16 +4,12 @@
 
 import type { User } from '@supabase/supabase-js';
 
-// In-memory cache for auth requests
+// In-memory cache for auth requests (session duration)
 let authCache: { user: User | null; profile: any | null } | null = null;
-let authCacheTimestamp: number = 0;
-const AUTH_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 export async function fetchAuthMe(forceRefresh: boolean = false): Promise<{ user: User | null; profile: any | null }> {
-  const now = Date.now();
-  
-  // Return cached data if available and fresh
-  if (!forceRefresh && authCache && (now - authCacheTimestamp) < AUTH_CACHE_DURATION) {
+  // Return cached data if available (unless force refresh)
+  if (!forceRefresh && authCache) {
     return authCache;
   }
 
@@ -25,7 +21,6 @@ export async function fetchAuthMe(forceRefresh: boolean = false): Promise<{ user
   if (!response.ok) {
     const result = { user: null, profile: null };
     authCache = result;
-    authCacheTimestamp = now;
     return result;
   }
 
@@ -37,7 +32,6 @@ export async function fetchAuthMe(forceRefresh: boolean = false): Promise<{ user
   
   // Update cache
   authCache = authData;
-  authCacheTimestamp = now;
   
   return authData;
 }
@@ -45,7 +39,6 @@ export async function fetchAuthMe(forceRefresh: boolean = false): Promise<{ user
 // Clear the auth cache (useful after login/logout)
 export function clearAuthCache(): void {
   authCache = null;
-  authCacheTimestamp = 0;
 }
 
 export async function startOAuth(provider: 'google' | 'facebook', redirectTo: string): Promise<string> {
