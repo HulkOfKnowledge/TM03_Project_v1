@@ -57,7 +57,7 @@ export default function CardDashboardPage() {
     }
   };
 
-  const handleSelectCard = async (cardOption: CardOption) => {
+  const handleSelectCard = async (cardOption: CardOption): Promise<void> => {
     try {
       // Activate the card (make it visible on dashboard)
       const response = await fetch(`/api/cards/${cardOption.id}/activate`, {

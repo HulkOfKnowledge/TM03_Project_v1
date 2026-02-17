@@ -26,14 +26,17 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   const [selectedMonth, setSelectedMonth] = useState('This month');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Use allCards if provided, otherwise just use the single card
   const cards = allCards.length > 0 ? allCards : [card];
   const currentCard = cards[currentCardIndex];
 
-  // Initialize with empty data
-  const [overviewData, setOverviewData] = useState<CardOverviewData | null>(null);
+  // Store data for all cards - Map<cardId, CardOverviewData>
+  const [allCardData, setAllCardData] = useState<Map<string, CardOverviewData>>(new Map());
+
+  // Current card's data
+  const overviewData = currentCard ? allCardData.get(currentCard.id) : null;
 
   // Adjust currentCardIndex if it becomes out of bounds when cards are removed
   useEffect(() => {
@@ -42,26 +45,37 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     }
   }, [cards.length, currentCardIndex]);
 
-  // Load card data when current card changes
+  // Pre-fetch data for ALL cards on mount or when cards change
   useEffect(() => {
-    if (currentCard) {
-      loadCardData();
-    }
-  }, [currentCard?.id]);
+    const loadAllCardsData = async () => {
+      setIsLoadingData(true);
+      const dataMap = new Map<string, CardOverviewData>();
+      
+      try {
+        // Fetch data for all cards in parallel
+        await Promise.all(
+          cards.map(async (c) => {
+            try {
+              const data = await cardService.getCardOverviewData(c);
+              dataMap.set(c.id, data);
+            } catch (error) {
+              console.error(`Error loading data for card ${c.id}:`, error);
+            }
+          })
+        );
+        
+        setAllCardData(dataMap);
+      } catch (error) {
+        console.error('Error loading cards data:', error);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
 
-  const loadCardData = async () => {
-    if (!currentCard) return;
-    
-    setIsLoadingData(true);
-    try {
-      const data = await cardService.getCardOverviewData(currentCard);
-      setOverviewData(data);
-    } catch (error) {
-      console.error('Error loading card data:', error);
-    } finally {
-      setIsLoadingData(false);
+    if (cards.length > 0) {
+      loadAllCardsData();
     }
-  };
+  }, [cards.map(c => c.id).join(',')]); // Re-fetch when card IDs change
 
   const handlePrevCard = () => {
     if (currentCardIndex > 0 && !isTransitioning) {
