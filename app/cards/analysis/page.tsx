@@ -102,7 +102,7 @@ export default function CreditAnalysisPage() {
 
       {/* Main Content */}
       <main className="pt-28 lg:pt-40 pb-16">
-        <div className="container mx-auto">
+        <div className="mx-auto md:px-6">
           {connectedCards.length === 0 ? (
             <div className="px-4 md:px-6">
               <EmptyCardState 
