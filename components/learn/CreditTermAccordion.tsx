@@ -44,13 +44,6 @@ export function CreditTermAccordion({ term, isExpanded, onClick }: CreditTermAcc
           />
           <span className="text-sm font-medium text-foreground md:text-base">{term.title}</span>
         </div>
-        
-        {isExpanded && (
-          <button className="hidden items-center gap-1 text-sm text-brand hover:underline md:flex">
-            <Info className="h-4 w-4" />
-            What This Means
-          </button>
-        )}
       </button>
 
       {/* Accordion Content */}
@@ -62,7 +55,7 @@ export function CreditTermAccordion({ term, isExpanded, onClick }: CreditTermAcc
 
           {term.lessonLink && (
             <Link
-              href={term.lessonLink}
+              href="/learn/learning-space"
               className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
             >
               Go to Lesson
