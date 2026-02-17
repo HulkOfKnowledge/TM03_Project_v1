@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 import { getAllQuizAttempts } from '@/lib/api/quiz-storage';
 
+export const dynamic = 'force-dynamic';
+
 interface LearningHistoryItem {
   id: string;
   title: string;

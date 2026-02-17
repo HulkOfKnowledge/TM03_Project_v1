@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 import type { CreditAnalysisData, CardBalance, PaymentHistoryRow, ChartDataPoint } from '@/types/card.types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
