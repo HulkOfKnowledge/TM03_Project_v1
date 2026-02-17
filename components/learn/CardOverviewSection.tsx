@@ -154,7 +154,7 @@ function UtilizationBar({ percent }: { percent: number }) {
       </div>
 
       {/* Zone labels */}
-      <div className="flex justify-between text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 pt-5 md:pt-0">
         <span>Safe</span>
         <span>Caution</span>
         <span>Danger</span>
@@ -212,7 +212,7 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue }: CardTilesP
           <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2 tabular-nums">
             {formatCurrency(creditLimit)}
           </p>
-          <button className="mt-3 inline-flex items-center gap-1.5 text-xs text-brand font-medium hover:opacity-70 transition-opacity">
+          <button className="mt-3 inline-flex items-center gap-1.5 text-xs bg-brand/15 px-2 py-1 rounded text-brand font-medium transition-opacity">
             <BookOpen className="h-3.5 w-3.5" />
             <span>Learn More</span>
           </button>
@@ -231,7 +231,7 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue }: CardTilesP
           <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2 tabular-nums">
             {formatCurrency(spentThisCycle)}
           </p>
-          <button className="mt-3 inline-flex items-center gap-1.5 text-xs text-brand font-medium hover:opacity-70 transition-opacity">
+          <button className="mt-3 inline-flex items-center gap-1.5 text-xs bg-brand/15 px-2 py-1 rounded text-brand font-medium transition-opacity">
             <TrendingUp className="h-3.5 w-3.5" />
             <span>0.5% Up this week</span>
           </button>
@@ -250,7 +250,7 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue }: CardTilesP
           <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2">
             {formatPaymentDue(paymentDue)}
           </p>
-          <button className="mt-3 inline-flex items-center gap-1.5 text-xs text-brand font-medium hover:opacity-70 transition-opacity">
+          <button className="mt-3 inline-flex items-center gap-1.5  text-xs bg-brand/15 px-2 py-1 rounded text-brand font-medium transition-opacity">
             <Bell className="h-3.5 w-3.5" />
             <span>Set Reminder</span>
           </button>
