@@ -70,6 +70,7 @@ export interface CardBalance {
 
 export interface PaymentHistoryRow {
   month: string;
+  cardName?: string; // Card identifier
   statementBalance: number;
   amountPaid: number;
   paymentStatus: 'On Time' | 'Late' | 'Missed';
@@ -83,13 +84,19 @@ export interface ChartDataPoint {
   value: number;
 }
 
+export interface CardChartData {
+  cardId: string;
+  cardName: string;
+  data: ChartDataPoint[];
+}
+
 export interface CreditAnalysisData {
   totalCreditAvailable: number;
   totalAmountOwed: number;
   creditUtilizationRate: number;
   cardBalances: CardBalance[];
   paymentHistory: PaymentHistoryRow[];
-  utilizationChartData: ChartDataPoint[];
-  spendingChartData: ChartDataPoint[];
+  utilizationChartData: CardChartData[]; // Per-card utilization data
+  spendingChartData: CardChartData[]; // Per-card spending data
   averageSpending: number;
 }

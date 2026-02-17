@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import type { PaymentHistoryRow } from '@/types/card.types';
@@ -21,15 +21,67 @@ export function PaymentHistoryTable({
   title = 'Payment History',
   subtitle,
 }: PaymentHistoryTableProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  
   const formatCurrency = (amount: number) => {
     return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
+
+  // Extract unique years from the data
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    data.forEach(row => {
+      const yearMatch = row.month.match(/\d{4}/);
+      if (yearMatch) {
+        years.add(yearMatch[0]);
+      }
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a)); // Sort descending
+  }, [data]);
+
+  // Extract unique payment statuses
+  const availableStatuses = useMemo(() => {
+    const statuses = new Set<string>();
+    data.forEach(row => {
+      statuses.add(row.paymentStatus);
+    });
+    return Array.from(statuses).sort();
+  }, [data]);
+
+  // Filter data based on search query, year, and status
+  const filteredData = useMemo(() => {
+    return data.filter(row => {
+      // Search filter - searches in month, cardName, paymentStatus, and alerts
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || 
+        row.month.toLowerCase().includes(searchLower) ||
+        row.cardName?.toLowerCase().includes(searchLower) ||
+        row.paymentStatus.toLowerCase().includes(searchLower) ||
+        row.alerts.toLowerCase().includes(searchLower);
+
+      // Year filter
+      const matchesYear = !selectedYear || row.month.includes(selectedYear);
+
+      // Status filter
+      const matchesStatus = !selectedStatus || row.paymentStatus === selectedStatus;
+
+      return matchesSearch && matchesYear && matchesStatus;
+    });
+  }, [data, searchQuery, selectedYear, selectedStatus]);
 
   const columns: Column<PaymentHistoryRow>[] = useMemo(() => [
     {
       key: 'month',
       header: 'Month',
       sortable: true,
+    },
+    {
+      key: 'cardName',
+      header: 'Card',
+      sortable: true,
+      render: (row) => row.cardName || '-',
     },
     {
       key: 'statementBalance',
@@ -87,38 +139,29 @@ export function PaymentHistoryTable({
           )}
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900 sm:px-4 sm:text-sm">
-            2025
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
-          <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900 sm:px-4 sm:text-sm">
-            Filter
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-              />
-            </svg>
-          </button>
+          {/* Year Filter */}
+          <select
+            value={selectedYear || ''}
+            onChange={(e) => setSelectedYear(e.target.value || null)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900 sm:px-4 sm:text-sm"
+          >
+            <option value="">All Years</option>
+            {availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+          
+          {/* Status Filter */}
+          <select
+            value={selectedStatus || ''}
+            onChange={(e) => setSelectedStatus(e.target.value || null)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900 sm:px-4 sm:text-sm"
+          >
+            <option value="">All Status</option>
+            {availableStatuses.map(status => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -127,13 +170,15 @@ export function PaymentHistoryTable({
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by name, transaction, anything"
           className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:placeholder-gray-500"
         />
       </div>
 
       {/* Table */}
-      <DataTable columns={columns} data={data} />
+      <DataTable columns={columns} data={filteredData} />
     </div>
   );
 }
