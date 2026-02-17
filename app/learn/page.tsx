@@ -155,17 +155,11 @@ export default function LearnDashboard() {
                       <CreditCard className="h-12 w-12 text-white" />
                     </div>
                     <p className="text-gray-600 dark:text-gray-400 mb-2 text-center">
-                      You haven't added any credit card yet,<br/>
-                      <Link
-                      href="/cards"
-                      className="text-brand hover:text-[#5558E3] font-medium underline transition-colors"
-                    >
-                      click here
-                    </Link>
-                    
-                    
-                    <span className="text-gray-600 dark:text-gray-400"> to add a card</span>
+                      You haven't added any credit card yet,<br/> click here to add a card.
                     </p>
+                    <Link href="/cards" className="mt-4 inline-block px-6 py-2.5 rounded-xl border border-brand text-brand dark:bg-brand/90 dark:text-white font-medium hover:bg-brand hover:text-white dark:hover:bg-brand transition-colors">
+                      Add Card
+                    </Link>
                   </div>
                 </div>
               </div>
