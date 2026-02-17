@@ -13,6 +13,7 @@ import { CreditCardDisplay } from './CreditCardDisplay';
 import { CardHistoryTable } from './CardHistoryTable';
 import { VolumeProgressBar } from './VolumeProgressBar';
 import { CardOverviewSkeleton } from './CardOverviewSkeleton';
+import { useUser } from '@/hooks/useAuth';
 
 interface CardOverviewProps {
   card: ConnectedCard;
@@ -22,6 +23,7 @@ interface CardOverviewProps {
 }
 
 export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] }: CardOverviewProps) {
+  const { profile } = useUser();
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState('This month');
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -31,6 +33,11 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   // Use allCards if provided, otherwise just use the single card
   const cards = allCards.length > 0 ? allCards : [card];
   const currentCard = cards[currentCardIndex];
+
+  // Get user's display name for card
+  const cardholderName = profile?.first_name && profile?.surname
+    ? `${profile.first_name} ${profile.surname}`
+    : profile?.first_name || 'Cardholder';
 
   // Store data for all cards - Map<cardId, CardOverviewData>
   const [allCardData, setAllCardData] = useState<Map<string, CardOverviewData>>(new Map());
@@ -214,7 +221,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                 <div className="h-32 overflow-hidden rounded-t-2xl opacity-60 shadow-sm">
                   <CreditCardDisplay
                     bank={cards[currentCardIndex + 2].bank}
-                    name="Kristin Mumbi"
+                    name={cardholderName}
                     type={cards[currentCardIndex + 2].type}
                     lastFour={cards[currentCardIndex + 2].lastFour}
                     gradientIndex={currentCardIndex + 2}
@@ -230,7 +237,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                 <div className="h-40 overflow-hidden rounded-t-2xl opacity-80 shadow-md">
                   <CreditCardDisplay
                     bank={cards[currentCardIndex + 1].bank}
-                    name="Kristin Mumbi"
+                    name={cardholderName}
                     type={cards[currentCardIndex + 1].type}
                     lastFour={cards[currentCardIndex + 1].lastFour}
                     gradientIndex={currentCardIndex + 1}
@@ -248,7 +255,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             >
               <CreditCardDisplay
                 bank={currentCard.bank}
-                name="Kristin Mumbi"
+                name={cardholderName}
                 type={currentCard.type}
                 lastFour={currentCard.lastFour}
                 gradientIndex={currentCardIndex}
