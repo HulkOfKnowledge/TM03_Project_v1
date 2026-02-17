@@ -36,6 +36,11 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   // History table filters
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [historyZoneFilter, setHistoryZoneFilter] = useState<string>('');
+  
+  // Touch/swipe state
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | 'up' | 'down' | null>(null);
 
   // Use allCards if provided, otherwise just use the single card
   const cards = allCards.length > 0 ? allCards : [card];
@@ -127,12 +132,71 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     }
   }, [cards.map(c => c.id).join(',')]); // Re-run when card IDs change
 
+  // Minimum swipe distance (in pixels)
+  const minSwipeDistance = 50;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distanceX = touchStart.x - touchEnd.x;
+    const distanceY = touchStart.y - touchEnd.y;
+    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
+
+    if (isHorizontalSwipe) {
+      // Left/Right swipe - slide animation
+      if (Math.abs(distanceX) > minSwipeDistance) {
+        if (distanceX > 0) {
+          // Swiped left - go to next card
+          setSwipeDirection('left');
+          handleNextCard();
+        } else {
+          // Swiped right - go to previous card
+          setSwipeDirection('right');
+          handlePrevCard();
+        }
+      }
+    } else {
+      // Up/Down swipe - shuffle animation
+      if (Math.abs(distanceY) > minSwipeDistance) {
+        if (distanceY > 0) {
+          // Swiped up - go to next card
+          setSwipeDirection('up');
+          handleNextCard();
+        } else {
+          // Swiped down - go to previous card
+          setSwipeDirection('down');
+          handlePrevCard();
+        }
+      }
+    }
+
+    // Reset touch state
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
   const handlePrevCard = () => {
     if (currentCardIndex > 0 && !isTransitioning) {
       setIsTransitioning(true);
       setTimeout(() => {
         setCurrentCardIndex(currentCardIndex - 1);
         setIsTransitioning(false);
+        setSwipeDirection(null);
       }, 300);
     }
   };
@@ -143,6 +207,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
       setTimeout(() => {
         setCurrentCardIndex(currentCardIndex + 1);
         setIsTransitioning(false);
+        setSwipeDirection(null);
       }, 300);
     }
   };
@@ -266,12 +331,12 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
       {/* Card Carousel */}
       <div className="mb-8">
         <div className="relative mx-auto max-w-2xl px-4 sm:px-8 md:px-16 lg:px-20">
-          {/* Navigation Buttons - Centered on the stack */}
+          {/* Navigation Buttons - Hidden on mobile, visible on md and up */}
           {cards.length > 1 && (
             <>
               <button
                 onClick={handlePrevCard}
-                className="absolute left-0 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:h-12 sm:w-12"
+                className="absolute left-0 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:h-12 sm:w-12 md:flex"
                 disabled={currentCardIndex === 0 || isTransitioning}
               >
                 <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-400 sm:h-6 sm:w-6" />
@@ -279,7 +344,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
               <button
                 onClick={handleNextCard}
-                className="absolute right-0 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:h-12 sm:w-12"
+                className="absolute right-0 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:h-12 sm:w-12 md:flex"
                 disabled={
                   currentCardIndex === cards.length - 1 || isTransitioning
                 }
@@ -290,7 +355,12 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           )}
 
           {/* Card Stack Container */}
-          <div className="relative pb-4 pt-8">
+          <div 
+            className="relative pb-4 pt-8 touch-pan-y md:touch-auto"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             {/* Third card in stack - show if there's a card at +2 position */}
             {currentCardIndex + 2 < cards.length && !isTransitioning && (
               <div className="pointer-events-none absolute left-1/2 top-0 z-0 w-[88%] -translate-x-1/2">
@@ -325,8 +395,16 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
             {/* Front card (current card) */}
             <div
-              className={`relative z-20 top-5 transition-opacity duration-300 ${
-                isTransitioning ? 'opacity-0' : 'opacity-100'
+              className={`relative z-20 top-5 transition-all duration-300 ${
+                isTransitioning 
+                  ? swipeDirection === 'left' || swipeDirection === 'right'
+                    ? swipeDirection === 'left' 
+                      ? 'opacity-0 -translate-x-full'
+                      : 'opacity-0 translate-x-full'
+                    : swipeDirection === 'up' || swipeDirection === 'down'
+                      ? 'opacity-0 scale-90'
+                      : 'opacity-0'
+                  : 'opacity-100 translate-x-0 scale-100'
               }`}
             >
               <CreditCardDisplay
