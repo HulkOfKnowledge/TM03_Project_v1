@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { CreditCardDisplay } from './CreditCardDisplay';
 
@@ -17,20 +17,6 @@ interface CardOption {
   lastFour: string;
 }
 
-// Sample cards for Flinks simulation
-const SAMPLE_CARDS: CardOption[] = [
-  { id: '1', name: 'Visa Platinum', bank: 'TD Bank', type: 'visa', lastFour: '5168' },
-  { id: '2', name: 'World Elite', bank: 'RBC', type: 'mastercard', lastFour: '4892' },
-  { id: '3', name: 'Cash Back', bank: 'Scotiabank', type: 'visa', lastFour: '7234' },
-  { id: '4', name: 'Travel Rewards', bank: 'BMO', type: 'visa', lastFour: '3456' },
-  { id: '5', name: 'Gold Card', bank: 'CIBC', type: 'mastercard', lastFour: '8901' },
-  { id: '6', name: 'Student Card', bank: 'Tangerine', type: 'mastercard', lastFour: '2345' },
-  { id: '7', name: 'Secured Card', bank: 'Capital One', type: 'visa', lastFour: '6789' },
-  { id: '8', name: 'Premium Travel', bank: 'Amex', type: 'visa', lastFour: '1234' },
-  { id: '9', name: 'No Fee Card', bank: 'PC Financial', type: 'mastercard', lastFour: '5678' },
-  { id: '10', name: 'Cashback Plus', bank: 'Simplii', type: 'visa', lastFour: '9012' },
-];
-
 interface CardSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -40,6 +26,35 @@ interface CardSelectionModalProps {
 
 export function CardSelectionModal({ isOpen, onClose, onSelectCard, connectedCardIds = [] }: CardSelectionModalProps) {
   const [selectedCard, setSelectedCard] = useState<CardOption | null>(null);
+  const [availableCards, setAvailableCards] = useState<CardOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch available cards from database when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadAvailableCards();
+    }
+  }, [isOpen]);
+
+  const loadAvailableCards = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/cards/available');
+      
+      if (response.ok) {
+        const result = await response.json();
+        setAvailableCards(result.data || []);
+      } else {
+        console.error('Failed to load available cards');
+        setAvailableCards([]);
+      }
+    } catch (error) {
+      console.error('Error loading available cards:', error);
+      setAvailableCards([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -70,10 +85,22 @@ export function CardSelectionModal({ isOpen, onClose, onSelectCard, connectedCar
 
         {/* Card Grid */}
         <div className="p-6 overflow-y-auto max-h-[calc(85vh-180px)]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {SAMPLE_CARDS.map((card, index) => {
-              const isConnected = connectedCardIds.includes(card.id);
-              const isSelected = selectedCard?.id === card.id;
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-gray-600 dark:text-gray-400">Loading cards...</div>
+            </div>
+          ) : availableCards.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="text-gray-600 dark:text-gray-400 text-center">
+                <p className="mb-2">No cards available to connect.</p>
+                <p className="text-sm">Load demo cards or connect via Flinks.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availableCards.map((card, index) => {
+                const isConnected = connectedCardIds.includes(card.id);
+                const isSelected = selectedCard?.id === card.id;
               
               return (
                 <button
@@ -122,6 +149,7 @@ export function CardSelectionModal({ isOpen, onClose, onSelectCard, connectedCar
               );
             })}
           </div>
+          )}
         </div>
 
         {/* Footer */}

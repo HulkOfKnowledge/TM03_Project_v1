@@ -61,7 +61,7 @@ export async function GET(_request: NextRequest) {
     });
 
     const creditUtilizationRate = totalCreditAvailable > 0 
-      ? (totalAmountOwed / totalCreditAvailable) * 100 
+      ? Math.round((totalAmountOwed / totalCreditAvailable) * 100 * 100) / 100 
       : 0;
 
     // Fetch historical data for charts (last 12 months)
@@ -93,17 +93,17 @@ export async function GET(_request: NextRequest) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const utilizationChartData: ChartDataPoint[] = months.map(month => ({
       label: month,
-      value: monthlyData.get(month)?.balance || 0,
+      value: Math.round(monthlyData.get(month)?.balance || 0),
     }));
 
     const spendingChartData: ChartDataPoint[] = months.map(month => ({
       label: month,
-      value: monthlyData.get(month)?.spending || 0,
+      value: Math.round(monthlyData.get(month)?.spending || 0),
     }));
 
     // Calculate average spending
     const totalSpending = Array.from(monthlyData.values()).reduce((sum, data) => sum + data.spending, 0);
-    const averageSpending = monthlyData.size > 0 ? totalSpending / monthlyData.size : 0;
+    const averageSpending = monthlyData.size > 0 ? Math.round(totalSpending / monthlyData.size) : 0;
 
     // Generate payment history (last 5 months)
     const paymentHistory: PaymentHistoryRow[] = historyData

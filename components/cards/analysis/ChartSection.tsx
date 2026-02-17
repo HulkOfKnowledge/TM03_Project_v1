@@ -57,7 +57,11 @@ export function ChartSection({
             <div>
               <div className="mb-1 flex items-center gap-2">
                 <span className="text-4xl text-gray-900 dark:text-white sm:text-5xl">
-                  {primaryValue}
+                  {primaryValue
+                    ? Math.round(
+                        parseFloat(primaryValue.replace(/[^0-9.-]+/g, ''))
+                      ).toLocaleString()
+                    : ''}
                 </span>
                 {trend && (
                   <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">

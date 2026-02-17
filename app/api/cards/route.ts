@@ -25,13 +25,10 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    // Fetch connected cards with their credit data
+    // Fetch connected cards
     const { data: cards, error } = await supabase
       .from('connected_credit_cards')
-      .select(`
-        *,
-        credit_data:credit_data_cache(*)
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
@@ -44,31 +41,40 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    // Transform database records to ConnectedCard format
-    const connectedCards: ConnectedCard[] = (cards || []).map((card: any) => {
-      const creditData = Array.isArray(card.credit_data) && card.credit_data.length > 0 
-        ? card.credit_data[0] 
-        : null;
+    // For each card, fetch the latest credit data
+    const connectedCards: ConnectedCard[] = await Promise.all(
+      (cards || []).map(async (card: any) => {
+        const { data: creditDataArray } = await supabase
+          .from('credit_data_cache')
+          .select('*')
+          .eq('card_id', card.id)
+          .order('synced_at', { ascending: false })
+          .limit(1);
 
-      return {
-        id: card.id,
-        name: `${card.institution_name} ${card.card_network || ''}`.trim(),
-        bank: card.institution_name,
-        type: card.card_network === 'visa' ? 'visa' : 'mastercard',
-        lastFour: card.card_last_four,
-        currentBalance: creditData?.current_balance || 0,
-        creditLimit: creditData?.credit_limit || 0,
-        availableCredit: creditData?.available_credit || 0,
-        utilizationPercentage: creditData?.utilization_percentage || 0,
-        minimumPayment: creditData?.minimum_payment || 0,
-        paymentDueDate: creditData?.payment_due_date || null,
-        lastPaymentAmount: creditData?.last_payment_amount || null,
-        lastPaymentDate: creditData?.last_payment_date || null,
-        interestRate: creditData?.interest_rate || null,
-        lastSyncedAt: card.last_synced_at,
-        isActive: card.is_active,
-      };
-    });
+        const creditData = creditDataArray && creditDataArray.length > 0 
+          ? creditDataArray[0] 
+          : null;
+
+        return {
+          id: card.id,
+          name: `${card.institution_name} ${card.card_network || ''}`.trim(),
+          bank: card.institution_name,
+          type: card.card_network === 'visa' ? 'visa' : 'mastercard',
+          lastFour: card.card_last_four,
+          currentBalance: creditData?.current_balance || 0,
+          creditLimit: creditData?.credit_limit || 0,
+          availableCredit: creditData?.available_credit || 0,
+          utilizationPercentage: creditData?.utilization_percentage || 0,
+          minimumPayment: creditData?.minimum_payment || 0,
+          paymentDueDate: creditData?.payment_due_date || null,
+          lastPaymentAmount: creditData?.last_payment_amount || null,
+          lastPaymentDate: creditData?.last_payment_date || null,
+          interestRate: creditData?.interest_rate || null,
+          lastSyncedAt: card.last_synced_at,
+          isActive: card.is_active,
+        };
+      })
+    );
 
     return NextResponse.json(
       createSuccessResponse(connectedCards),
@@ -111,20 +117,24 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!flinksLoginId || !flinksAccountId || !institutionName || !cardType || !cardLastFour) {
+    if (!institutionName || !cardType || !cardLastFour) {
       return NextResponse.json(
         createErrorResponse('VALIDATION_ERROR', 'Missing required fields'),
         { status: 400 }
       );
     }
 
+    // For mock/demo cards, use provided values or generate defaults
+    const loginId = flinksLoginId || `demo_login_${Date.now()}`;
+    const accountId = flinksAccountId || `demo_account_${Date.now()}`;
+
     // Insert connected card
     const { data: newCard, error: insertError } = await supabase
       .from('connected_credit_cards')
       .insert({
         user_id: user.id,
-        flinks_login_id: flinksLoginId,
-        flinks_account_id: flinksAccountId,
+        flinks_login_id: loginId,
+        flinks_account_id: accountId,
         institution_name: institutionName,
         card_type: cardType,
         card_last_four: cardLastFour,

@@ -14,7 +14,6 @@ import { CardOverviewSkeleton } from '@/components/cards/CardOverviewSkeleton';
 import { CardSelectionModal } from '@/components/cards/CardSelectionModal';
 import { SuccessModal } from '@/components/cards/SuccessModal';
 import { useCard } from '@/contexts/CardContext';
-import type { ConnectedCard } from '@/types/card.types';
 
 interface CardOption {
   id: string;
@@ -25,38 +24,57 @@ interface CardOption {
 }
 
 export default function CardDashboardPage() {
-  const { connectedCards, addCard, removeCard, isLoading } = useCard();
+  const { connectedCards, removeCard, isLoading, refreshCards } = useCard();
   const [showCardSelection, setShowCardSelection] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const handleAddCard = () => {
     setShowCardSelection(true);
   };
 
+  const handleSeedDemoData = async () => {
+    try {
+      setIsSeeding(true);
+      const response = await fetch('/api/cards/seed-demo', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Failed to seed demo data:', error);
+        alert(error.error?.message || 'Failed to load demo cards');
+        return;
+      }
+
+      // Open card selection modal to let user pick cards
+      setShowCardSelection(true);
+    } catch (error) {
+      console.error('Error seeding demo data:', error);
+      alert('Failed to load demo cards. Please try again.');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   const handleSelectCard = async (cardOption: CardOption) => {
     try {
-      // Convert CardOption to ConnectedCard with default values
-      const card: ConnectedCard = {
-        ...cardOption,
-        currentBalance: 0,
-        creditLimit: 0,
-        availableCredit: 0,
-        utilizationPercentage: 0,
-        minimumPayment: 0,
-        paymentDueDate: null,
-        lastPaymentAmount: null,
-        lastPaymentDate: null,
-        interestRate: null,
-        lastSyncedAt: null,
-        isActive: true,
-      };
+      // Activate the card (make it visible on dashboard)
+      const response = await fetch(`/api/cards/${cardOption.id}/activate`, {
+        method: 'PATCH',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to activate card');
+      }
       
-      await addCard(card);
+      // Refresh cards and close modal
+      await refreshCards();
       setShowCardSelection(false);
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('Error adding card:', error);
-      // TODO: Show error message to user
+      console.error('Error activating card:', error);
+      alert('Failed to connect card. Please try again.');
     }
   };
 
@@ -102,7 +120,12 @@ export default function CardDashboardPage() {
               allCards={connectedCards}
             />
           ) : (
-            <EmptyCardState onAddCard={handleAddCard} showFAQButton />
+            <EmptyCardState 
+              onAddCard={handleAddCard} 
+              onSeedDemoData={handleSeedDemoData}
+              isSeeding={isSeeding}
+              showFAQButton 
+            />
           )}
         </div>
       </main>

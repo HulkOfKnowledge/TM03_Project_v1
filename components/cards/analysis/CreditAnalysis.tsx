@@ -22,7 +22,7 @@ import {
 import { Line } from 'react-chartjs-2';
 import { useTheme } from '@/components/ThemeProvider';
 import { cardService } from '@/services/card.service';
-import type { CreditAnalysisData } from '@/types/card.types';
+import type { CreditAnalysisData, ConnectedCard } from '@/types/card.types';
 import { MetricCard } from './MetricCard';
 import { ChartSection } from './ChartSection';
 import { PaymentHistoryTable } from './PaymentHistoryTable';
@@ -41,20 +41,20 @@ ChartJS.register(
 );
 
 interface CreditAnalysisProps {
-  connectedCardsCount: number;
+  connectedCards: ConnectedCard[];
 }
 
-export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
+export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
   const [selectedPeriod, setSelectedPeriod] = useState('Yearly');
   const [analysisData, setAnalysisData] = useState<CreditAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
-  // Fetch credit analysis data on mount
+  // Fetch credit analysis data on mount and when cards change
   useEffect(() => {
     loadAnalysisData();
-  }, []);
+  }, [connectedCards]);
 
   const loadAnalysisData = async () => {
     try {
@@ -126,62 +126,73 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
     };
   }, [analysisData, themeColors]);
 
-  const utilizationChartOptions: ChartOptions<'line'> = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
+  const utilizationChartOptions: ChartOptions<'line'> = useMemo(() => {
+    // Calculate dynamic max based on data
+    const maxValue = analysisData 
+      ? Math.max(...analysisData.utilizationChartData.map(d => d.value))
+      : 100;
+    const yMax = Math.ceil(maxValue * 1.2 / 1000) * 1000; // Round up to nearest 1000 with 20% padding
+    
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          enabled: true,
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+            }
+          }
+        },
       },
-      tooltip: {
-        enabled: true,
+      scales: {
+        x: {
+          grid: {
+            display: false, // Hide vertical grid lines
+          },
+          ticks: {
+            color: themeColors.text,
+            font: {
+              size: 12,
+            },
+          },
+          border: {
+            display: false,
+          },
+        },
+        y: {
+          min: 0,
+          max: yMax || 5000,
+          grid: {
+            color: themeColors.grid,
+            drawTicks: false,
+          },
+          ticks: {
+            color: themeColors.text,
+            font: {
+              size: 12,
+            },
+            callback: function(value) {
+              return '$' + (Number(value) / 1000).toFixed(0) + 'k';
+            },
+          },
+          border: {
+            display: false,
+          },
+        },
+      },
+      interaction: {
         mode: 'index',
         intersect: false,
       },
-    },
-    scales: {
-      x: {
-        grid: {
-          color: themeColors.grid,
-          drawTicks: false,
-        },
-        ticks: {
-          color: themeColors.text,
-          font: {
-            size: 12,
-          },
-        },
-        border: {
-          display: false,
-        },
-      },
-      y: {
-        min: 0,
-        max: 500,
-        grid: {
-          color: themeColors.grid,
-          drawTicks: false,
-        },
-        ticks: {
-          color: themeColors.text,
-          font: {
-            size: 12,
-          },
-          callback: function(value) {
-            return value + 'k';
-          },
-          stepSize: 100,
-        },
-        border: {
-          display: false,
-        },
-      },
-    },
-    interaction: {
-      mode: 'index',
-      intersect: false,
-    },
-  }), [themeColors]);
+    };
+  }, [themeColors, analysisData]);
 
   // Spending Patterns Chart Data
   const spendingChartData = useMemo(() => {
@@ -212,58 +223,69 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
     };
   }, [analysisData, themeColors]);
 
-  const spendingChartOptions: ChartOptions<'line'> = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        enabled: true,
-        mode: 'index',
-        intersect: false,
-      },
-    },
-    scales: {
-      x: {
-        grid: {
-          color: themeColors.grid,
-          drawTicks: false,
-        },
-        ticks: {
-          color: themeColors.text,
-          font: {
-            size: 12,
-          },
-        },
-        border: {
+  const spendingChartOptions: ChartOptions<'line'> = useMemo(() => {
+    // Calculate dynamic max based on data
+    const maxValue = analysisData 
+      ? Math.max(...analysisData.spendingChartData.map(d => d.value))
+      : 100;
+    const yMax = Math.ceil(maxValue * 1.2 / 1000) * 1000; // Round up to nearest 1000 with 20% padding
+    
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
           display: false,
         },
-      },
-      y: {
-        min: 0,
-        max: 500,
-        grid: {
-          color: themeColors.grid,
-          drawTicks: false,
-        },
-        ticks: {
-          color: themeColors.text,
-          font: {
-            size: 12,
-          },
-          callback: function(value) {
-            return value + 'k';
-          },
-          stepSize: 100,
-        },
-        border: {
-          display: false,
+        tooltip: {
+          enabled: true,
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+              return 'Spending: $' + context.parsed.y.toLocaleString();
+            }
+          }
         },
       },
-    },
-  }), [themeColors]);
+      scales: {
+        x: {
+          grid: {
+            display: false, // Hide vertical grid lines
+          },
+          ticks: {
+            color: themeColors.text,
+            font: {
+              size: 12,
+            },
+          },
+          border: {
+            display: false,
+          },
+        },
+        y: {
+          min: 0,
+          max: yMax || 5000,
+          grid: {
+            color: themeColors.grid,
+            drawTicks: false,
+          },
+          ticks: {
+            color: themeColors.text,
+            font: {
+              size: 12,
+            },
+            callback: function(value) {
+              return '$' + (Number(value) / 1000).toFixed(0) + 'k';
+            },
+          },
+          border: {
+            display: false,
+          },
+        },
+      },
+    };
+  }, [themeColors, analysisData]);
 
   // Chart legend configuration
   const utilizationLegend = useMemo(() => [
@@ -341,14 +363,13 @@ export function CreditAnalysis({ connectedCardsCount }: CreditAnalysisProps) {
             {/* Left side - Title and description */}
             <div className="flex-shrink-0">
               <span className="mb-2 block text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-                Credit Utilization
+                Data per card
               </span>
               <p className="mb-2 text-3xl text-gray-900 dark:text-white sm:text-4xl md:text-5xl">
-                {connectedCardsCount} Cards
+                {connectedCards.length} Cards
               </p>
               <p className="inline-block rounded bg-gray-50 px-3 py-1.5 text-[10px] text-gray-500 dark:bg-gray-900 dark:text-gray-500 sm:text-xs">
-                This is a suggested amount, be sure to make your personal
-                calculations as well
+                This is based on your connected cards. Connect more to see a detailed breakdown.
               </p>
             </div>
 

@@ -9,11 +9,13 @@ import { CreditCard, Plus, Eye, Calendar, Bell, Layers } from 'lucide-react';
 import { CreditCardDisplay } from './CreditCardDisplay';
 
 interface EmptyCardStateProps {
-  onAddCard: () => void;
+  onAddCard?: () => void;
+  onSeedDemoData?: () => void;
   showFAQButton?: boolean;
+  isSeeding?: boolean;
 }
 
-export function EmptyCardState({ onAddCard, showFAQButton = false }: EmptyCardStateProps) {
+export function EmptyCardState({ onAddCard, onSeedDemoData, showFAQButton = false, isSeeding = false }: EmptyCardStateProps) {
   return (
     <div className="max-w-xl mx-auto">
       {/* Header */}
@@ -49,14 +51,29 @@ export function EmptyCardState({ onAddCard, showFAQButton = false }: EmptyCardSt
             />
           </div>
 
-          {/* Connect Button */}
-          <button
-            onClick={onAddCard}
-            className="w-full md:w-auto mx-auto px-6 py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30"
-          >
-            <Plus className="h-5 w-5" />
-            Connect Card
-          </button>
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {onSeedDemoData && (
+              <button
+                onClick={onSeedDemoData}
+                disabled={isSeeding}
+                className="flex-1 px-6 py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30"
+              >
+                <Layers className="h-5 w-5" />
+                {isSeeding ? 'Seeding Data...' : 'Load Demo Cards'}
+              </button>
+            )}
+            {onAddCard && (
+              <button
+                onClick={onAddCard}
+                disabled={isSeeding}
+                className="flex-1 px-6 py-3 rounded-xl border-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 font-medium hover:bg-indigo-50 dark:hover:bg-indigo-950/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                <Plus className="h-5 w-5" />
+                Connect Real Card
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Features List */}

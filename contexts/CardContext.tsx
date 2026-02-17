@@ -64,15 +64,37 @@ export function CardProvider({ children }: { children: ReactNode }) {
 
   const addCard = async (card: ConnectedCard) => {
     try {
-      // In a real implementation, this would call POST /api/cards
-      // For now, just add to local state
-      setConnectedCards(prev => {
-        // Check if card already exists
-        if (prev.some(c => c.id === card.id)) {
-          return prev;
-        }
-        return [...prev, card];
+      // Check if card already exists
+      if (connectedCards.some(c => c.id === card.id)) {
+        return;
+      }
+
+      // Call API to persist the card
+      const response = await fetch('/api/cards', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          // For mock/sample cards, use the card id as flinks identifiers
+          flinksLoginId: `mock_login_${card.id}`,
+          flinksAccountId: `mock_account_${card.id}`,
+          institutionName: card.bank,
+          cardType: 'credit',
+          cardLastFour: card.lastFour,
+          cardNetwork: card.type,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to add card');
+      }
+
+      const result = await response.json();
+      const addedCard = result.data;
+
+      // Update local state with the card from the API
+      setConnectedCards(prev => [...prev, addedCard]);
     } catch (error) {
       console.error('Error adding card:', error);
       throw error;
