@@ -126,11 +126,11 @@ class CreditAnalyzer:
                 insights.append(CreditInsight(
                     type="alert",
                     priority="urgent",
-                    title=self.translate_text("High utilization detected"),
+                    title=self.translate_text("Danger Zone - Critical utilization"),
                     message=self.translate_text(
                         f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
-                        f"This may negatively impact your credit score. Consider paying down ${card.current_balance - (card.credit_limit * 0.30):.2f} "
-                        f"to reach the recommended 30% threshold."
+                        f"This is severely impacting your credit score. Urgent action required! "
+                        f"Pay down ${card.current_balance - (card.credit_limit * 0.30):.2f} to reach the safe 30% threshold."
                     ),
                     action_required=True,
                     metadata={
@@ -139,14 +139,46 @@ class CreditAnalyzer:
                         "recommended_payment": card.current_balance - (card.credit_limit * 0.30)
                     }
                 ))
-            elif card.utilization_percentage > 50:
+            elif card.utilization_percentage > 30:
                 insights.append(CreditInsight(
-                    type="recommendation",
+                    type="alert",
                     priority="high",
-                    title=self.translate_text("Moderate utilization warning"),
+                    title=self.translate_text("Danger Zone - High utilization"),
                     message=self.translate_text(
                         f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
-                        f"Keeping it below 30% is ideal for your credit health."
+                        f"Above 30% is not recommended and will negatively impact your credit score. "
+                        f"Pay down ${card.current_balance - (card.credit_limit * 0.30):.2f} to reach the recommended 30% threshold."
+                    ),
+                    action_required=True,
+                    metadata={
+                        "card_id": card.card_id,
+                        "current_utilization": card.utilization_percentage,
+                        "recommended_payment": card.current_balance - (card.credit_limit * 0.30)
+                    }
+                ))
+            elif card.utilization_percentage > 25:
+                insights.append(CreditInsight(
+                    type="recommendation",
+                    priority="medium",
+                    title=self.translate_text("Caution Zone - Moderate utilization"),
+                    message=self.translate_text(
+                        f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
+                        f"You're in the caution zone (26-30%). Try to keep it below 25% for optimal credit health."
+                    ),
+                    action_required=False,
+                    metadata={
+                        "card_id": card.card_id,
+                        "current_utilization": card.utilization_percentage
+                    }
+                ))
+            elif card.utilization_percentage <= 25:
+                insights.append(CreditInsight(
+                    type="achievement",
+                    priority="low",
+                    title=self.translate_text("Safe Zone - Excellent utilization"),
+                    message=self.translate_text(
+                        f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
+                        f"Perfect! You're in the safe zone (0-25%). This is great for your credit score."
                     ),
                     action_required=False,
                     metadata={
@@ -193,24 +225,7 @@ class CreditAnalyzer:
                         }
                     ))
         
-        # 3. Low utilization achievement
-        low_util_cards = [card for card in cards if card.utilization_percentage < 10]
-        if low_util_cards:
-            insights.append(CreditInsight(
-                type="achievement",
-                priority="low",
-                title=self.translate_text("Excellent credit management"),
-                message=self.translate_text(
-                    f"Great job! You're keeping {len(low_util_cards)} card(s) below 10% utilization. "
-                    f"This is excellent for your credit health."
-                ),
-                action_required=False,
-                metadata={
-                    "low_utilization_cards": len(low_util_cards)
-                }
-            ))
-        
-        # 4. Credit improvement tips
+        # 3. Credit improvement tips
         avg_utilization = sum(card.utilization_percentage for card in cards) / len(cards) if cards else 0
         
         if avg_utilization > 30:
@@ -230,39 +245,31 @@ class CreditAnalyzer:
                 }
             ))
         
-        # 5. ML-based spending pattern insight
-        if cards:
-            # Use ML to detect spending patterns
-            card = cards[0]  # Analyze primary card
-            
-            # Prepare features for spending pattern prediction
-            features = {
-                'credit_limit': card.credit_limit,
-                'monthly_spending': card.current_balance,  # Approximation
-                'utilization': card.utilization_percentage,
-                'transaction_frequency': 15,  # Default (would come from real data)
-                'avg_transaction_amount': card.current_balance / 15 if card.current_balance > 0 else 0,
-                'groceries_pct': 25,  # Default percentages (would come from real transaction data)
-                'dining_pct': 20,
-                'shopping_pct': 20
-            }
-            
-            spending_pattern = self.ml_models.predict_spending_pattern(features)
-            
-            pattern_messages = {
-                'conservative': "Your spending pattern is conservative. You're managing credit responsibly!",
-                'moderate': "Your spending pattern is moderate. Continue monitoring your balances.",
-                'aggressive': "Your spending pattern shows higher credit usage. Consider budgeting strategies to reduce balances."
-            }
+        # 4. Spending pattern analysis based on utilization
+        if cards and len(cards) > 0:
+            # Determine spending pattern based on average utilization
+            if avg_utilization > 50:
+                spending_pattern = "aggressive"
+                pattern_message = f"Your spending pattern shows high credit usage ({avg_utilization:.1f}% average utilization). Consider budgeting strategies to reduce balances and avoid interest charges."
+                pattern_priority = "medium"
+            elif avg_utilization > 25:
+                spending_pattern = "moderate"
+                pattern_message = f"Your spending pattern is moderate ({avg_utilization:.1f}% average utilization). Continue monitoring your balances to stay in the safe zone (below 25%)."
+                pattern_priority = "low"
+            else:
+                spending_pattern = "conservative"
+                pattern_message = f"Your spending pattern is conservative ({avg_utilization:.1f}% average utilization). You're managing credit responsibly - great job!"
+                pattern_priority = "low"
             
             insights.append(CreditInsight(
                 type="tip",
-                priority="low",
+                priority=pattern_priority,
                 title=self.translate_text("Spending pattern analysis"),
-                message=self.translate_text(pattern_messages.get(spending_pattern, "")),
+                message=self.translate_text(pattern_message),
                 action_required=False,
                 metadata={
-                    'spending_pattern': spending_pattern
+                    'spending_pattern': spending_pattern,
+                    'average_utilization': avg_utilization
                 }
             ))
         
