@@ -26,7 +26,6 @@ import type { CreditAnalysisData, ConnectedCard } from '@/types/card.types';
 import { MetricCard } from './MetricCard';
 import { ChartSection } from './ChartSection';
 import { PaymentHistoryTable } from './PaymentHistoryTable';
-import { PaymentRecommendations } from './PaymentRecommendations';
 
 // Register Chart.js components
 ChartJS.register(

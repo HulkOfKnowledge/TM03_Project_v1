@@ -176,6 +176,16 @@ export async function GET(_request: NextRequest) {
     const paymentHistory: PaymentHistoryRow[] = [];
     paymentHistoryMap.forEach((cardHistory, cardName) => {
       Array.from(cardHistory.entries()).forEach(([month, data]) => {
+        // ML-based alert generation (matching credit intelligence service zones)
+        let alerts = '-';
+        if (data.utilizationPercentage > 30) {
+          alerts = 'High utilization';
+        } else if (data.utilizationPercentage > 25) {
+          alerts = 'Caution: Monitor closely';
+        } else if (data.utilizationPercentage > 0) {
+          alerts = 'Safe';
+        }
+        
         paymentHistory.push({
           month,
           cardName,
@@ -184,7 +194,7 @@ export async function GET(_request: NextRequest) {
           paymentStatus: data.paid >= data.balance * 0.9 ? 'On Time' as const : 'Late' as const,
           peakUsage: Math.round(data.peakUsage),
           utilizationPercentage: Math.round(data.utilizationPercentage),
-          alerts: data.utilizationPercentage > 30 ? 'High Usage' : '-',
+          alerts,
         });
       });
     });

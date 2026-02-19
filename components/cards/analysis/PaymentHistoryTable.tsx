@@ -122,6 +122,20 @@ export function PaymentHistoryTable({
       key: 'alerts',
       header: 'Alerts',
       sortable: true,
+      render: (row) => {
+        const alert = row.alerts;
+        let colorClass = 'text-gray-600 dark:text-gray-400';
+        
+        if (alert.includes('High')) {
+          colorClass = 'text-red-600 dark:text-red-400 font-medium';
+        } else if (alert.includes('Caution')) {
+          colorClass = 'text-yellow-600 dark:text-yellow-400 font-medium';
+        } else if (alert.includes('Safe')) {
+          colorClass = 'text-green-600 dark:text-green-400';
+        }
+        
+        return <span className={colorClass}>{alert}</span>;
+      },
     },
   ], []);
 
