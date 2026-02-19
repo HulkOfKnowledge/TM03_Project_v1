@@ -537,7 +537,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
         </div>
 
         {/* Table */}
-        <CardHistoryTable data={filteredHistory} />
+        <CardHistoryTable data={filteredHistory} card={currentCard} />
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">

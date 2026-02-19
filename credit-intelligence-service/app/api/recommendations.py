@@ -23,16 +23,23 @@ async def get_payment_recommendations(
     """
     Generate personalized payment recommendations
     
-    TODO: Implement payment recommendation logic
-    - Call PaymentRecommender service
-    - Optimize payment allocation based on goal
-    - Calculate projected savings
-    - Return prioritized payment strategy
+    Handles scenarios like:
+    - User owes $2000 across 3 cards but has only $1000 to pay
+    
+    Optimization strategies:
+    - minimize_interest: Pay highest APR cards first (Avalanche method)
+    - improve_score: Pay highest utilization cards first  
+    - balanced: Use ML + rules for optimal allocation
+    
+    Returns:
+    - Prioritized payment recommendations for each card
+    - Expected impact (interest saved, utilization improvement, score impact)
+    - Projected savings (monthly and annual)
     """
     try:
-        # TODO: Call recommender.recommend(request)
-        # TODO: Return recommendations
-        
-        raise HTTPException(status_code=501, detail="Not implemented")
+        # Generate payment recommendations using hybrid approach
+        result = recommender.recommend(request)
+        return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate recommendations: {str(e)}")
+

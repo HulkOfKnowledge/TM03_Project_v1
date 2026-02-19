@@ -6,15 +6,29 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { CardHistoryRow } from '@/types/card.types';
+import type { CardHistoryRow, ConnectedCard } from '@/types/card.types';
 import { DataTable, Column } from '@/components/ui/DataTable';
+import { TransactionInsightModal } from './TransactionInsightModal';
 
 interface CardHistoryTableProps {
   data: CardHistoryRow[];
+  card: ConnectedCard;
 }
 
-export function CardHistoryTable({ data }: CardHistoryTableProps) {
+export function CardHistoryTable({ data, card }: CardHistoryTableProps) {
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [selectedTransaction, setSelectedTransaction] = useState<CardHistoryRow | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleViewNote = (row: CardHistoryRow) => {
+    setSelectedTransaction(row);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedTransaction(null);
+  };
 
   const toggleRow = (index: number) => {
     const newSelected = new Set(selectedRows);
@@ -33,7 +47,7 @@ export function CardHistoryTable({ data }: CardHistoryTableProps) {
   const getZoneColor = (zone: string) => {
     switch (zone) {
       case 'Safe':
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
       case 'Caution':
         return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
       case 'Danger':
@@ -110,13 +124,26 @@ export function CardHistoryTable({ data }: CardHistoryTableProps) {
       key: 'action',
       header: 'Action',
       sortable: false,
-      render: () => (
-        <button className="text-sm text-gray-900 underline hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400">
+      render: (row) => (
+        <button 
+          onClick={() => handleViewNote(row)}
+          className="text-sm text-gray-900 underline hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400"
+        >
           View Note
         </button>
       ),
     },
   ], [selectedRows]);
 
-  return <DataTable columns={columns} data={data} />;
+  return (
+    <>
+      <DataTable columns={columns} data={data} />
+      <TransactionInsightModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        transaction={selectedTransaction}
+        card={card}
+      />
+    </>
+  );
 }

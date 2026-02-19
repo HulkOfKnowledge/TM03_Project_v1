@@ -99,4 +99,9 @@ export interface CreditAnalysisData {
   utilizationChartData: CardChartData[]; // Per-card utilization data
   spendingChartData: CardChartData[]; // Per-card spending data
   averageSpending: number;
+  mlInsights?: {
+    overallScore: number;
+    insights: any[];
+    recommendations: any[];
+  } | null;
 }
