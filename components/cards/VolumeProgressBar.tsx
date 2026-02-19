@@ -95,10 +95,24 @@ export function VolumeProgressBar({ percentage }: VolumeProgressBarProps) {
       </div>
       
       {/* Labels */}
-      <div className="grid grid-cols-3 text-xs text-gray-600 dark:text-gray-400">
-        <span className="font-medium text-left">0-25% Safe</span>
-        <span className="font-medium text-center">26-30% Caution</span>
-        <span className="font-medium text-right">30%+ Danger</span>
+      <div className="relative w-full text-xs text-gray-600 dark:text-gray-400 h-10 sm:h-6">
+        {/* Safe Zone Label */}
+        <span className="absolute left-0 font-medium flex flex-col sm:flex-row sm:gap-1 items-start sm:items-center">
+          <span className="text-[10px] sm:text-xs whitespace-nowrap">0-25%</span>
+          <span className="text-[10px] sm:text-xs whitespace-nowrap">Safe</span>
+        </span>
+        
+        {/* Caution Zone Label */}
+        <span className="absolute font-medium flex flex-col sm:flex-row sm:gap-1 items-center" style={{ left: '27.5%', transform: 'translateX(-50%)' }}>
+          <span className="text-[10px] sm:text-xs whitespace-nowrap">26-30%</span>
+          <span className="text-[10px] sm:text-xs whitespace-nowrap">Caution</span>
+        </span>
+        
+        {/* Danger Zone Label */}
+        <span className="absolute font-medium flex flex-col sm:flex-row sm:gap-1 items-start sm:items-center" style={{ left: '65%' }}>
+          <span className="text-[10px] sm:text-xs whitespace-nowrap">30%+</span>
+          <span className="text-[10px] sm:text-xs whitespace-nowrap">Danger</span>
+        </span>
       </div>
     </div>
   );
