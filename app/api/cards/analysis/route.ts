@@ -1,12 +1,14 @@
 /**
  * API Route: GET /api/cards/analysis
  * Get credit analysis data for all connected cards
+ * Includes ML-powered insights from Credit Intelligence Service
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 import type { CreditAnalysisData, CardBalance, PaymentHistoryRow, ChartDataPoint, CardChartData } from '@/types/card.types';
+import axios from 'axios';
 
 export const dynamic = 'force-dynamic';
 
@@ -198,8 +200,59 @@ export async function GET(_request: NextRequest) {
       averageSpending,
     };
 
+    // Get ML-powered insights from Credit Intelligence Service
+    let mlInsights = null;
+    try {
+      const pythonApiUrl = process.env.CREDIT_INTELLIGENCE_API_URL || 'http://localhost:8000';
+      const mlResponse = await axios.post(
+        `${pythonApiUrl}/api/v1/analyze`,
+        {
+          user_id: user.id,
+          cards: (cards || []).map((card: any) => {
+            const creditData = Array.isArray(card.credit_data) && card.credit_data.length > 0 
+              ? card.credit_data[0] 
+              : null;
+            
+            return {
+              card_id: card.id,
+              institution_name: card.institution_name,
+              current_balance: creditData?.current_balance || 0,
+              credit_limit: creditData?.credit_limit || 0,
+              utilization_percentage: creditData?.utilization_percentage || 0,
+              minimum_payment: creditData?.minimum_payment || 0,
+              payment_due_date: creditData?.payment_due_date || null,
+              interest_rate: creditData?.interest_rate || 19.99,
+              last_payment_amount: creditData?.last_payment_amount || 0,
+              last_payment_date: creditData?.last_payment_date || null,
+            };
+          }),
+          timestamp: new Date().toISOString(),
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': process.env.CREDIT_INTELLIGENCE_API_KEY || '',
+          },
+          timeout: 10000, // 10 second timeout for insights
+        }
+      );
+
+      mlInsights = {
+        overallScore: mlResponse.data.overall_score,
+        insights: mlResponse.data.insights,
+        recommendations: mlResponse.data.recommendations,
+      };
+    } catch (mlError) {
+      // Log error but don't fail the entire request
+      console.error('Failed to fetch ML insights:', mlError);
+      // Continue without ML insights
+    }
+
     return NextResponse.json(
-      createSuccessResponse(analysisData),
+      createSuccessResponse({
+        ...analysisData,
+        mlInsights, // Add ML insights to the response
+      }),
       { status: 200 }
     );
   } catch (error) {
