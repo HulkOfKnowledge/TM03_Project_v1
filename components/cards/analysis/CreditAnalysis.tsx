@@ -446,6 +446,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
         periodOptions={['This month', 'Yearly', 'Last 3 months']}
+        valueClassName={filteredData!.creditUtilizationRate > 30 ? "text-4xl text-red-600 dark:text-red-500 sm:text-5xl" : "text-4xl text-gray-900 dark:text-white sm:text-5xl"}
       >
         <Line data={utilizationChartData} options={utilizationChartOptions} />
       </ChartSection>

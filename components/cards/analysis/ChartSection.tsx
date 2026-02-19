@@ -25,6 +25,7 @@ interface ChartSectionProps {
   selectedPeriod: string;
   onPeriodChange: (period: string) => void;
   periodOptions?: string[];
+  valueClassName?: string;
 }
 
 export function ChartSection({
@@ -38,6 +39,7 @@ export function ChartSection({
   selectedPeriod,
   onPeriodChange,
   periodOptions = ['Yearly', 'Monthly', 'Last 3 months'],
+  valueClassName,
 }: ChartSectionProps) {
   return (
     <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
@@ -56,7 +58,7 @@ export function ChartSection({
           {primaryValue && (
             <div>
               <div className="mb-1 flex items-center gap-2">
-                <span className="text-4xl text-gray-900 dark:text-white sm:text-5xl">
+                <span className={valueClassName || "text-4xl text-gray-900 dark:text-white sm:text-5xl"}>
                   {primaryValue}
                 </span>
                 {trend && (
