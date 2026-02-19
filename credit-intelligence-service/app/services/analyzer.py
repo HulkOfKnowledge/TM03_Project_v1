@@ -70,15 +70,18 @@ class CreditAnalyzer:
         
         score = 100.0
         
-        # 1. Average utilization (lower is better)
-        avg_utilization = sum(card.utilization_percentage for card in cards) / len(cards)
-        if avg_utilization > 70:
+        # 1. Overall utilization (lower is better) - uses total balance / total limit
+        total_balance = sum(card.current_balance for card in cards)
+        total_limit = sum(card.credit_limit for card in cards)
+        overall_utilization = (total_balance / total_limit * 100) if total_limit > 0 else 0
+        
+        if overall_utilization > 70:
             score -= 40
-        elif avg_utilization > 50:
+        elif overall_utilization > 50:
             score -= 30
-        elif avg_utilization > 30:
+        elif overall_utilization > 30:
             score -= 15
-        elif avg_utilization > 10:
+        elif overall_utilization > 10:
             score -= 5
         
         # 2. High utilization cards penalty
@@ -103,7 +106,7 @@ class CreditAnalyzer:
             score += 3
         
         # 5. Account diversity (multiple cards is good if managed well)
-        if len(cards) >= 2 and avg_utilization < 30:
+        if len(cards) >= 2 and overall_utilization < 30:
             score += 5
         
         return max(0.0, min(100.0, score))
@@ -226,39 +229,42 @@ class CreditAnalyzer:
                     ))
         
         # 3. Credit improvement tips
-        avg_utilization = sum(card.utilization_percentage for card in cards) / len(cards) if cards else 0
+        # Calculate overall utilization (total balance / total limit)
+        total_balance = sum(card.current_balance for card in cards) if cards else 0
+        total_limit = sum(card.credit_limit for card in cards) if cards else 0
+        overall_utilization = (total_balance / total_limit * 100) if total_limit > 0 else 0
         
-        if avg_utilization > 30:
+        if overall_utilization > 30:
             insights.append(CreditInsight(
                 type="tip",
                 priority="medium",
                 title=self.translate_text("Credit improvement tip"),
                 message=self.translate_text(
-                    f"Your average utilization is {avg_utilization:.1f}%. "
+                    f"Your overall utilization is {overall_utilization:.1f}%. "
                     f"Experts recommend keeping it below 30% for optimal credit health. "
                     f"Consider increasing your credit limits or paying down balances."
                 ),
                 action_required=False,
                 metadata={
-                    "average_utilization": avg_utilization,
+                    "overall_utilization": overall_utilization,
                     "recommended_utilization": 30
                 }
             ))
         
         # 4. Spending pattern analysis based on utilization
         if cards and len(cards) > 0:
-            # Determine spending pattern based on average utilization
-            if avg_utilization > 50:
+            # Determine spending pattern based on overall utilization
+            if overall_utilization > 50:
                 spending_pattern = "aggressive"
-                pattern_message = f"Your spending pattern shows high credit usage ({avg_utilization:.1f}% average utilization). Consider budgeting strategies to reduce balances and avoid interest charges."
+                pattern_message = f"Your spending pattern shows high credit usage ({overall_utilization:.1f}% overall utilization). Consider budgeting strategies to reduce balances and avoid interest charges."
                 pattern_priority = "medium"
-            elif avg_utilization > 25:
+            elif overall_utilization > 25:
                 spending_pattern = "moderate"
-                pattern_message = f"Your spending pattern is moderate ({avg_utilization:.1f}% average utilization). Continue monitoring your balances to stay in the safe zone (below 25%)."
+                pattern_message = f"Your spending pattern is moderate ({overall_utilization:.1f}% overall utilization). Continue monitoring your balances to stay in the safe zone (below 25%)."
                 pattern_priority = "low"
             else:
                 spending_pattern = "conservative"
-                pattern_message = f"Your spending pattern is conservative ({avg_utilization:.1f}% average utilization). You're managing credit responsibly - great job!"
+                pattern_message = f"Your spending pattern is conservative ({overall_utilization:.1f}% overall utilization). You're managing credit responsibly - great job!"
                 pattern_priority = "low"
             
             insights.append(CreditInsight(
@@ -269,7 +275,7 @@ class CreditAnalyzer:
                 action_required=False,
                 metadata={
                     'spending_pattern': spending_pattern,
-                    'average_utilization': avg_utilization
+                    'overall_utilization': overall_utilization
                 }
             ))
         
