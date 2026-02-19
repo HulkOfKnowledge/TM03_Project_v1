@@ -54,49 +54,51 @@ export function TransactionInsightModal({
       
       let generatedInsight: Insight;
 
-      if (transaction.utilizationPercentage > 70) {
+      // Danger Zone: Above 30%
+      if (transaction.utilizationPercentage > 30) {
         generatedInsight = {
           type: 'high_utilization_alert',
           severity: 'urgent',
-          message: `⚠️ High utilization (${transaction.utilizationPercentage.toFixed(1)}%). Consider paying down your balance to improve your credit score.`,
+          message: `Danger Zone! Your utilization was ${transaction.utilizationPercentage.toFixed(1)}% in ${transaction.month}. This is above 30% and will negatively impact your credit score. Consider paying down your balance immediately.`,
           metadata: {
             current_utilization: transaction.utilizationPercentage,
             threshold_percentage: 30
           }
         };
-      } else if (transaction.utilizationPercentage > 50) {
+      }
+      // Caution Zone: 26-30%
+      else if (transaction.utilizationPercentage > 25) {
+        const isNear30 = transaction.utilizationPercentage >= 29;
         generatedInsight = {
-          type: 'moderate_utilization_warning',
-          severity: 'medium',
-          message: `Your utilization for ${transaction.month} was ${transaction.utilizationPercentage.toFixed(1)}%. Keeping it below 30% is ideal for your credit score.`,
-          metadata: {
-            current_utilization: transaction.utilizationPercentage,
-            threshold_percentage: 30
-          }
-        };
-      } else if (remainingTo30 > 0 && remainingTo30 <= 500) {
-        generatedInsight = {
-          type: 'utilization_warning',
-          severity: 'info',
-          message: `You had $${remainingTo30.toFixed(2)} left before reaching 30% utilization (optimal for credit score) in ${transaction.month}.`,
+          type: 'caution_zone_warning',
+          severity: isNear30 ? 'high' : 'medium',
+          message: `Caution Zone. Your utilization for ${transaction.month} was ${transaction.utilizationPercentage.toFixed(1)}%. ${isNear30 ? 'You are very close to 30% - be careful!' : 'Try to keep it below 30% to protect your credit score.'} You had $${remainingTo30.toFixed(2)} remaining before reaching 30%.`,
           metadata: {
             remaining_amount: remainingTo30,
             threshold_percentage: 30,
             current_utilization: transaction.utilizationPercentage
           }
         };
-      } else if (transaction.payment > transaction.endingBalance * 0.5) {
-        generatedInsight = {
-          type: 'good_payment',
-          severity: 'success',
-          message: `Great job! You paid $${transaction.payment.toFixed(2)} in ${transaction.month}, which is ${((transaction.payment / transaction.endingBalance) * 100).toFixed(0)}% of your balance.`,
-        };
-      } else {
-        generatedInsight = {
-          type: 'spending_pattern',
-          severity: 'info',
-          message: `In ${transaction.month}, your spending reached $${transaction.peakUsage.toFixed(2)} at peak. Your ending balance was $${transaction.endingBalance.toFixed(2)}.`,
-        };
+      }
+      // Safe Zone: 0-25%
+      else {
+        if (transaction.payment > transaction.endingBalance * 0.5) {
+          generatedInsight = {
+            type: 'safe_zone_good_payment',
+            severity: 'success',
+            message: `Safe Zone! Your utilization was only ${transaction.utilizationPercentage.toFixed(1)}% in ${transaction.month}. Great job paying $${transaction.payment.toFixed(2)}, which is ${((transaction.payment / transaction.endingBalance) * 100).toFixed(0)}% of your balance. Keep it up!`,
+          };
+        } else {
+          generatedInsight = {
+            type: 'safe_zone',
+            severity: 'success',
+            message: `Safe Zone! Your utilization for ${transaction.month} was ${transaction.utilizationPercentage.toFixed(1)}%, well below the 30% threshold. This is excellent for your credit score. Keep maintaining this level!`,
+            metadata: {
+              current_utilization: transaction.utilizationPercentage,
+              threshold_percentage: 30
+            }
+          };
+        }
       }
 
       setInsight(generatedInsight);
@@ -119,8 +121,9 @@ export function TransactionInsightModal({
       case 'urgent':
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
       case 'high':
-      case 'medium':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
       case 'success':
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       default:

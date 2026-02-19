@@ -47,7 +47,7 @@ export function CardHistoryTable({ data, card }: CardHistoryTableProps) {
   const getZoneColor = (zone: string) => {
     switch (zone) {
       case 'Safe':
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
       case 'Caution':
         return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
       case 'Danger':
