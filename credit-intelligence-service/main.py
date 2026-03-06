@@ -28,21 +28,21 @@ async def lifespan(app: FastAPI):
     try:
         ml_models._load_models()
         if ml_models.payment_priority_model:
-            print("✓ Payment priority model loaded")
+            print("Payment priority model loaded")
         else:
-            print("⚠ Payment priority model not found - using rule-based fallback")
+            print("Payment priority model not found - using rule-based fallback")
         
         if ml_models.spending_pattern_model:
-            print("✓ Spending pattern model loaded")
+            print("Spending pattern model loaded")
         else:
-            print("⚠ Spending pattern model not found - using rule-based fallback")
+            print("Spending pattern model not found - using rule-based fallback")
         
         if ml_models.utilization_predictor:
-            print("✓ Utilization predictor loaded")
+            print("Utilization predictor loaded")
         else:
-            print("⚠ Utilization predictor not found - using rule-based fallback")
+            print("Utilization predictor not found - using rule-based fallback")
     except Exception as e:
-        print(f"⚠ Warning: Could not load ML models: {e}")
+        print(f"Warning: Could not load ML models: {e}")
         print("Falling back to rule-based analysis")
     
     print("\nService ready!")
