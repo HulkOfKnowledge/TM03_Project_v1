@@ -176,7 +176,7 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue }: CardTilesP
   const [numberVisible, setNumberVisible] = useState(false);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 sm:mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] gap-3 mb-6 sm:mb-8">
 
       {/* Tile 1*/}
       <div className="rounded-2xl bg-brand p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
@@ -203,7 +203,7 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue }: CardTilesP
       {/* Tile 2 – Credit Limit */}
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
-          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Credit Limit</span>
+          <span className="text-xs sm:text-sm text-brand font-medium">Credit Limit</span>
           <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
             <Info className="h-4 w-4" />
           </button>
@@ -222,7 +222,7 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue }: CardTilesP
       {/* Tile 3 – Spent This Cycle */}
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
-          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Spent This Cycle</span>
+          <span className="text-xs sm:text-sm text-brand font-medium">Spent This Cycle</span>
           <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
             <Info className="h-4 w-4" />
           </button>
@@ -241,7 +241,7 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue }: CardTilesP
       {/* Tile 4 – Payment Due */}
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
-          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Payment Due</span>
+          <span className="text-xs sm:text-sm text-brand font-medium">Payment Due</span>
           <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
             <Info className="h-4 w-4" />
           </button>
