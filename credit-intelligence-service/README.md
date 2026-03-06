@@ -56,14 +56,34 @@ The service uses a **hybrid system** combining rule-based logic with ML models:
 
 ## 🚀 Quick Start
 
-### 1. Install Dependencies
+### Requirements
+
+- **Python 3.13+**
+- A virtual environment (recommended)
+
+### 1. Create & Activate Virtual Environment
 
 ```bash
 cd credit-intelligence-service
+
+# Create venv
+python -m venv venv
+
+# Activate — Windows
+venv\Scripts\activate
+
+# Activate — macOS / Linux
+source venv/bin/activate
+```
+
+### 2. Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Train ML Models (Optional but Recommended)
+> **Note:** All packages require Python 3.13+.
+### 3. Train ML Models (Optional but Recommended)
 
 ```bash
 python app/ml/train.py
@@ -71,7 +91,7 @@ python app/ml/train.py
 
 This generates synthetic training data and trains all models. Models are saved to `app/ml/trained_models/`.
 
-### 3. Test the Service
+### 4. Test the Service
 
 ```bash
 python app/test_service.py
@@ -79,13 +99,25 @@ python app/test_service.py
 
 This runs comprehensive tests for all components.
 
-### 4. Start the Service
+### 5. Start the Service
 
 ```bash
 python main.py
 ```
 
 Service runs on `http://localhost:8000`
+
+### Starting via npm (from project root)
+
+The project includes cross-platform npm scripts that automatically resolve the correct venv binary on Windows, macOS, and Linux:
+
+```bash
+# Development (with hot reload)
+npm run dev:python
+
+# Production
+npm run start:python
+```
 
 ## 📊 API Endpoints
 

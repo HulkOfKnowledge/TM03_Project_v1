@@ -6,19 +6,19 @@
     "dev": "next dev",
     "devall": "concurrently \"npm run dev\" \"npm run dev:python\" --names \"next,python\" --prefix-colors \"cyan,magenta\"",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:python\" --names \"next,python\" --prefix-colors \"cyan,magenta\"",
-    "dev:python": "cd credit-intelligence-service && ./venv/bin/python -m uvicorn main:app --reload --port 8000",
+    "dev:python": "node scripts/run-python.js -m uvicorn main:app --reload --port 8000",
     "build": "next build",
     "start": "next start",
     "start:all": "concurrently \"npm run start\" \"npm run start:python\" --names \"next,python\" --prefix-colors \"cyan,magenta\"",
-    "start:python": "cd credit-intelligence-service && ./venv/bin/python -m uvicorn main:app --port 8000",
+    "start:python": "node scripts/run-python.js -m uvicorn main:app --port 8000",
     "lint": "next lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "type-check": "tsc --noEmit",
     "db:migrate": "supabase migration up",
     "db:reset": "supabase db reset",
     "db:seed": "tsx scripts/seed.ts",
-    "ml:train": "cd credit-intelligence-service && ./venv/bin/python app/ml/train.py",
-    "ml:test": "cd credit-intelligence-service && ./venv/bin/python app/test_service.py"
+    "ml:train": "node scripts/run-python.js app/ml/train.py",
+    "ml:test": "node scripts/run-python.js app/test_service.py"
   },
   "dependencies": {
     "@supabase/ssr": "^0.1.0",
