@@ -147,19 +147,25 @@ export async function POST(_request: NextRequest) {
         continue;
       }
 
+      // Each card has its own billing day
+      const billingDay = seededRandom(userSeed + i * 31, 1, 28);
+
       // Generate 12 months of historical data
       const creditDataEntries = [];
       for (let monthsAgo = 0; monthsAgo < 12; monthsAgo++) {
         const creditData = generateCreditData(userSeed, i, monthsAgo);
         const syncDate = new Date(now);
         syncDate.setMonth(syncDate.getMonth() - monthsAgo);
-        
-        // Calculate payment due date (15 days from sync date)
-        const dueDate = new Date(syncDate);
-        dueDate.setDate(dueDate.getDate() + 15);
-        
-        // Calculate last payment date (30 days before sync)
-        const paymentDate = new Date(syncDate);
+
+        // Due date falls on this card's fixed billing day in the current cycle month
+        const dueDate = new Date(syncDate.getFullYear(), syncDate.getMonth(), billingDay);
+        // If billing day already passed this month, push to next month
+        if (dueDate <= syncDate) {
+          dueDate.setMonth(dueDate.getMonth() + 1);
+        }
+
+        // Last payment was made ~30 days before the previous due date
+        const paymentDate = new Date(dueDate);
         paymentDate.setDate(paymentDate.getDate() - 30);
 
         creditDataEntries.push({
