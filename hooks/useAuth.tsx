@@ -54,6 +54,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const inFlightRequest = useRef<Promise<{ user: User | null; profile: UserProfile | null }> | null>(null);
   const hasInitialized = useRef(false);
+  const isPublicRoute =
+    pathname === '/' ||
+    pathname?.startsWith('/login') ||
+    pathname?.startsWith('/signup');
+  const shouldSkipInitialAuthFetch =
+    pathname?.startsWith('/login') || pathname?.startsWith('/signup');
 
   const fetchUserAndProfile = useCallback(async (force: boolean = false) => {
     try {
@@ -88,9 +94,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(false);
   }, [fetchUserAndProfile]);
 
-  // Only fetch on initial mount
+  // Only fetch user data when needed (avoid auth checks on public routes)
   useEffect(() => {
     if (hasInitialized.current) return;
+
+    if (shouldSkipInitialAuthFetch) {
+      setLoading(false);
+      return;
+    }
+
     hasInitialized.current = true;
 
     const initializeAuth = async () => {
@@ -99,15 +111,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     void initializeAuth();
-  }, []); // Empty dependency array - only run once on mount
+  }, [fetchUserAndProfile, shouldSkipInitialAuthFetch]);
 
   useEffect(() => {
     if (loading) return;
-
-    const isPublicRoute =
-      pathname === '/' ||
-      pathname?.startsWith('/login') ||
-      pathname?.startsWith('/signup');
 
     if (!user && !isPublicRoute) {
       router.replace('/login');

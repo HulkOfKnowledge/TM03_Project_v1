@@ -7,29 +7,26 @@ import { clearAuthCache } from './api/auth-client';
 
 /**
  * Handle user logout
- * Properly signs out from Supabase and redirects to home page
+ * Properly signs out from Supabase and redirects to the login page
  */
 export function handleLogout(): void {
-  try {
-    
-    // Redirect immediately
-    window.location.replace('/login');
+  // Clear client-side cache first so UI updates immediately.
+  clearAuthCache();
 
-    // Clear the auth cache
-    clearAuthCache();
-
-    // Fire-and-forget logout call to clear cookies
-    void fetch('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      keepalive: true,
-    });
-  } catch (error) {
-    console.error('Failed to logout:', error);
-    // Still redirect even if there's an error to prevent stuck state
-    window.location.replace('/login');
-  }
+  void (async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Failed to logout:', error);
+    } finally {
+      // Redirect after logout attempt to avoid middleware seeing stale session on /login.
+      window.location.replace('/login');
+    }
+  })();
 }
