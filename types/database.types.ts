@@ -95,6 +95,35 @@ export interface CreateCreditDataInput {
   raw_flinks_data: Record<string, unknown>;
 }
 
+// ==================== CARD TRANSACTIONS ====================
+/** Mirrors the card_transactions table (migration 009). */
+export interface CardTransaction {
+  id: string;
+  card_id: string;
+  /** Flinks transaction UUID – used for idempotent upserts */
+  flinks_transaction_id: string;
+  date: string;         // 'YYYY-MM-DD'
+  description: string;
+  debit: number | null;   // positive = card balance increases (purchase)
+  credit: number | null;  // positive = card balance decreases (payment/refund)
+  balance: number | null; // running card balance after this transaction
+  raw_category: string | null;
+  synced_at: string;
+  created_at: string;
+}
+
+export interface CreateCardTransactionInput {
+  card_id: string;
+  flinks_transaction_id: string;
+  date: string;
+  description: string;
+  debit?: number | null;
+  credit?: number | null;
+  balance?: number | null;
+  raw_category?: string | null;
+  synced_at?: string;
+}
+
 // ==================== LEARNING MODULES ====================
 export interface LearningModule {
   id: string; // UUID
