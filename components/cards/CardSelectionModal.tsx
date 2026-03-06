@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { CreditCardDisplay } from './CreditCardDisplay';
+import { getCardGradientIndex } from '@/lib/utils';
 
 interface CardOption {
   id: string;
@@ -98,7 +99,7 @@ export function CardSelectionModal({ isOpen, onClose, onSelectCard, connectedCar
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {availableCards.map((card, index) => {
+              {availableCards.map((card) => {
                 const isConnected = connectedCardIds.includes(card.id);
                 const isSelected = selectedCard?.id === card.id;
               
@@ -127,7 +128,7 @@ export function CardSelectionModal({ isOpen, onClose, onSelectCard, connectedCar
                       name={card.name}
                       type={card.type}
                       lastFour={card.lastFour}
-                      gradientIndex={index}
+                      gradientIndex={getCardGradientIndex(card.id)}
                       size="medium"
                     />
 

@@ -7,8 +7,6 @@
 import { useState, useCallback } from 'react';
 import {
   Plus,
-  Eye,
-  EyeOff,
   BookOpen,
   TrendingUp,
   Bell,
@@ -20,6 +18,9 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import type { ConnectedCard } from '@/types/card.types';
+import { getCardGradientIndex } from '@/lib/utils';
+import { CreditCardDisplay } from '@/components/cards/CreditCardDisplay';
+import { useUser } from '@/hooks/useAuth';
 
 // Props 
 interface CardOverviewSectionProps {
@@ -170,34 +171,26 @@ interface CardTilesProps {
   creditLimit: number;          // tile 2
   spentThisCycle: number;       // tile 3
   paymentDue: string | null;    // tile 4
+  cardholderName: string;       // user's name
 }
 
-function CardTiles({ card, creditLimit, spentThisCycle, paymentDue }: CardTilesProps) {
-  const [numberVisible, setNumberVisible] = useState(false);
+function CardTiles({ card, creditLimit, spentThisCycle, paymentDue, cardholderName }: CardTilesProps) {
+  // Get consistent gradient for this card
+  const gradientIndex = getCardGradientIndex(card.id);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] gap-3 mb-6 sm:mb-8">
 
       {/* Tile 1*/}
-      <div className="rounded-2xl bg-brand p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
-        <span className="text-xs sm:text-sm text-white/80 font-medium leading-snug">
-          {card.bank} {card.name}
-        </span>
-        <div>
-          <p className="text-lg sm:text-xl font-black tracking-widest text-white font-mono leading-tight mt-2">
-            {numberVisible
-              ? `**** **** ${card.lastFour}`
-              : `*** **** ${card.lastFour}`}
-          </p>
-          <button
-            onClick={() => setNumberVisible((v) => !v)}
-            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-colors"
-          >
-            {numberVisible
-              ? <><EyeOff className="h-3.5 w-3.5" /><span>Hide</span></>
-              : <><Eye className="h-3.5 w-3.5" /><span>View</span></>}
-          </button>
-        </div>
+      <div className="min-h-[160px] sm:min-h-[180px]">
+        <CreditCardDisplay
+          bank={card.bank}
+          name={cardholderName}
+          type={card.type}
+          lastFour={card.lastFour}
+          gradientIndex={gradientIndex}
+          size="medium"
+        />
       </div>
 
       {/* Tile 2 – Credit Limit */}
@@ -262,7 +255,7 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue }: CardTilesP
 
 // Consolidated (all cards aggregated)
 
-function ConsolidatedView({ cardList }: { cardList: ConnectedCard[] }) {
+function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCard[]; cardholderName: string }) {
   const isSingle = cardList.length === 1;
   const primaryCard = cardList[0];
 
@@ -290,6 +283,7 @@ function ConsolidatedView({ cardList }: { cardList: ConnectedCard[] }) {
         creditLimit={isSingle ? primaryCard.creditLimit : totalLimit}
         spentThisCycle={totalBalance}
         paymentDue={earliestDue}
+        cardholderName={cardholderName}
       />
       <UtilizationBar percent={util} />
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10 flex items-start gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
@@ -302,7 +296,7 @@ function ConsolidatedView({ cardList }: { cardList: ConnectedCard[] }) {
 
 // Individual Card Carousel
 
-function IndividualView({ cardList }: { cardList: ConnectedCard[] }) {
+function IndividualView({ cardList, cardholderName }: { cardList: ConnectedCard[]; cardholderName: string }) {
   const [index, setIndex] = useState(0);
   const prev = useCallback(() => setIndex((i) => (i === 0 ? cardList.length - 1 : i - 1)), [cardList.length]);
   const next = useCallback(() => setIndex((i) => (i === cardList.length - 1 ? 0 : i + 1)), [cardList.length]);
@@ -353,6 +347,7 @@ function IndividualView({ cardList }: { cardList: ConnectedCard[] }) {
         creditLimit={card.creditLimit}
         spentThisCycle={card.currentBalance}
         paymentDue={card.paymentDueDate}
+        cardholderName={cardholderName}
       />
       <UtilizationBar percent={util} />
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10 flex items-start gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
@@ -398,8 +393,14 @@ function ViewToggle({ mode, onChange, count }: { mode: ViewMode; onChange: (m: V
 
 // Main Export
 export function CardOverviewSection({ cards, onAddCard }: CardOverviewSectionProps) {
+  const { profile } = useUser();
   const [viewMode, setViewMode] = useState<ViewMode>('consolidated');
   const hasCards = cards.length > 0;
+
+  // Get user's display name for card
+  const cardholderName = profile?.first_name && profile?.surname
+    ? `${profile.first_name} ${profile.surname}`
+    : profile?.first_name || 'Cardholder';
 
   return (
     <section className="mb-16">
@@ -439,9 +440,9 @@ export function CardOverviewSection({ cards, onAddCard }: CardOverviewSectionPro
         {!hasCards ? (
           <EmptyState onAddCard={onAddCard} />
         ) : viewMode === 'individual' && cards.length > 1 ? (
-          <IndividualView cardList={cards} />
+          <IndividualView cardList={cards} cardholderName={cardholderName} />
         ) : (
-          <ConsolidatedView cardList={cards} />
+          <ConsolidatedView cardList={cards} cardholderName={cardholderName} />
         )}
       </div>
     </section>

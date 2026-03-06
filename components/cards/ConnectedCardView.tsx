@@ -6,8 +6,11 @@
 'use client';
 
 import { ArrowLeft } from 'lucide-react';
+import { getCardGradientIndex } from '@/lib/utils';
+import { CARD_GRADIENTS } from './CreditCardDisplay';
 
 interface ConnectedCardViewProps {
+  cardId?: string;
   cardName: string;
   cardLastFour: string;
   cardType: 'visa' | 'mastercard';
@@ -17,13 +20,17 @@ interface ConnectedCardViewProps {
 }
 
 export function ConnectedCardView({
-  cardName,
+  cardId,
   cardLastFour,
   cardType,
   holderName = 'John Doe',
   onAddCard,
   onBack,
 }: ConnectedCardViewProps) {
+  // Get consistent gradient for this card
+  const gradientIndex = getCardGradientIndex(cardId || cardLastFour);
+  const gradient = CARD_GRADIENTS[gradientIndex];
+
   return (
     <div className="max-w-2xl mx-auto">
       {/* Back Button */}
@@ -43,7 +50,7 @@ export function ConnectedCardView({
         <div className="max-w-md mx-auto">
           {/* Flinks Card with Branding */}
           <div className="relative mb-8">
-            <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-black dark:from-gray-900 dark:via-black dark:to-gray-950 rounded-2xl p-6 md:p-8 shadow-2xl aspect-[1.586/1]">
+            <div className={`bg-gradient-to-br ${gradient} rounded-2xl p-6 md:p-8 shadow-2xl aspect-[1.586/1]`}>
               <div className="flex flex-col justify-between h-full">
                 <div className="flex items-start justify-between">
                   <p className="text-white/90 text-sm md:text-base font-medium">Credit</p>

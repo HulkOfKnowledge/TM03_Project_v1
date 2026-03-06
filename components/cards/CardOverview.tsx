@@ -14,6 +14,7 @@ import { CardHistoryTable } from './CardHistoryTable';
 import { VolumeProgressBar } from './VolumeProgressBar';
 import { CardOverviewSkeleton } from './CardOverviewSkeleton';
 import { useUser } from '@/hooks/useAuth';
+import { getCardGradientIndex } from '@/lib/utils';
 
 interface CardOverviewProps {
   card: ConnectedCard;
@@ -370,7 +371,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                     name={cardholderName}
                     type={cards[currentCardIndex + 2].type}
                     lastFour={cards[currentCardIndex + 2].lastFour}
-                    gradientIndex={currentCardIndex + 2}
+                    gradientIndex={getCardGradientIndex(cards[currentCardIndex + 2].id)}
                     size="large"
                   />
                 </div>
@@ -386,7 +387,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                     name={cardholderName}
                     type={cards[currentCardIndex + 1].type}
                     lastFour={cards[currentCardIndex + 1].lastFour}
-                    gradientIndex={currentCardIndex + 1}
+                    gradientIndex={getCardGradientIndex(cards[currentCardIndex + 1].id)}
                     size="large"
                   />
                 </div>
@@ -412,7 +413,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                 name={cardholderName}
                 type={currentCard.type}
                 lastFour={currentCard.lastFour}
-                gradientIndex={currentCardIndex}
+                gradientIndex={getCardGradientIndex(currentCard.id)}
                 size="large"
               />
 

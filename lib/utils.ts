@@ -116,3 +116,29 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
     timeout = setTimeout(later, wait);
   };
 }
+
+/**
+ * Get consistent gradient index for a card based on its unique identifier
+ * This ensures the same card always has the same color across the app
+ * 
+ * @param cardId - Unique identifier for the card (id, lastFour, or any unique string)
+ * @param totalGradients - Total number of available gradients (default: 11)
+ * @returns A consistent index between 0 and totalGradients-1
+ */
+export function getCardGradientIndex(
+  cardId: string | undefined,
+  totalGradients: number = 11
+): number {
+  if (!cardId) return 0;
+
+  // Simple hash function to convert string to number
+  let hash = 0;
+  for (let i = 0; i < cardId.length; i++) {
+    const char = cardId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+
+  // Ensure positive number and return index within range
+  return Math.abs(hash) % totalGradients;
+}
