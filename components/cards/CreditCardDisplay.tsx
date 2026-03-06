@@ -15,19 +15,35 @@ interface CreditCardDisplayProps {
   size?: 'small' | 'medium' | 'large';
 }
 
-// Gradient variations for different cards
+// Brand-accurate gradient colors for the 10 demo banks
+export const BANK_GRADIENTS: Record<string, string> = {
+  // --- colourful cards ---
+  'td bank':      'from-green-700 via-green-800 to-green-900',       // TD: signature green
+  'scotiabank':   'from-red-600 via-red-700 to-red-900',             // Scotia: bright red
+  'bmo':          'from-sky-500 via-blue-600 to-blue-700',            // BMO: light blue
+  'tangerine':    'from-orange-500 via-orange-600 to-amber-700',     // Tangerine: orange
+  'pc financial': 'from-amber-500 via-orange-500 to-orange-600',     // PC Financial: amber
+  'simplii':      'from-rose-500 via-pink-600 to-rose-600',          // Simplii: pink-red
+  // --- dark / premium cards ---
+  'rbc':          'from-blue-950 via-indigo-950 to-slate-900',       // RBC: deep navy
+  'cibc':         'from-zinc-700 via-zinc-800 to-zinc-900',          // CIBC: dark charcoal
+  'capital one':  'from-slate-600 via-slate-800 to-slate-900',       // Capital One: dark ash
+  'amex':         'from-neutral-700 via-stone-800 to-zinc-900',      // Amex: dark platinum
+};
+
+// Fallback gradients for unrecognised institutions — mix of colourful and dark
 export const CARD_GRADIENTS = [
-    'from-gray-800 via-gray-900 to-black',
+  'from-zinc-800 via-gray-900 to-black',
+  'from-slate-600 via-slate-700 to-slate-900',
+  'from-neutral-700 via-stone-800 to-zinc-950',
   'from-purple-600 via-purple-700 to-pink-600',
-  'from-blue-600 via-blue-700 to-indigo-600',
+  'from-blue-700 via-blue-800 to-indigo-900',
   'from-green-600 via-emerald-700 to-teal-600',
   'from-orange-600 via-red-700 to-pink-600',
-  'from-indigo-600 via-purple-700 to-purple-600',
   'from-cyan-600 via-blue-700 to-indigo-600',
-  'from-rose-600 via-pink-700 to-purple-600',
   'from-amber-600 via-orange-700 to-red-600',
   'from-teal-600 via-cyan-700 to-blue-600',
-  'from-violet-600 via-purple-700 to-fuchsia-600',
+  'from-violet-700 via-purple-800 to-fuchsia-900',
 ];
 
 export function CreditCardDisplay({
@@ -39,7 +55,8 @@ export function CreditCardDisplay({
   className = '',
   size = 'large',
 }: CreditCardDisplayProps) {
-  const gradient = CARD_GRADIENTS[gradientIndex % CARD_GRADIENTS.length];
+  const bankKey = bank.toLowerCase().trim();
+  const gradient = BANK_GRADIENTS[bankKey] ?? CARD_GRADIENTS[gradientIndex % CARD_GRADIENTS.length];
 
   // Size-based styling
   const sizeClasses = {

@@ -7,19 +7,42 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
 
-// Demo card configurations
+// Demo card template — financial values are personalised per user at seed time
 const DEMO_CARDS = [
-  { name: 'Visa Platinum', bank: 'TD Bank', type: 'visa', lastFour: '5168' },
-  { name: 'World Elite', bank: 'RBC', type: 'mastercard', lastFour: '4892' },
-  { name: 'Cash Back', bank: 'Scotiabank', type: 'visa', lastFour: '7234' },
-  { name: 'Travel Rewards', bank: 'BMO', type: 'visa', lastFour: '3456' },
-  { name: 'Gold Card', bank: 'CIBC', type: 'mastercard', lastFour: '8901' },
-  { name: 'Student Card', bank: 'Tangerine', type: 'mastercard', lastFour: '2345' },
-  { name: 'Secured Card', bank: 'Capital One', type: 'visa', lastFour: '6789' },
-  { name: 'Premium Travel', bank: 'Amex', type: 'visa', lastFour: '1234' },
-  { name: 'No Fee Card', bank: 'PC Financial', type: 'mastercard', lastFour: '5678' },
-  { name: 'Cashback Plus', bank: 'Simplii', type: 'visa', lastFour: '9012' },
+  { name: 'Visa Platinum',   bank: 'TD Bank',      type: 'visa',       network: 'td bank' },
+  { name: 'World Elite',     bank: 'RBC',          type: 'mastercard', network: 'rbc' },
+  { name: 'Cash Back',       bank: 'Scotiabank',   type: 'visa',       network: 'scotiabank' },
+  { name: 'Travel Rewards',  bank: 'BMO',          type: 'visa',       network: 'bmo' },
+  { name: 'Gold Card',       bank: 'CIBC',         type: 'mastercard', network: 'cibc' },
+  { name: 'Student Card',    bank: 'Tangerine',    type: 'mastercard', network: 'tangerine' },
+  { name: 'Secured Card',    bank: 'Capital One',  type: 'visa',       network: 'capital one' },
+  { name: 'Premium Travel',  bank: 'Amex',         type: 'visa',       network: 'amex' },
+  { name: 'No Fee Card',     bank: 'PC Financial', type: 'mastercard', network: 'pc financial' },
+  { name: 'Cashback Plus',   bank: 'Simplii',      type: 'visa',       network: 'simplii' },
 ];
+
+/**
+ * Hash a user UUID to a stable numeric seed so each user gets different demo data
+ */
+function hashUserId(userId: string): number {
+  let hash = 5381;
+  for (let i = 0; i < userId.length; i++) {
+    const char = userId.charCodeAt(i);
+    hash = ((hash << 5) + hash) ^ char;
+    hash = hash & hash; // keep 32-bit
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * Generate a user+card-specific last-four string
+ */
+function generateLastFour(userSeed: number, cardIndex: number): string {
+  const seed = userSeed + cardIndex * 7919; // prime multiplier for spread
+  const x = Math.sin(seed) * 10000;
+  const val = 1000 + Math.floor((x - Math.floor(x)) * 9000);
+  return val.toString();
+}
 
 /**
  * Generate deterministic random number based on seed
@@ -31,10 +54,10 @@ function seededRandom(seed: number, min: number, max: number): number {
 }
 
 /**
- * Generate credit data for a card
+ * Generate credit data for a card, personalised by userSeed
  */
-function generateCreditData(cardIndex: number, monthsAgo: number = 0) {
-  const baseSeed = cardIndex * 1000 + monthsAgo;
+function generateCreditData(userSeed: number, cardIndex: number, monthsAgo: number = 0) {
+  const baseSeed = userSeed + cardIndex * 1000 + monthsAgo;
   
   const creditLimit = seededRandom(baseSeed, 2000, 10000);
   const utilizationBase = seededRandom(baseSeed + 1, 15, 65);
@@ -77,12 +100,30 @@ export async function POST(_request: NextRequest) {
       );
     }
 
+    // Idempotency: skip if user already has demo cards
+    const { count } = await supabase
+      .from('connected_credit_cards')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .like('flinks_account_id', 'demo_account_%');
+
+    if ((count ?? 0) > 0) {
+      return NextResponse.json(
+        createSuccessResponse({ message: 'Demo cards already seeded for this user', cards: [] }),
+        { status: 200 }
+      );
+    }
+
+    // Derive a stable numeric seed from this user's ID so their data is unique
+    const userSeed = hashUserId(user.id);
+
     const createdCards = [];
     const now = new Date();
 
     // Create each demo card
     for (let i = 0; i < DEMO_CARDS.length; i++) {
       const card = DEMO_CARDS[i];
+      const lastFour = generateLastFour(userSeed, i);
       
       // Insert card (initially inactive - user will select which to "connect" via modal)
       const { data: newCard, error: cardError } = await supabase
@@ -93,7 +134,7 @@ export async function POST(_request: NextRequest) {
           flinks_account_id: `demo_account_${i}`,
           institution_name: card.bank,
           card_type: 'credit',
-          card_last_four: card.lastFour,
+          card_last_four: lastFour,
           card_network: card.type,
           is_active: false, // Start as inactive
           last_synced_at: now.toISOString(),
@@ -109,7 +150,7 @@ export async function POST(_request: NextRequest) {
       // Generate 12 months of historical data
       const creditDataEntries = [];
       for (let monthsAgo = 0; monthsAgo < 12; monthsAgo++) {
-        const creditData = generateCreditData(i, monthsAgo);
+        const creditData = generateCreditData(userSeed, i, monthsAgo);
         const syncDate = new Date(now);
         syncDate.setMonth(syncDate.getMonth() - monthsAgo);
         
@@ -151,7 +192,7 @@ export async function POST(_request: NextRequest) {
         name: `${card.bank} ${card.name}`,
         bank: card.bank,
         type: card.type,
-        lastFour: card.lastFour,
+        lastFour,
       });
     }
 

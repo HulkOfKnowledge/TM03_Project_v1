@@ -22,10 +22,19 @@ export class CardService {
       ? new Date(card.paymentDueDate).toLocaleDateString('en-CA') 
       : 'N/A';
     
-    // Calculate hours until due date
-    const hoursLeft = card.paymentDueDate 
-      ? Math.max(0, Math.floor((new Date(card.paymentDueDate).getTime() - Date.now()) / (1000 * 60 * 60)))
-      : 0;
+    // Calculate smart countdown until due date
+    const timeLeft = (() => {
+      if (!card.paymentDueDate) return null;
+      const msLeft = new Date(card.paymentDueDate).getTime() - Date.now();
+      if (msLeft <= 0) return null;
+      const totalMins = Math.floor(msLeft / (1000 * 60));
+      const days = Math.floor(totalMins / (60 * 24));
+      const hours = Math.floor((totalMins % (60 * 24)) / 60);
+      const mins = totalMins % 60;
+      if (days >= 1) return `${days} day${days !== 1 ? 's' : ''}`;
+      if (hours >= 1) return `${hours} hr${hours !== 1 ? 's' : ''}`;
+      return `${mins} min${mins !== 1 ? 's' : ''}`;
+    })();
 
     // Format currency values
     const formatCurrency = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -41,7 +50,7 @@ export class CardService {
         label: 'Due date', 
         value: dueDate, 
         info: true, 
-        description: hoursLeft > 0 ? `${hoursLeft.toLocaleString()} hours left` : 'Past due' 
+        description: timeLeft ? `${timeLeft} left` : 'Past due' 
       },
       { 
         label: 'Credit Limit', 
