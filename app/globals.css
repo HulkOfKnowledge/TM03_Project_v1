@@ -213,6 +213,29 @@
   }
 }
 
+/* Card swipe hint nudge - plays once on mount to teach the gesture */
+@keyframes card-swipe-hint {
+  0%   { transform: translateX(0); }
+  40%  { transform: translateX(14px); }
+  70%  { transform: translateX(5px); }
+  100% { transform: translateX(0); }
+}
+
+.card-swipe-hint {
+  animation: card-swipe-hint 700ms cubic-bezier(0.4, 0, 0.2, 1) 800ms both;
+}
+
+/* Swipe hint label arrow */
+@keyframes hint-arrow-right {
+  0%   { opacity: 0.3; transform: translateX(-4px); }
+  50%  { opacity: 1;   transform: translateX(6px); }
+  100% { opacity: 0.3; transform: translateX(-4px); }
+}
+
+.hint-arrow-right {
+  animation: hint-arrow-right 1.2s cubic-bezier(0.4, 0, 0.2, 1) 900ms infinite;
+}
+
 /* Card shuffle animation */
 @keyframes card-shuffle-out {
   from {

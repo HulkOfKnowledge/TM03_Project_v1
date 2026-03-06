@@ -30,6 +30,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   const [transitionPhase, setTransitionPhase] = useState<'idle' | 'exit' | 'enter'>('idle');
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [hasInteracted, setHasInteracted] = useState(false);
   
   // Track which cards have had their data loaded
   const loadedCardIds = useRef(new Set<string>());
@@ -159,21 +160,11 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     const distanceY = touchStart.y - touchEnd.y;
     const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
 
-    if (isHorizontalSwipe) {
-      if (Math.abs(distanceX) > minSwipeDistance) {
-        if (distanceX > 0) {
-          handleNextCard();
-        } else {
-          handlePrevCard();
-        }
-      }
-    } else {
-      if (Math.abs(distanceY) > minSwipeDistance) {
-        if (distanceY > 0) {
-          handleNextCard();
-        } else {
-          handlePrevCard();
-        }
+    if (isHorizontalSwipe && Math.abs(distanceX) > minSwipeDistance) {
+      if (distanceX > 0) {
+        handleNextCard();
+      } else {
+        handlePrevCard();
       }
     }
 
@@ -183,6 +174,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
   const handlePrevCard = () => {
     if (transitionPhase !== 'idle') return;
+    setHasInteracted(true);
     setTransitionPhase('exit');
     setTimeout(() => {
       setCurrentCardIndex((prev) => (prev - 1 + cards.length) % cards.length);
@@ -193,6 +185,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
   const handleNextCard = () => {
     if (transitionPhase !== 'idle') return;
+    setHasInteracted(true);
     setTransitionPhase('exit');
     setTimeout(() => {
       setCurrentCardIndex((prev) => (prev + 1) % cards.length);
@@ -388,6 +381,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
               <div className={`relative ${
                 transitionPhase === 'exit' ? 'card-shuffle-out' :
                 transitionPhase === 'enter' ? 'card-shuffle-in' :
+                cards.length > 1 && !hasInteracted ? 'card-swipe-hint' :
                 ''
               }`}>
                 <CreditCardDisplay
@@ -410,6 +404,30 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
               </div>
             </div>
           </div>
+
+          {/* Mobile swipe hint + dot indicators */}
+          {cards.length > 1 && (
+            <div className="mt-4 flex flex-col items-center gap-2 md:hidden">
+              {!hasInteracted && (
+                <p className="text-xs text-gray-400 dark:text-gray-600 flex items-center gap-1.5">
+                  Swipe to switch cards
+                  <span className="hint-arrow-right inline-block">→</span>
+                </p>
+              )}
+              <div className="flex gap-1.5">
+                {cards.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i === currentCardIndex
+                        ? 'w-4 bg-brand'
+                        : 'w-1.5 bg-gray-300 dark:bg-gray-700'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Card Status and Progress */}
           <div className="mt-6 sm:mt-8">
