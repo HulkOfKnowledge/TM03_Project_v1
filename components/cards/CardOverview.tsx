@@ -192,10 +192,10 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   };
 
   const handlePrevCard = () => {
-    if (currentCardIndex > 0 && !isTransitioning) {
+    if (!isTransitioning) {
       setIsTransitioning(true);
       setTimeout(() => {
-        setCurrentCardIndex(currentCardIndex - 1);
+        setCurrentCardIndex((currentCardIndex - 1 + cards.length) % cards.length);
         setIsTransitioning(false);
         setSwipeDirection(null);
       }, 300);
@@ -203,10 +203,10 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   };
 
   const handleNextCard = () => {
-    if (currentCardIndex < cards.length - 1 && !isTransitioning) {
+    if (!isTransitioning) {
       setIsTransitioning(true);
       setTimeout(() => {
-        setCurrentCardIndex(currentCardIndex + 1);
+        setCurrentCardIndex((currentCardIndex + 1) % cards.length);
         setIsTransitioning(false);
         setSwipeDirection(null);
       }, 300);
@@ -331,63 +331,41 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
       {/* Card Carousel */}
       <div className="mb-8">
-        <div className="relative mx-auto max-w-2xl px-4 sm:px-8 md:px-16 lg:px-20">
-          {/* Navigation Buttons - Hidden on mobile, visible on md and up */}
-          {cards.length > 1 && (
-            <>
-              <button
-                onClick={handlePrevCard}
-                className="absolute left-0 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:h-12 sm:w-12 md:flex"
-                disabled={currentCardIndex === 0 || isTransitioning}
-              >
-                <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-400 sm:h-6 sm:w-6" />
-              </button>
-
-              <button
-                onClick={handleNextCard}
-                className="absolute right-0 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:h-12 sm:w-12 md:flex"
-                disabled={
-                  currentCardIndex === cards.length - 1 || isTransitioning
-                }
-              >
-                <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400 sm:h-6 sm:w-6" />
-              </button>
-            </>
-          )}
+        <div className="mx-auto max-w-2xl px-2 md:px-20">
 
           {/* Card Stack Container */}
-          <div 
+          <div
             className="relative pb-4 pt-8 touch-pan-y md:touch-auto"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            {/* Third card in stack - show if there's a card at +2 position */}
-            {currentCardIndex + 2 < cards.length && !isTransitioning && (
+            {/* Third card in stack - always show with circular indexing when 3+ cards */}
+            {cards.length >= 3 && !isTransitioning && (
               <div className="pointer-events-none absolute left-1/2 top-0 z-0 w-[88%] -translate-x-1/2">
                 <div className="h-32 overflow-hidden rounded-t-2xl opacity-60 shadow-sm">
                   <CreditCardDisplay
-                    bank={cards[currentCardIndex + 2].bank}
+                    bank={cards[(currentCardIndex + 2) % cards.length].bank}
                     name={cardholderName}
-                    type={cards[currentCardIndex + 2].type}
-                    lastFour={cards[currentCardIndex + 2].lastFour}
-                    gradientIndex={getCardGradientIndex(cards[currentCardIndex + 2].id)}
+                    type={cards[(currentCardIndex + 2) % cards.length].type}
+                    lastFour={cards[(currentCardIndex + 2) % cards.length].lastFour}
+                    gradientIndex={getCardGradientIndex(cards[(currentCardIndex + 2) % cards.length].id)}
                     size="large"
                   />
                 </div>
               </div>
             )}
 
-            {/* Second card in stack - show if there's a card at +1 position */}
-            {currentCardIndex + 1 < cards.length && !isTransitioning && (
+            {/* Second card in stack - always show with circular indexing when 2+ cards */}
+            {cards.length >= 2 && !isTransitioning && (
               <div className="pointer-events-none absolute left-1/2 top-5 z-10 w-[94%] -translate-x-1/2">
                 <div className="h-40 overflow-hidden rounded-t-2xl opacity-80 shadow-md">
                   <CreditCardDisplay
-                    bank={cards[currentCardIndex + 1].bank}
+                    bank={cards[(currentCardIndex + 1) % cards.length].bank}
                     name={cardholderName}
-                    type={cards[currentCardIndex + 1].type}
-                    lastFour={cards[currentCardIndex + 1].lastFour}
-                    gradientIndex={getCardGradientIndex(cards[currentCardIndex + 1].id)}
+                    type={cards[(currentCardIndex + 1) % cards.length].type}
+                    lastFour={cards[(currentCardIndex + 1) % cards.length].lastFour}
+                    gradientIndex={getCardGradientIndex(cards[(currentCardIndex + 1) % cards.length].id)}
                     size="large"
                   />
                 </div>
@@ -408,6 +386,28 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                   : 'opacity-100 translate-x-0 scale-100'
               }`}
             >
+              {/* Left Arrow - centered on this card */}
+              {cards.length > 1 && (
+                <button
+                  onClick={handlePrevCard}
+                  className="group absolute -left-16 top-1/2 z-30 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-brand hover:border-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-brand dark:hover:border-brand dark:hover:text-white sm:h-12 sm:w-12 md:flex"
+                  disabled={isTransitioning}
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-600 group-hover:text-white dark:text-gray-400 sm:h-6 sm:w-6" />
+                </button>
+              )}
+
+              {/* Right Arrow - centered on this card */}
+              {cards.length > 1 && (
+                <button
+                  onClick={handleNextCard}
+                  className="group absolute -right-16 top-1/2 z-30 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-lg transition-colors hover:bg-brand hover:border-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-brand dark:hover:border-brand dark:hover:text-white sm:h-12 sm:w-12 md:flex"
+                  disabled={isTransitioning}
+                >
+                  <ChevronRight className="h-5 w-5 text-gray-600 group-hover:text-white dark:text-gray-400 sm:h-6 sm:w-6" />
+                </button>
+              )}
+
               <CreditCardDisplay
                 bank={currentCard.bank}
                 name={cardholderName}
