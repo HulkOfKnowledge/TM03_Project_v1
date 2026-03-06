@@ -452,7 +452,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Metrics
+              {currentCard.bank} {currentCard.lastFour} Metrics
             </h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
               Sample data for {currentCard.bank} {currentCard.name}
@@ -499,7 +499,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              History
+              {currentCard.bank} {currentCard.lastFour} History
             </h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
               Currently showing sample data for {currentCard.bank}{' '}
