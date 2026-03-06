@@ -322,8 +322,8 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             onTouchEnd={handleTouchEnd}
           >
             {/* Third card in stack - always show with circular indexing when 3+ cards */}
-            {cards.length >= 3 && transitionPhase === 'idle' && (
-              <div className="pointer-events-none absolute left-1/2 top-0 z-0 w-[88%] -translate-x-1/2">
+            {cards.length >= 3 && (transitionPhase === 'idle' || transitionPhase === 'enter') && (
+              <div className={`pointer-events-none absolute left-1/2 top-0 z-0 w-[88%] -translate-x-1/2 ${transitionPhase === 'enter' ? 'card-stack-in-back' : ''}`}>
                 <div className="h-32 overflow-hidden rounded-t-2xl opacity-60 shadow-sm">
                   <CreditCardDisplay
                     bank={cards[(currentCardIndex + 2) % cards.length].bank}
@@ -338,8 +338,8 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             )}
 
             {/* Second card in stack - always show with circular indexing when 2+ cards */}
-            {cards.length >= 2 && transitionPhase === 'idle' && (
-              <div className="pointer-events-none absolute left-1/2 top-5 z-10 w-[94%] -translate-x-1/2">
+            {cards.length >= 2 && (transitionPhase === 'idle' || transitionPhase === 'enter') && (
+              <div className={`pointer-events-none absolute left-1/2 top-5 z-10 w-[94%] -translate-x-1/2 ${transitionPhase === 'enter' ? 'card-stack-in-mid' : ''}`}>
                 <div className="h-40 overflow-hidden rounded-t-2xl opacity-80 shadow-md">
                   <CreditCardDisplay
                     bank={cards[(currentCardIndex + 1) % cards.length].bank}
