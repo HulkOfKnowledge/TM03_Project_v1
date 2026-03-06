@@ -27,7 +27,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   const { profile } = useUser();
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState('This month');
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionPhase, setTransitionPhase] = useState<'idle' | 'exit' | 'enter'>('idle');
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   
@@ -41,7 +41,8 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   // Touch/swipe state
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
-  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | 'up' | 'down' | null>(null);
+
+  const isTransitioning = transitionPhase !== 'idle';
 
   // Use allCards if provided, otherwise just use the single card
   const cards = allCards.length > 0 ? allCards : [card];
@@ -159,58 +160,45 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
 
     if (isHorizontalSwipe) {
-      // Left/Right swipe - slide animation
       if (Math.abs(distanceX) > minSwipeDistance) {
         if (distanceX > 0) {
-          // Swiped left - go to next card
-          setSwipeDirection('left');
           handleNextCard();
         } else {
-          // Swiped right - go to previous card
-          setSwipeDirection('right');
           handlePrevCard();
         }
       }
     } else {
-      // Up/Down swipe - shuffle animation
       if (Math.abs(distanceY) > minSwipeDistance) {
         if (distanceY > 0) {
-          // Swiped up - go to next card
-          setSwipeDirection('up');
           handleNextCard();
         } else {
-          // Swiped down - go to previous card
-          setSwipeDirection('down');
           handlePrevCard();
         }
       }
     }
 
-    // Reset touch state
     setTouchStart(null);
     setTouchEnd(null);
   };
 
   const handlePrevCard = () => {
-    if (!isTransitioning) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentCardIndex((currentCardIndex - 1 + cards.length) % cards.length);
-        setIsTransitioning(false);
-        setSwipeDirection(null);
-      }, 300);
-    }
+    if (transitionPhase !== 'idle') return;
+    setTransitionPhase('exit');
+    setTimeout(() => {
+      setCurrentCardIndex((prev) => (prev - 1 + cards.length) % cards.length);
+      setTransitionPhase('enter');
+      setTimeout(() => setTransitionPhase('idle'), 240);
+    }, 160);
   };
 
   const handleNextCard = () => {
-    if (!isTransitioning) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentCardIndex((currentCardIndex + 1) % cards.length);
-        setIsTransitioning(false);
-        setSwipeDirection(null);
-      }, 300);
-    }
+    if (transitionPhase !== 'idle') return;
+    setTransitionPhase('exit');
+    setTimeout(() => {
+      setCurrentCardIndex((prev) => (prev + 1) % cards.length);
+      setTransitionPhase('enter');
+      setTimeout(() => setTransitionPhase('idle'), 240);
+    }, 160);
   };
 
   const handleDisconnect = () => {
@@ -341,7 +329,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             onTouchEnd={handleTouchEnd}
           >
             {/* Third card in stack - always show with circular indexing when 3+ cards */}
-            {cards.length >= 3 && !isTransitioning && (
+            {cards.length >= 3 && transitionPhase === 'idle' && (
               <div className="pointer-events-none absolute left-1/2 top-0 z-0 w-[88%] -translate-x-1/2">
                 <div className="h-32 overflow-hidden rounded-t-2xl opacity-60 shadow-sm">
                   <CreditCardDisplay
@@ -357,7 +345,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             )}
 
             {/* Second card in stack - always show with circular indexing when 2+ cards */}
-            {cards.length >= 2 && !isTransitioning && (
+            {cards.length >= 2 && transitionPhase === 'idle' && (
               <div className="pointer-events-none absolute left-1/2 top-5 z-10 w-[94%] -translate-x-1/2">
                 <div className="h-40 overflow-hidden rounded-t-2xl opacity-80 shadow-md">
                   <CreditCardDisplay
@@ -373,20 +361,8 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             )}
 
             {/* Front card (current card) */}
-            <div
-              className={`relative z-20 top-5 transition-all duration-300 ${
-                isTransitioning 
-                  ? swipeDirection === 'left' || swipeDirection === 'right'
-                    ? swipeDirection === 'left' 
-                      ? 'opacity-0 -translate-x-full'
-                      : 'opacity-0 translate-x-full'
-                    : swipeDirection === 'up' || swipeDirection === 'down'
-                      ? 'opacity-0 scale-90'
-                      : 'opacity-0'
-                  : 'opacity-100 translate-x-0 scale-100'
-              }`}
-            >
-              {/* Left Arrow - centered on this card */}
+            <div className="relative z-20 top-5">
+              {/* Left Arrow - outside the fade animation */}
               {cards.length > 1 && (
                 <button
                   onClick={handlePrevCard}
@@ -397,7 +373,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                 </button>
               )}
 
-              {/* Right Arrow - centered on this card */}
+              {/* Right Arrow */}
               {cards.length > 1 && (
                 <button
                   onClick={handleNextCard}
@@ -408,23 +384,30 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                 </button>
               )}
 
-              <CreditCardDisplay
-                bank={currentCard.bank}
-                name={cardholderName}
-                type={currentCard.type}
-                lastFour={currentCard.lastFour}
-                gradientIndex={getCardGradientIndex(currentCard.id)}
-                size="large"
-              />
+              {/* Card content - shuffle animation */}
+              <div className={`relative ${
+                transitionPhase === 'exit' ? 'card-shuffle-out' :
+                transitionPhase === 'enter' ? 'card-shuffle-in' :
+                ''
+              }`}>
+                <CreditCardDisplay
+                  bank={currentCard.bank}
+                  name={cardholderName}
+                  type={currentCard.type}
+                  lastFour={currentCard.lastFour}
+                  gradientIndex={getCardGradientIndex(currentCard.id)}
+                  size="large"
+                />
 
-              {/* Disconnect button on card */}
-              <button
-                onClick={() => setShowDisconnectConfirm(true)}
-                className="absolute right-4 top-4 z-30 rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
-                title="Disconnect card"
-              >
-                <X className="h-4 w-4 text-white" />
-              </button>
+                {/* Disconnect button on card */}
+                <button
+                  onClick={() => setShowDisconnectConfirm(true)}
+                  className="absolute right-4 top-4 z-30 rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+                  title="Disconnect card"
+                >
+                  <X className="h-4 w-4 text-white" />
+                </button>
+              </div>
             </div>
           </div>
 
