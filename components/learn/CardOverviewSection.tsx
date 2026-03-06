@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Plus,
   BookOpen,
@@ -16,6 +16,8 @@ import {
   LayoutGrid,
   CreditCard,
   ShieldCheck,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import type { ConnectedCard } from '@/types/card.types';
 import { getCardGradientIndex } from '@/lib/utils';
@@ -56,15 +58,99 @@ function safeUtilization(pct: number | null | undefined): number {
 }
 
 function utilizationDotColor(pct: number): string {
-  if (pct <= 30) return '#22c55e';
-  if (pct <= 60) return '#f59e0b';
+  if (pct <= 25) return '#22c55e';
+  if (pct <= 30) return '#f59e0b';
   return '#ef4444';
 }
 
 function healthMsg(pct: number): string {
-  if (pct <= 30) return 'Your credit health is looking healthy, make sure you repay on time.';
-  if (pct <= 60) return 'Your credit utilization is in the caution zone. Try to pay down balances.';
+  if (pct <= 25) return 'Your credit health is looking healthy, make sure you repay on time.';
+  if (pct <= 30) return 'Your credit utilization is in the caution zone. Try to pay down balances.';
   return 'Your credit utilization is high. Prioritize paying down your balances.';
+}
+
+function getUtilizationStatus(pct: number): 'safe' | 'caution' | 'danger' {
+  if (pct <= 25) return 'safe';
+  if (pct <= 30) return 'caution';
+  return 'danger';
+}
+
+function getCardsNeedingAttention(cards: ConnectedCard[]) {
+  return cards
+    .filter((c) => safeUtilization(c.utilizationPercentage) > 30)
+    .map((c) => ({
+      id: c.id,
+      bank: c.bank,
+      lastFour: c.lastFour,
+      utilization: safeUtilization(c.utilizationPercentage),
+    }));
+}
+
+// Carousel Dots
+
+interface CarouselDotsProps {
+  count: number;
+  activeIndex: number;
+  onSelect: (index: number) => void;
+  variant?: 'default' | 'danger';
+}
+
+function CarouselDots({ count, activeIndex, onSelect, variant = 'default' }: CarouselDotsProps) {
+  if (count <= 1) return null;
+
+  const activeColor = variant === 'danger' ? 'bg-red-500' : 'bg-brand';
+  const inactiveColor = 'bg-gray-300 dark:bg-gray-600';
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-3">
+      {Array.from({ length: count }).map((_, idx) => (
+        <button
+          key={idx}
+          onClick={() => onSelect(idx)}
+          className={`h-2 rounded-full transition-all duration-300 ${
+            idx === activeIndex ? `w-6 ${activeColor}` : `w-2 ${inactiveColor}`
+          }`}
+          aria-label={`View item ${idx + 1}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Card Needs Attention Alert
+
+interface CardNeedsAttentionAlertProps {
+  bank: string;
+  lastFour: string;
+  utilization: number;
+  onClose?: () => void;
+}
+
+function CardNeedsAttentionAlert({ bank, lastFour, utilization, onClose }: CardNeedsAttentionAlertProps) {
+  return (
+    <div className="rounded-2xl bg-white dark:bg-neutral-800 border-2 border-red-500 dark:border-red-500 p-4 sm:p-5 flex items-center gap-4 relative">
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors group"
+          aria-label="Close alert"
+        >
+          <X className="h-4 w-4 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200" />
+        </button>
+      )}
+      <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center">
+        <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-500" strokeWidth={2} />
+      </div>
+      <div className={`flex-1 min-w-0 ${onClose ? 'pr-8 sm:pr-10' : ''}`}>
+        <p className="text-sm sm:text-base text-gray-900 dark:text-white mb-1">
+          Your {bank} card ending with {lastFour} needs urgent attention
+        </p>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+          {utilization}% credit utilization • Make a payment to improve your credit score
+        </p>
+      </div>
+    </div>
+  );
 }
 
 // Trust Banner
@@ -144,21 +230,23 @@ function UtilizationBar({ percent }: { percent: number }) {
           className="absolute top-0 z-10 flex flex-col items-center transition-all duration-700"
           style={{ left: needleLeft }}
         >
-          <div className="w-1 h-12  bg-gray-700 dark:bg-gray-200" />
+          <div className="w-[2px] h-12  bg-gray-700 dark:bg-gray-200" />
         </div>
 
-        {/* Full gradient bar — always green→red, fills entire width */}
+        {/* Gradient bar scaled: 0-25% safe (green), 26-30% caution (yellow), 30%+ danger (orange-red) */}
         <div
           className="h-4 sm:h-5 w-full rounded-full"
-          style={{ background: 'linear-gradient(to right, #22c55e 0%, #84cc16 20%, #eab308 40%, #f97316 65%, #ef4444 100%)' }}
+          style={{ background: 'linear-gradient(to right, #22c55e 0%, #84cc16 20%, #eab308 27%, #f97316 30%, #ef4444 40%)' }}
         />
       </div>
 
       {/* Zone labels */}
-      <div className="flex justify-between text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 pt-5 md:pt-0">
-        <span>Safe</span>
-        <span>Caution</span>
-        <span>Danger</span>
+      <div className="relative text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 pt-5 md:pt-0">
+        <div className="flex justify-between">
+          <span className="absolute" style={{ left: '12.5%', transform: 'translateX(-50%)' }}>Safe</span>
+          <span className="absolute" style={{ left: '27.5%', transform: 'translateX(-50%)' }}>Caution</span>
+          <span className="absolute" style={{ left: '65%', transform: 'translateX(-50%)' }}>Danger</span>
+        </div>
       </div>
     </div>
   );
@@ -349,6 +437,7 @@ function ConsolidatedTiles({ cardCount, totalCreditLimit, totalSpent, earliestDu
 
 function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCard[]; cardholderName: string }) {
   const isSingle = cardList.length === 1;
+  const [alertIndex, setAlertIndex] = useState(0);
 
   // For single card, show the individual card view
   if (isSingle) {
@@ -390,6 +479,20 @@ function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCar
     .sort()
     .at(0) ?? null;
 
+  // Get cards needing attention (>30% utilization)
+  const cardsNeedingAttention = getCardsNeedingAttention(cardList);
+
+  // Auto-advance carousel every 3 seconds
+  useEffect(() => {
+    if (cardsNeedingAttention.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setAlertIndex((prev) => (prev + 1) % cardsNeedingAttention.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [cardsNeedingAttention.length]);
+
   return (
     <>
       <TrustBanner />
@@ -399,6 +502,23 @@ function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCar
         totalSpent={totalBalance}
         earliestDue={earliestDue}
       />
+      
+      {/* Cards Needing Attention - Carousel */}
+      {cardsNeedingAttention.length > 0 && (
+        <div className="mb-6 sm:mb-8">
+          <CardNeedsAttentionAlert
+            bank={cardsNeedingAttention[alertIndex].bank}
+            lastFour={cardsNeedingAttention[alertIndex].lastFour}
+            utilization={cardsNeedingAttention[alertIndex].utilization}
+          />
+          <CarouselDots
+            count={cardsNeedingAttention.length}
+            activeIndex={alertIndex}
+            onSelect={setAlertIndex}
+            variant="danger"
+          />
+        </div>
+      )}
       <UtilizationBar percent={util} />
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10 flex items-start gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
         <Info className="h-4 w-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
@@ -412,11 +532,19 @@ function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCar
 
 function IndividualView({ cardList, cardholderName }: { cardList: ConnectedCard[]; cardholderName: string }) {
   const [index, setIndex] = useState(0);
+  const [closedAlerts, setClosedAlerts] = useState<Set<string>>(new Set());
   const prev = useCallback(() => setIndex((i) => (i === 0 ? cardList.length - 1 : i - 1)), [cardList.length]);
   const next = useCallback(() => setIndex((i) => (i === cardList.length - 1 ? 0 : i + 1)), [cardList.length]);
 
   const card = cardList[index];
   const util = safeUtilization(card.utilizationPercentage);
+  const status = getUtilizationStatus(util);
+
+  const handleCloseAlert = () => {
+    setClosedAlerts(prev => new Set([...prev, card.id]));
+  };
+
+  const isAlertClosed = closedAlerts.has(card.id);
 
   return (
     <>
@@ -424,34 +552,52 @@ function IndividualView({ cardList, cardholderName }: { cardList: ConnectedCard[
 
       {/* Dot nav + arrows */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          {cardList.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setIndex(i)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === index
-                  ? 'w-6 bg-brand'
-                  : 'w-2 bg-gray-300 dark:bg-gray-600'
-              }`}
-              aria-label={`View card ${i + 1}`}
-            />
-          ))}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {cardList.map((_, i) => {
+              const cardUtil = safeUtilization(cardList[i].utilizationPercentage);
+              const isDanger = cardUtil > 30;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setIndex(i)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    i === index
+                      ? `w-6 ${isDanger ? 'bg-red-500' : 'bg-brand'}`
+                      : `w-2 ${isDanger ? 'bg-red-300 dark:bg-red-600' : 'bg-gray-300 dark:bg-gray-600'}`
+                  }`}
+                  aria-label={`View card ${i + 1}`}
+                />
+              );
+            })}
+          </div>
+          {status === 'danger' && (
+            <div className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400 font-medium">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>High Utilization - Make Payments</span>
+            </div>
+          )}
+          {status === 'caution' && (
+            <div className="flex items-center gap-1 text-xs text-amber-500 dark:text-amber-400 font-medium">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>Caution Zone - Monitor Spending</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={prev}
-            className="h-8 w-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+            className="h-8 w-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center bg-gray-300 dark:bg-gray-700 hover:bg-brand dark:hover:bg-brand transition-colors group"
             aria-label="Previous card"
           >
-            <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+            <ChevronLeft className="h-4 w-4 text-gray-700 dark:text-gray-300 group-hover:text-white dark:group-hover:text-white transition-colors" />
           </button>
           <button
             onClick={next}
-            className="h-8 w-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+            className="h-8 w-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center bg-gray-300 dark:bg-gray-700 hover:bg-brand dark:hover:bg-brand transition-colors group"
             aria-label="Next card"
           >
-            <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+            <ChevronRight className="h-4 w-4 text-gray-700 dark:text-gray-300 group-hover:text-white dark:group-hover:text-white transition-colors" />
           </button>
         </div>
       </div>
@@ -463,6 +609,19 @@ function IndividualView({ cardList, cardholderName }: { cardList: ConnectedCard[
         paymentDue={card.paymentDueDate}
         cardholderName={cardholderName}
       />
+      
+      {/* Urgent Attention Alert for Individual Card */}
+      {status === 'danger' && !isAlertClosed && (
+        <div className="mb-6 sm:mb-8">
+          <CardNeedsAttentionAlert
+            bank={card.bank}
+            lastFour={card.lastFour}
+            utilization={util}
+            onClose={handleCloseAlert}
+          />
+        </div>
+      )}
+      
       <UtilizationBar percent={util} />
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10 flex items-start gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
         <Info className="h-4 w-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
