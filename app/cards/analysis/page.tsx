@@ -104,14 +104,12 @@ export default function CreditAnalysisPage() {
       <main className="pt-28 lg:pt-40 pb-16">
         <div className="container mx-auto px-4 md:px-6">
           {connectedCards.length === 0 ? (
-            <div className="px-4 md:px-6">
               <EmptyCardState 
                 onAddCard={handleAddCard}
                 onSeedDemoData={handleSeedDemoData}
                 isSeeding={isSeeding}
                 showFAQButton 
               />
-            </div>
           ) : (
             <CreditAnalysis 
               connectedCards={connectedCards}
