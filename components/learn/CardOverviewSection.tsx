@@ -164,7 +164,7 @@ function UtilizationBar({ percent }: { percent: number }) {
   );
 }
 
-// Connected: 4-tile row
+// Connected: Individual card view with 4 tiles
 
 interface CardTilesProps {
   card: ConnectedCard;          // the "active" card for tile 1
@@ -253,13 +253,128 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue, cardholderNa
   );
 }
 
+// Consolidated: Aggregated data tiles (no specific card shown)
+
+interface ConsolidatedTilesProps {
+  cardCount: number;
+  totalCreditLimit: number;
+  totalSpent: number;
+  earliestDue: string | null;
+}
+
+function ConsolidatedTiles({ cardCount, totalCreditLimit, totalSpent, earliestDue }: ConsolidatedTilesProps) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] gap-3 mb-6 sm:mb-8">
+
+      {/* Tile 1 – Connected Cards Summary */}
+      <div className="rounded-2xl bg-brand border border-brand p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
+        <div className="flex items-start justify-between">
+          <span className="text-xs sm:text-sm text-white font-medium">Connected Cards</span>
+          <button className="text-white/70 hover:text-white transition-colors mt-0.5">
+            <Info className="h-4 w-4" />
+          </button>
+        </div>
+        <div>
+          <p className="text-2xl sm:text-3xl font-bold text-white mt-2 tabular-nums">
+            {cardCount} {cardCount === 1 ? 'Card' : 'Cards'}
+          </p>
+          <div className="mt-3 flex items-center gap-1.5 text-xs bg-white/20 px-2 py-1 rounded text-white font-medium w-fit">
+            <LayoutGrid className="h-3.5 w-3.5" />
+            <span>All Cards View</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tile 2 – Total Credit Limit */}
+      <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
+        <div className="flex items-start justify-between">
+          <span className="text-xs sm:text-sm text-brand font-medium">Total Credit Limit</span>
+          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
+            <Info className="h-4 w-4" />
+          </button>
+        </div>
+        <div>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2 tabular-nums">
+            {formatCurrency(totalCreditLimit)}
+          </p>
+          <button className="mt-3 inline-flex items-center gap-1.5 text-xs bg-brand/15 px-2 py-1 rounded text-brand font-medium transition-opacity">
+            <BookOpen className="h-3.5 w-3.5" />
+            <span>Learn More</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Tile 3 – Total Spent */}
+      <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
+        <div className="flex items-start justify-between">
+          <span className="text-xs sm:text-sm text-brand font-medium">Total Spent</span>
+          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
+            <Info className="h-4 w-4" />
+          </button>
+        </div>
+        <div>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2 tabular-nums">
+            {formatCurrency(totalSpent)}
+          </p>
+          <button className="mt-3 inline-flex items-center gap-1.5 text-xs bg-brand/15 px-2 py-1 rounded text-brand font-medium transition-opacity">
+            <TrendingUp className="h-3.5 w-3.5" />
+            <span>Across all cards</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Tile 4 – Earliest Payment Due */}
+      <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
+        <div className="flex items-start justify-between">
+          <span className="text-xs sm:text-sm text-brand font-medium">Next Payment Due</span>
+          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
+            <Info className="h-4 w-4" />
+          </button>
+        </div>
+        <div>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2">
+            {formatPaymentDue(earliestDue)}
+          </p>
+          <button className="mt-3 inline-flex items-center gap-1.5  text-xs bg-brand/15 px-2 py-1 rounded text-brand font-medium transition-opacity">
+            <Bell className="h-3.5 w-3.5" />
+            <span>Set Reminder</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Consolidated (all cards aggregated)
 
 function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCard[]; cardholderName: string }) {
   const isSingle = cardList.length === 1;
-  const primaryCard = cardList[0];
 
-  // Aggregated values
+  // For single card, show the individual card view
+  if (isSingle) {
+    const card = cardList[0];
+    const util = safeUtilization(card.utilizationPercentage);
+    
+    return (
+      <>
+        <TrustBanner />
+        <CardTiles
+          card={card}
+          creditLimit={card.creditLimit}
+          spentThisCycle={card.currentBalance}
+          paymentDue={card.paymentDueDate}
+          cardholderName={cardholderName}
+        />
+        <UtilizationBar percent={util} />
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10 flex items-start gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
+          <Info className="h-4 w-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
+          <span>{healthMsg(util)}</span>
+        </div>
+      </>
+    );
+  }
+
+  // For multiple cards, show aggregated view without showing a specific card
   const totalLimit   = cardList.reduce((s, c) => s + (c.creditLimit ?? 0), 0);
   const totalBalance = cardList.reduce((s, c) => s + (c.currentBalance ?? 0), 0);
 
@@ -278,12 +393,11 @@ function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCar
   return (
     <>
       <TrustBanner />
-      <CardTiles
-        card={primaryCard}
-        creditLimit={isSingle ? primaryCard.creditLimit : totalLimit}
-        spentThisCycle={totalBalance}
-        paymentDue={earliestDue}
-        cardholderName={cardholderName}
+      <ConsolidatedTiles
+        cardCount={cardList.length}
+        totalCreditLimit={totalLimit}
+        totalSpent={totalBalance}
+        earliestDue={earliestDue}
       />
       <UtilizationBar percent={util} />
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10 flex items-start gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
