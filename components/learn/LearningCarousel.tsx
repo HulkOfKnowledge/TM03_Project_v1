@@ -193,7 +193,7 @@ export function LearningCarousel({
             <button
               onClick={prevPage}
               disabled={currentPage <= 0}
-              className="h-14 w-14 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-brand dark:hover:bg-brand transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-300 dark:disabled:hover:bg-gray-800"
+              className="h-14 w-14 rounded-full bg-brand text-white hover:opacity-90 transition-all flex items-center justify-center disabled:bg-gray-300 dark:disabled:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
               aria-label="Previous"
             >
               <ChevronLeft className="h-6 w-6" />
@@ -201,7 +201,7 @@ export function LearningCarousel({
             <button
               onClick={nextPage}
               disabled={currentPage >= totalPages - 1}
-              className="h-14 w-14 rounded-full bg-gray-300 dark:bg-gray-800 text-white hover:bg-brand dark:hover:bg-brand transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-300 dark:disabled:hover:bg-gray-800"
+              className="h-14 w-14 rounded-full bg-brand text-white hover:opacity-90 transition-all flex items-center justify-center disabled:bg-gray-300 dark:disabled:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
               aria-label="Next"
             >
               <ChevronRight className="h-6 w-6" />

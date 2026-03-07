@@ -128,7 +128,7 @@ interface CardNeedsAttentionAlertProps {
 
 function CardNeedsAttentionAlert({ bank, lastFour, utilization, onClose }: CardNeedsAttentionAlertProps) {
   return (
-    <div className="rounded-2xl bg-white dark:bg-neutral-800 border-2 border-red-500 dark:border-red-500 p-4 sm:p-5 flex items-center gap-4 relative">
+    <div className="rounded-xl bg-white dark:bg-neutral-800 border-2 border-red-500 dark:border-red-500 p-4 sm:p-5 flex items-center gap-4 relative">
       {onClose && (
         <button
           onClick={onClose}
@@ -157,7 +157,7 @@ function CardNeedsAttentionAlert({ bank, lastFour, utilization, onClose }: CardN
 
 function TrustBanner() {
   return (
-    <div className="flex items-center gap-3 px-4 py-3.5 sm:px-5 sm:py-3 rounded-2xl border border-brand bg-white dark:bg-neutral-900 mb-6 sm:mb-8">
+    <div className="flex items-center gap-3 px-4 py-3.5 sm:px-5 sm:py-3 rounded-2xl bg-white dark:bg-neutral-900 mb-6 sm:mb-8">
       <div className="shrink-0 w-8 h-8 rounded-full bg-brand flex items-center justify-center">
         <ShieldCheck className="h-4 w-4 text-white" strokeWidth={2.5} />
       </div>
@@ -281,7 +281,26 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue, cardholderNa
         />
       </div>
 
-      {/* Tile 2 – Credit Limit */}
+      {/* Tile 2 – Payment Due */}
+      <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
+        <div className="flex items-start justify-between">
+          <span className="text-xs sm:text-sm text-brand font-medium">Payment Due</span>
+          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
+            <Info className="h-4 w-4" />
+          </button>
+        </div>
+        <div>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2">
+            {formatPaymentDue(paymentDue)}
+          </p>
+          <button className="mt-3 inline-flex items-center gap-1.5  text-xs bg-brand/15 px-2 py-1 rounded text-brand font-medium transition-opacity">
+            <Bell className="h-3.5 w-3.5" />
+            <span>Set Reminder</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Tile 3 – Credit Limit */}
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
           <span className="text-xs sm:text-sm text-brand font-medium">Credit Limit</span>
@@ -300,7 +319,7 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue, cardholderNa
         </div>
       </div>
 
-      {/* Tile 3 – Spent This Cycle */}
+      {/* Tile 4 – Spent This Cycle */}
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
           <span className="text-xs sm:text-sm text-brand font-medium">Spent This Cycle</span>
@@ -319,24 +338,6 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue, cardholderNa
         </div>
       </div>
 
-      {/* Tile 4 – Payment Due */}
-      <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
-        <div className="flex items-start justify-between">
-          <span className="text-xs sm:text-sm text-brand font-medium">Payment Due</span>
-          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
-            <Info className="h-4 w-4" />
-          </button>
-        </div>
-        <div>
-          <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2">
-            {formatPaymentDue(paymentDue)}
-          </p>
-          <button className="mt-3 inline-flex items-center gap-1.5  text-xs bg-brand/15 px-2 py-1 rounded text-brand font-medium transition-opacity">
-            <Bell className="h-3.5 w-3.5" />
-            <span>Set Reminder</span>
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
