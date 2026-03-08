@@ -1,5 +1,6 @@
 /**
  * Client-side helpers for auth API routes
+ * Includes in-memory caching to avoid unnecessary API calls
  */
 
 import type { User } from '@supabase/supabase-js';
@@ -7,6 +8,11 @@ import type { User } from '@supabase/supabase-js';
 // In-memory cache for auth requests (session duration)
 let authCache: { user: User | null; profile: any | null } | null = null;
 
+/**
+ * Fetch current user and profile with caching support
+ * @param forceRefresh - If true, bypass cache and fetch fresh data
+ * @returns User and profile data
+ */
 export async function fetchAuthMe(forceRefresh: boolean = false): Promise<{ user: User | null; profile: any | null }> {
   // Return cached data if available (unless force refresh)
   if (!forceRefresh && authCache) {
@@ -39,6 +45,11 @@ export async function fetchAuthMe(forceRefresh: boolean = false): Promise<{ user
 // Clear the auth cache (useful after login/logout)
 export function clearAuthCache(): void {
   authCache = null;
+}
+
+// Update auth cache without API call (useful after profile updates)
+export function updateAuthCache(user: User | null, profile: any | null): void {
+  authCache = { user, profile };
 }
 
 export async function startOAuth(provider: 'google' | 'facebook', redirectTo: string): Promise<string> {

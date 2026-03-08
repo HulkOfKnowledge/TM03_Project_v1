@@ -11,6 +11,11 @@ import type {
   ConnectedCard,
   Transaction,
 } from '@/types/card.types';
+import { 
+  fetchCardTransactions, 
+  fetchCardMonthlyHistory, 
+  fetchCreditAnalysis 
+} from '@/lib/api/cards-client';
 
 export class CardService {
   /**
@@ -68,43 +73,17 @@ export class CardService {
   }
 
   /**
-   * Get card transaction history from API
+   * Get card transaction history from API (cached)
    */
-  async getCardHistory(cardId: string): Promise<CardHistoryRow[]> {
-    try {
-      const response = await fetch(`/api/cards/${cardId}/monthly-history`);
-      
-      if (!response.ok) {
-        console.error('Failed to fetch card history');
-        return [];
-      }
-
-      const result = await response.json();
-      return result.data || [];
-    } catch (error) {
-      console.error('Error fetching card history:', error);
-      return [];
-    }
+  async getCardHistory(cardId: string, forceRefresh: boolean = false): Promise<CardHistoryRow[]> {
+    return fetchCardMonthlyHistory(cardId, forceRefresh);
   }
 
   /**
-   * Get card transactions from API
+   * Get card transactions from API (cached)
    */
-  async getCardTransactions(cardId: string, limit: number = 50): Promise<Transaction[]> {
-    try {
-      const response = await fetch(`/api/cards/${cardId}/transactions?limit=${limit}`);
-      
-      if (!response.ok) {
-        console.error('Failed to fetch card transactions');
-        return [];
-      }
-
-      const result = await response.json();
-      return result.data?.transactions || [];
-    } catch (error) {
-      console.error('Error fetching card transactions:', error);
-      return [];
-    }
+  async getCardTransactions(cardId: string, limit: number = 50, forceRefresh: boolean = false): Promise<Transaction[]> {
+    return fetchCardTransactions(cardId, limit, forceRefresh);
   }
 
   /**
@@ -132,28 +111,10 @@ export class CardService {
   }
 
   /**
-   * Get credit analysis data from API
+   * Get credit analysis data from API (cached)
    */
-  async getCreditAnalysisData(): Promise<CreditAnalysisData | null> {
-    try {
-      const response = await fetch('/api/cards/analysis');
-      
-      if (!response.ok) {
-        console.error('Failed to fetch credit analysis');
-        return null;
-      }
-
-      const result = await response.json();
-      
-      if (!result.success || !result.data) {
-        return null;
-      }
-      
-      return result.data;
-    } catch (error) {
-      console.error('Error fetching credit analysis:', error);
-      return null;
-    }
+  async getCreditAnalysisData(forceRefresh: boolean = false): Promise<CreditAnalysisData | null> {
+    return fetchCreditAnalysis(forceRefresh);
   }
 }
 

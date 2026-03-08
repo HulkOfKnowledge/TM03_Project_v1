@@ -7,6 +7,11 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ConnectedCard } from '@/types/card.types';
+import { 
+  fetchCards, 
+  addCardToCache,
+  removeCardFromCache 
+} from '@/lib/api/cards-client';
 
 interface CardContextType {
   connectedCards: ConnectedCard[];
@@ -42,18 +47,11 @@ export function CardProvider({ children }: { children: ReactNode }) {
     }
   }, [connectedCards, selectedCard]);
 
-  const loadCards = async () => {
+  const loadCards = async (forceRefresh: boolean = false) => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/cards');
-      
-      if (response.ok) {
-        const result = await response.json();
-        setConnectedCards(result.data || []);
-      } else {
-        console.error('Failed to load cards:', response.statusText);
-        setConnectedCards([]);
-      }
+      const cards = await fetchCards(forceRefresh);
+      setConnectedCards(cards);
     } catch (error) {
       console.error('Error loading cards:', error);
       setConnectedCards([]);
@@ -93,7 +91,8 @@ export function CardProvider({ children }: { children: ReactNode }) {
       const result = await response.json();
       const addedCard = result.data;
 
-      // Update local state with the card from the API
+      // Update cache and local state with the card from the API
+      addCardToCache(addedCard);
       setConnectedCards(prev => [...prev, addedCard]);
     } catch (error) {
       console.error('Error adding card:', error);
@@ -108,6 +107,8 @@ export function CardProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.ok) {
+        // Update cache and local state
+        removeCardFromCache(cardId);
         setConnectedCards(prev => prev.filter(card => card.id !== cardId));
       } else {
         console.error('Failed to remove card:', response.statusText);
@@ -124,7 +125,7 @@ export function CardProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshCards = async () => {
-    await loadCards();
+    await loadCards(true);
   };
 
   return (

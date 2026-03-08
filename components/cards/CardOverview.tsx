@@ -430,7 +430,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
           {/* Card Status and Progress */}
           <div className="mt-6 sm:mt-8">
-            <div className="mb-4 flex flex-col items-center gap-2 text-center">
+            <div className="mb-4 flex flex-col items-center text-center">
               <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                 This card is in the{' '}
                 <span
