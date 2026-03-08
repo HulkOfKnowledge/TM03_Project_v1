@@ -49,9 +49,19 @@ export interface Transaction {
   amount: number;
   category: string | null;
   merchantName: string | null;
+  balance?: number; // Running balance after transaction
+  zone?: 'Safe' | 'Caution' | 'Danger'; // Calculated zone based on utilization
+  utilizationPercentage?: number; // Calculated utilization at time of transaction
 }
 
-export type SortField = 'zone' | 'month' | 'startBalance' | 'endingBalance' | 'peakUsage' | 'payment';
+export interface DateFilter {
+  type: 'month' | 'range' | 'year';
+  startDate: string; // ISO date string
+  endDate: string;   // ISO date string
+  label: string;     // Display label (e.g., "January 2026")
+}
+
+export type SortField = 'zone' | 'month' | 'startBalance' | 'endingBalance' | 'peakUsage' | 'payment' | 'date' | 'amount';
 export type SortDirection = 'asc' | 'desc' | null;
 
 export interface CardOverviewData {

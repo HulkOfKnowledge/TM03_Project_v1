@@ -7,10 +7,11 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Info, Search, X } from 'lucide-react';
-import type { ConnectedCard, CardOverviewData } from '@/types/card.types';
+import type { ConnectedCard, CardOverviewData, Transaction, DateFilter } from '@/types/card.types';
 import { cardService } from '@/services/card.service';
 import { CreditCardDisplay } from './CreditCardDisplay';
 import { CardHistoryTable } from './CardHistoryTable';
+import { DailyTransactionTable } from './DailyTransactionTable';
 import { VolumeProgressBar } from './VolumeProgressBar';
 import { CardOverviewSkeleton } from './CardOverviewSkeleton';
 import { useUser } from '@/hooks/useAuth';
@@ -26,7 +27,6 @@ interface CardOverviewProps {
 export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] }: CardOverviewProps) {
   const { profile } = useUser();
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [selectedMonth, setSelectedMonth] = useState('This month');
   const [transitionPhase, setTransitionPhase] = useState<'idle' | 'exit' | 'enter'>('idle');
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -34,10 +34,23 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   
   // Track which cards have had their data loaded
   const loadedCardIds = useRef(new Set<string>());
+  const loadedTransactionIds = useRef(new Set<string>());
+  
+  // Date filtering state
+  const [filterType, setFilterType] = useState<'month' | 'range' | 'year'>('month');
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  
+  // Transaction data storage - Map<cardId, Transaction[]>
+  const [allTransactionData, setAllTransactionData] = useState<Map<string, Transaction[]>>(new Map());
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   
   // History table filters
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [historyZoneFilter, setHistoryZoneFilter] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'monthly' | 'daily'>('daily');
   
   // Touch/swipe state
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -59,6 +72,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
   // Current card's data
   const overviewData = currentCard ? allCardData.get(currentCard.id) : null;
+  const currentTransactions = currentCard ? allTransactionData.get(currentCard.id) || [] : [];
 
   // Adjust currentCardIndex if it becomes out of bounds when cards are removed
   useEffect(() => {
@@ -135,8 +149,141 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     }
   }, [cards.map(c => c.id).join(',')]); // Re-run when card IDs change
 
+  // Fetch transactions for cards
+  useEffect(() => {
+    const loadTransactions = async () => {
+      if (!currentCard) return;
+      
+      // Check if we already loaded transactions for this card
+      if (loadedTransactionIds.current.has(currentCard.id)) {
+        return;
+      }
+      
+      setIsLoadingTransactions(true);
+      try {
+        const transactions = await cardService.getCardTransactions(currentCard.id, 500);
+        
+        // Calculate zones and utilization for each transaction
+        const enrichedTransactions = cardService.calculateTransactionZones(transactions, currentCard);
+        
+        setAllTransactionData(prev => {
+          const newMap = new Map(prev);
+          newMap.set(currentCard.id, enrichedTransactions);
+          return newMap;
+        });
+        
+        loadedTransactionIds.current.add(currentCard.id);
+      } catch (error) {
+        console.error('Error loading transactions:', error);
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    };
+    
+    loadTransactions();
+  }, [currentCard?.id]);
+
   // Minimum swipe distance (in pixels)
   const minSwipeDistance = 50;
+
+  // Get current date filter
+  const getCurrentDateFilter = (): DateFilter => {
+    const now = new Date();
+    
+    if (filterType === 'month') {
+      const [year, month] = selectedMonth.split('-');
+      const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endOfMonth = new Date(parseInt(year), parseInt(month), 0);
+      
+      return {
+        type: 'month',
+        startDate: startOfMonth.toISOString().split('T')[0],
+        endDate: endOfMonth.toISOString().split('T')[0],
+        label: startOfMonth.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+      };
+    } else if (filterType === 'year') {
+      return {
+        type: 'year',
+        startDate: `${selectedYear}-01-01`,
+        endDate: `${selectedYear}-12-31`,
+        label: selectedYear
+      };
+    } else {
+      // range
+      return {
+        type: 'range',
+        startDate: startDate || now.toISOString().split('T')[0],
+        endDate: endDate || now.toISOString().split('T')[0],
+        label: `${startDate || 'Start'} to ${endDate || 'End'}`
+      };
+    }
+  };
+
+  // Apply date filter to transactions
+  const filteredTransactions = useMemo(() => {
+    if (!currentCard || currentTransactions.length === 0) return [];
+    
+    const dateFilter = getCurrentDateFilter();
+    
+    return currentTransactions.filter(txn => {
+      const txnDate = txn.date;
+      const inDateRange = txnDate >= dateFilter.startDate && txnDate <= dateFilter.endDate;
+      
+      // Search filter
+      const matchesSearch = !historySearchQuery || 
+        txn.description.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
+        txn.date.includes(historySearchQuery);
+      
+      // Zone filter
+      const matchesZone = !historyZoneFilter || txn.zone === historyZoneFilter;
+      
+      return inDateRange && matchesSearch && matchesZone;
+    });
+  }, [currentCard, currentTransactions, filterType, selectedMonth, selectedYear, startDate, endDate, historySearchQuery, historyZoneFilter]);
+
+  // Calculate filtered metrics based on date range
+  const filteredMetrics = useMemo(() => {
+    if (!currentCard || !overviewData) return overviewData?.metrics || [];
+    
+    if (filteredTransactions.length === 0) return overviewData.metrics;
+    
+    // Calculate metrics from filtered transactions
+    const purchases = filteredTransactions.filter(t => t.amount > 0);
+    const payments = filteredTransactions.filter(t => t.amount < 0);
+    
+    const totalSpending = purchases.reduce((sum, t) => sum + t.amount, 0);
+    const totalPayments = payments.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const avgTransaction = purchases.length > 0 ? totalSpending / purchases.length : 0;
+    
+    const formatCurrency = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    
+    return [
+      { 
+        label: 'Total Spending', 
+        value: formatCurrency(totalSpending), 
+        info: true, 
+        description: `${purchases.length} transaction${purchases.length !== 1 ? 's' : ''}` 
+      },
+      { 
+        label: 'Total Payments', 
+        value: formatCurrency(totalPayments), 
+        info: true, 
+        description: `${payments.length} payment${payments.length !== 1 ? 's' : ''}` 
+      },
+      { 
+        label: 'Current Balance', 
+        value: formatCurrency(currentCard.currentBalance), 
+        info: true, 
+        description: `Available: ${formatCurrency(currentCard.availableCredit)}` 
+      },
+      { 
+        label: 'Avg Transaction', 
+        value: formatCurrency(avgTransaction), 
+        info: true, 
+        description: purchases.length > 0 ? 'Per purchase' : 'No purchases' 
+      },
+    ];
+  }, [currentCard, filteredTransactions, overviewData]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
@@ -223,10 +370,34 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   
   // Get available zones for filter dropdown
   const availableZones = useMemo(() => {
-    if (!overviewData?.history) return [];
-    const zones = new Set(overviewData.history.map(row => row.zone));
-    return Array.from(zones).sort();
-  }, [overviewData?.history]);
+    if (viewMode === 'daily') {
+      const zones = new Set(filteredTransactions.map(txn => txn.zone).filter(Boolean));
+      return Array.from(zones).sort();
+    } else {
+      if (!overviewData?.history) return [];
+      const zones = new Set(overviewData.history.map(row => row.zone));
+      return Array.from(zones).sort();
+    }
+  }, [viewMode, filteredTransactions, overviewData?.history]);
+
+  // Generate month options (last 24 months)
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const now = new Date();
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = d.toISOString().slice(0, 7); // YYYY-MM
+      const label = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      options.push({ value, label });
+    }
+    return options;
+  }, []);
+
+  // Generate year options (last 5 years)
+  const yearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
+  }, []);
 
   // Safety check: if no current card, don't render
   if (!currentCard) {
@@ -468,28 +639,74 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
       {/* Metrics Section */}
       <div className="mb-8">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
               {currentCard.bank} {currentCard.lastFour} Metrics
             </h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-              Sample data for {currentCard.bank} {currentCard.name}
+              {getCurrentDateFilter().label}
             </p>
           </div>
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
-          >
-            <option>This month</option>
-            <option>Last month</option>
-            <option>Last 3 months</option>
-          </select>
+          
+          {/* Date Filter Controls */}
+          <div className="flex flex-wrap gap-2">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as 'month' | 'range' | 'year')}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+            >
+              <option value="month">Month</option>
+              <option value="year">Year</option>
+              <option value="range">Date Range</option>
+            </select>
+            
+            {filterType === 'month' && (
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+              >
+                {monthOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            )}
+            
+            {filterType === 'year' && (
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+              >
+                {yearOptions.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            )}
+            
+            {filterType === 'range' && (
+              <div className="flex gap-2 items-center">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+                />
+                <span className="text-gray-500">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {overviewData.metrics.map((metric, index) => (
+          {filteredMetrics.map((metric, index) => (
             <div
               key={index}
               className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950"
@@ -515,19 +732,48 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
       {/* History Section */}
       <div className="mb-8">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex-1">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
               {currentCard.bank} {currentCard.lastFour} History
             </h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-              Currently showing sample data for {currentCard.bank}{' '}
-              {currentCard.name} (****{currentCard.lastFour})
+              {viewMode === 'daily' 
+                ? `Showing ${filteredTransactions.length} transaction${filteredTransactions.length !== 1 ? 's' : ''} for ${getCurrentDateFilter().label}`
+                : `Monthly summary for ${currentCard.bank} ${currentCard.name} (****${currentCard.lastFour})`
+              }
             </p>
           </div>
-          <button className="px-4 py-2 text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-            Download Statement
-          </button>
+          
+          <div className="flex gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex rounded-lg border border-gray-200 dark:border-gray-800">
+              <button
+                onClick={() => setViewMode('daily')}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  viewMode === 'daily'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-900'
+                }`}
+              >
+                Daily
+              </button>
+              <button
+                onClick={() => setViewMode('monthly')}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  viewMode === 'monthly'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-900'
+                }`}
+              >
+                Monthly
+              </button>
+            </div>
+            
+            <button className="px-4 py-2 text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+              Download Statement
+            </button>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -538,7 +784,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
               type="text"
               value={historySearchQuery}
               onChange={(e) => setHistorySearchQuery(e.target.value)}
-              placeholder="Search month, date, total balance, and..."
+              placeholder={viewMode === 'daily' ? "Search description, date..." : "Search month, date, total balance..."}
               className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:placeholder-gray-400"
             />
           </div>
@@ -557,11 +803,22 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
         </div>
 
         {/* Table */}
-        <CardHistoryTable data={filteredHistory} card={currentCard} />
+        {isLoadingTransactions ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
+          </div>
+        ) : viewMode === 'daily' ? (
+          <DailyTransactionTable data={filteredTransactions} card={currentCard} />
+        ) : (
+          <CardHistoryTable data={filteredHistory} card={currentCard} />
+        )}
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Page 1 of 1
+            {viewMode === 'daily' 
+              ? `Showing ${filteredTransactions.length} transaction${filteredTransactions.length !== 1 ? 's' : ''}`
+              : 'Page 1 of 1'
+            }
           </p>
         </div>
       </div>

@@ -111,6 +111,48 @@ export class CardService {
   }
 
   /**
+   * Calculate zones and utilization for each transaction
+   * Enriches transactions with balance, utilization%, and zone information
+   */
+  calculateTransactionZones(transactions: Transaction[], card: ConnectedCard): Transaction[] {
+    if (!transactions || transactions.length === 0) return [];
+    
+    // Sort transactions by date (oldest first) to calculate running balance
+    const sorted = [...transactions].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    
+    let runningBalance = card.currentBalance;
+    
+    // If we have transactions, work backwards from current balance
+    // This is an approximation - in a real system you'd get balance from each transaction
+    const enriched = sorted.map((txn, index) => {
+      // For now, use the balance from the transaction if available
+      // Otherwise calculate based on current balance working backwards
+      const balance = txn.balance || runningBalance;
+      const utilizationPercentage = card.creditLimit > 0 
+        ? (balance / card.creditLimit) * 100 
+        : 0;
+      const zone = this.calculateUtilizationZone(utilizationPercentage);
+      
+      // Update running balance for next transaction (working backwards)
+      if (index < sorted.length - 1) {
+        runningBalance = balance - sorted[index + 1].amount;
+      }
+      
+      return {
+        ...txn,
+        balance,
+        utilizationPercentage,
+        zone
+      };
+    });
+    
+    // Return in reverse chronological order (newest first)
+    return enriched.reverse();
+  }
+
+  /**
    * Get credit analysis data from API (cached)
    */
   async getCreditAnalysisData(forceRefresh: boolean = false): Promise<CreditAnalysisData | null> {
