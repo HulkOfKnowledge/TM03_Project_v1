@@ -89,7 +89,7 @@ export default function LearnDashboard() {
 
           {/* Learning Path Section */}
           <section className="mb-16">
-            <div className="bg-gray-100 dark:bg-gray-900 rounded-none md:rounded-[32px] p-0 md:p-8 md:p-12">
+            <div className="md:bg-gray-100 dark:bg-gray-900 rounded-none md:rounded-[32px] p-3 md:p-8 md:p-12">
               <LearningCarousel
                 items={learningPath}
                 onItemClick={handleContentClick}
@@ -156,7 +156,7 @@ export default function LearnDashboard() {
                 </p>
               </div>
               <Link
-                href="/learn/all"
+                href="/learn/learning-space"
                 className="hidden md:inline-flex px-6 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-black dark:text-white font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 View all

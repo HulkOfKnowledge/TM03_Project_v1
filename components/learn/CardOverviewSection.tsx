@@ -128,7 +128,7 @@ interface CardNeedsAttentionAlertProps {
 
 function CardNeedsAttentionAlert({ bank, lastFour, utilization, onClose }: CardNeedsAttentionAlertProps) {
   return (
-    <div className="rounded-xl bg-white dark:bg-neutral-800 border-2 border-red-500 dark:border-red-500 p-4 sm:p-5 flex items-center gap-4 relative">
+    <div className="rounded-xl bg-white dark:bg-neutral-800 border border-red-500 dark:border-red-500 p-4 sm:p-5 flex items-center gap-4 relative">
       {onClose && (
         <button
           onClick={onClose}
