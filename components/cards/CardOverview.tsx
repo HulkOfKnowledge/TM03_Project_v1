@@ -206,7 +206,6 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   };
 
   // Filter history data based on search and filters
-  // Note: These useMemo hooks must come before any early returns to comply with Rules of Hooks
   const filteredHistory = useMemo(() => {
     if (!overviewData?.history) return [];
     
@@ -396,10 +395,10 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                 {/* Disconnect button on card */}
                 <button
                   onClick={() => setShowDisconnectConfirm(true)}
-                  className="absolute right-4 top-4 z-30 rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+                  className="absolute right-1 top-2 z-30 rounded-full bg-white/50 p-2 transition-colors hover:bg-white/20"
                   title="Disconnect card"
                 >
-                  <X className="h-4 w-4 text-white" />
+                  <X className="h-4 w-4 text-black dark:text-white" />
                 </button>
               </div>
             </div>
@@ -431,12 +430,31 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
           {/* Card Status and Progress */}
           <div className="mt-6 sm:mt-8">
-            <div className="mb-4 text-center">
+            <div className="mb-4 flex flex-col items-center gap-2 text-center">
               <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                This card is in the {zoneText}
+                This card is in the{' '}
+                <span
+                  className={`inline-block rounded-sm px-2 py-1 text-xs ${
+                    zoneText === 'Safe Zone'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                      : zoneText === 'Caution Zone'
+                      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                  }`}
+                >
+                  {zoneText}
+                </span>
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">
-                Remember to payback on time to keep it consistent
+              <p className={`text-xs ${
+                zoneText === 'Danger Zone'
+                  ? 'font-medium text-red-600 dark:text-red-400'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                {zoneText === 'Safe Zone'
+                  ? 'Great work! Keep your spending habits consistent to maintain this.'
+                  : zoneText === 'Caution Zone'
+                  ? 'Getting close! Monitor your spending carefully and avoid new charges.'
+                  : 'Make a payment now to bring your balance down and protect your credit score!'}
               </p>
             </div>
 
