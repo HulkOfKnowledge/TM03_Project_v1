@@ -56,11 +56,10 @@ export function Navigation() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
-  const [activeNavItem, setActiveNavItem] = useState<string | null>(null);
   const [hoveredNavItem, setHoveredNavItem] = useState<string | null>(null);
   const [expandedMobileMenu, setExpandedMobileMenu] = useState<string | null>(null);
   const isDark = useIsDarkMode();
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadNotifications] = useState(0);
   const navRef = useRef<HTMLDivElement>(null);
   const subNavTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -179,16 +178,6 @@ export function Navigation() {
   const handleSubNavMouseLeave = () => {
     setHoveredNavItem(null);
   };
-
-  // Set active nav item based on current pathname
-  useEffect(() => {
-    const activeItem = navItems.find(item => item.active);
-    if (activeItem && activeItem.subNav) {
-      setActiveNavItem(activeItem.label);
-    } else {
-      setActiveNavItem(null);
-    }
-  }, [pathname]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
