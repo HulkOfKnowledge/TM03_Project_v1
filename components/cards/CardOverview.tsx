@@ -7,8 +7,9 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Info, Search, X } from 'lucide-react';
-import type { ConnectedCard, CardOverviewData, Transaction, DateFilter } from '@/types/card.types';
+import type { ConnectedCard, CardOverviewData, Transaction, DateFilter, CardPeriodMetrics } from '@/types/card.types';
 import { cardService } from '@/services/card.service';
+import { fetchCardMetrics } from '@/lib/api/cards-client';
 import { CreditCardDisplay } from './CreditCardDisplay';
 import { DailyTransactionTable } from './DailyTransactionTable';
 import { VolumeProgressBar } from './VolumeProgressBar';
@@ -207,6 +208,18 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     return { type: 'range', startDate: s, endDate: e, label: `${fmt(s)} to ${fmt(e)}` };
   }, [filterType, selectedMonth, selectedYear, startDate, endDate, today]);
 
+  // Fetch backend metrics for current card + date filter (single source of truth)
+  const [cardMetrics, setCardMetrics] = useState<CardPeriodMetrics | null>(null);
+  useEffect(() => {
+    if (!currentCard) return;
+    let active = true;
+    fetchCardMetrics(dateFilter.startDate, dateFilter.endDate).then(data => {
+      if (!active) return;
+      setCardMetrics(data?.cards.find(c => c.id === currentCard.id) ?? null);
+    });
+    return () => { active = false; };
+  }, [currentCard?.id, dateFilter.startDate, dateFilter.endDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Filtered transactions 
   const filteredTransactions = useMemo(() => {
     if (!currentCard || currentTransactions.length === 0) return [];
@@ -226,19 +239,13 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
     const formatCurrency = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    // Ending balance = the balance field on the most recent transaction in the filtered range.
-    // filteredTransactions is sorted newest-first, so index 0 is the latest.
-    const endingBalance = filteredTransactions.length > 0
-      ? (filteredTransactions[0]?.balance ?? currentCard.currentBalance)
-      : currentCard.currentBalance;
-
-    const endingUtilization = currentCard.creditLimit > 0
-      ? (endingBalance / currentCard.creditLimit) * 100
-      : 0;
+    // Use backend-computed metrics as the source of truth; fall back to card snapshot if not yet loaded
+    const endingBalance    = cardMetrics?.endingBalance    ?? currentCard.currentBalance;
+    const endingUtilization = cardMetrics?.utilizationPct  ?? (currentCard.creditLimit > 0 ? (currentCard.currentBalance / currentCard.creditLimit) * 100 : 0);
+    const totalSpending    = cardMetrics?.totalSpending    ?? 0;
 
     const purchases = filteredTransactions.filter(t => t.amount > 0);
     const payments  = filteredTransactions.filter(t => t.amount < 0);
-    const totalSpending = purchases.reduce((sum, t) => sum + t.amount, 0);
 
     // Due date logic:
     // - Current/future period → show the real upcoming due date from the card
@@ -275,10 +282,10 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     return [
       { label: 'Credit Balance',  value: formatCurrency(endingBalance),   showInfo: true,  description: `${purchases.length} purchases, ${payments.length} payments in period` },
       { label: 'Due Date',        value: dueInfo.value,                   showInfo: false, description: dueInfo.description },
-      { label: 'Credit Limit',    value: formatCurrency(currentCard.creditLimit), showInfo: true, description: `Utilization: ${endingUtilization.toFixed(1)}%` },
+      { label: 'Credit Limit',    value: formatCurrency(currentCard.creditLimit), showInfo: true, description: `Utilization: ${endingUtilization.toFixed(2)}%` },
       { label: 'Total Spending',  value: formatCurrency(totalSpending),   showInfo: true,  description: 'In selected period' },
     ];
-  }, [overviewData, currentCard, filteredTransactions, dateFilter]);
+  }, [overviewData, currentCard, filteredTransactions, dateFilter, cardMetrics]);
   
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);

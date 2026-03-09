@@ -37,8 +37,8 @@ function formatCurrency(amount: number | null | undefined): string {
   return new Intl.NumberFormat('en-CA', {
     style: 'currency',
     currency: 'CAD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   })
     .format(safe)
     .replace('CA', '');
@@ -54,7 +54,8 @@ function formatPaymentDue(raw: string | null | undefined): string {
 
 function safeUtilization(pct: number | null | undefined): number {
   const n = Number(pct);
-  return isFinite(n) ? Math.min(Math.max(Math.round(n), 0), 100) : 0;
+  if (!isFinite(n)) return 0;
+  return parseFloat(Math.min(Math.max(n, 0), 100).toFixed(2));
 }
 
 function utilizationDotColor(pct: number): string {

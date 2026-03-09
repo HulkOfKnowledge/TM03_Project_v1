@@ -7,7 +7,8 @@ import type {
   ConnectedCard, 
   Transaction, 
   CardHistoryRow, 
-  CreditAnalysisData 
+  CreditAnalysisData,
+  CardMetricsResponse,
 } from '@/types/card.types';
 
 // In-memory caches (session duration, no time-based expiration)
@@ -268,6 +269,51 @@ export function clearCreditAnalysisCache(): void {
   creditAnalysisCache = null;
 }
 
+// ============= CARD METRICS CACHING =============
+
+const metricsCache = new Map<string, CardMetricsResponse>();
+
+/**
+ * Fetch date-filtered card metrics from the single-source-of-truth endpoint.
+ * Results are cached by "startDate:endDate" key.
+ */
+export async function fetchCardMetrics(
+  startDate: string,
+  endDate: string,
+  forceRefresh: boolean = false,
+): Promise<CardMetricsResponse | null> {
+  const key = `${startDate}:${endDate}`;
+  if (!forceRefresh && metricsCache.has(key)) return metricsCache.get(key)!;
+
+  try {
+    const response = await fetch(
+      `/api/cards/metrics?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
+      { method: 'GET', credentials: 'include' },
+    );
+
+    if (!response.ok) {
+      console.error('Failed to fetch card metrics:', response.statusText);
+      return null;
+    }
+
+    const result = await response.json();
+    if (!result.success || !result.data) return null;
+
+    metricsCache.set(key, result.data);
+    return result.data as CardMetricsResponse;
+  } catch (error) {
+    console.error('Error fetching card metrics:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear the metrics cache
+ */
+export function clearMetricsCache(): void {
+  metricsCache.clear();
+}
+
 /**
  * Clear all card-related caches
  * Useful after significant changes or logout
@@ -277,4 +323,5 @@ export function clearAllCardCaches(): void {
   transactionsCache.clear();
   monthlyHistoryCache.clear();
   creditAnalysisCache = null;
+  metricsCache.clear();
 }

@@ -1,18 +1,18 @@
 /**
  * useCreditAnalysis hook
  * Encapsulates all data fetching, state, and chart computation for the Credit Analysis view.
+ * All metric calculations are performed server-side via GET /api/cards/metrics.
  */
 
 import { useState, useMemo, useEffect } from 'react';
 import type { ChartOptions } from 'chart.js';
 import { useTheme } from '@/components/ThemeProvider';
 import { cardService } from '@/services/card.service';
-import type { Transaction, ConnectedCard, CreditAnalysisData } from '@/types/card.types';
+import { fetchCardMetrics } from '@/lib/api/cards-client';
+import type { ConnectedCard, CreditAnalysisData, CardMetricsResponse } from '@/types/card.types';
 import {
   getDatesInRange,
   fmtDayLabel,
-  buildDailyUtilization,
-  buildDailySpending,
   aggregateMonthly,
 } from '@/lib/chart-utils';
 
@@ -43,35 +43,12 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
   );
 
   // Data state
-  const [allTransactions, setAllTransactions] = useState<Map<string, Transaction[]>>(new Map());
+  const [metricsData, setMetricsData] = useState<CardMetricsResponse | null>(null);
   const [analysisData, setAnalysisData] = useState<CreditAnalysisData | null>(null);
-  const [loadingTxns, setLoadingTxns] = useState(true);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
   const [loadingAnalysis, setLoadingAnalysis] = useState(true);
 
   const cardIdKey = connectedCards.map(c => c.id).join(',');
-
-  useEffect(() => {
-    if (!connectedCards.length) { setLoadingTxns(false); return; }
-    let active = true;
-    setLoadingTxns(true);
-    Promise.all(
-      connectedCards.map(async card => {
-        try {
-          const raw = await cardService.getCardTransactions(card.id, 500);
-          return { id: card.id, txns: cardService.calculateTransactionZones(raw, card) };
-        } catch {
-          return { id: card.id, txns: [] as Transaction[] };
-        }
-      }),
-    ).then(results => {
-      if (!active) return;
-      const m = new Map<string, Transaction[]>();
-      results.forEach(r => m.set(r.id, r.txns));
-      setAllTransactions(m);
-      setLoadingTxns(false);
-    });
-    return () => { active = false; };
-  }, [cardIdKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let active = true;
@@ -106,6 +83,19 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
   const chartDates = useMemo(() => getDatesInRange(dateFilter.startDate, dateFilter.endDate), [dateFilter]);
   const useMonthly = chartDates.length > 60;
 
+  // Fetch metrics from the single-source-of-truth backend endpoint (after dateFilter is declared)
+  useEffect(() => {
+    if (!connectedCards.length) { setLoadingMetrics(false); return; }
+    let active = true;
+    setLoadingMetrics(true);
+    fetchCardMetrics(dateFilter.startDate, dateFilter.endDate).then(data => {
+      if (!active) return;
+      setMetricsData(data);
+      setLoadingMetrics(false);
+    });
+    return () => { active = false; };
+  }, [cardIdKey, dateFilter.startDate, dateFilter.endDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Theme palette 
   const palette = useMemo(() => [
     isDark ? '#8B5CF6' : '#7C3AED',
@@ -136,59 +126,57 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     return { labels: chartDates.map(fmtDayLabel), data: daily };
   }
 
-  // Utilization chart data
+  // Utilization chart data (from API daily series)
   const utilizationChartData = useMemo(() => {
+    if (!metricsData) return { labels: [] as string[], datasets: [] };
+    const { utilization } = metricsData.daily;
+    const pr = useMonthly ? 4 : (chartDates.length > 45 ? 0 : 3);
+
     if (viewMode === 'consolidated') {
-      const totalLimit = connectedCards.reduce((s, c) => s + (c.creditLimit || 0), 0);
-      if (!totalLimit) return { labels: [] as string[], datasets: [] };
-      const daily: (number | null)[] = chartDates.map(day => {
-        if (day > today) return null;
-        return Math.min(Math.max(
-          connectedCards.reduce((sum, card) => {
-            const sorted = [...(allTransactions.get(card.id) ?? [])].sort((a, b) => a.date.localeCompare(b.date));
-            return sum + (sorted.filter(t => t.date <= day).pop()?.balance ?? 0);
-          }, 0) / totalLimit * 100,
-        0), 100);
-      });
-      const { labels, data } = toPoints(daily, 'last');
+      const { labels, data } = toPoints(utilization.combined, 'last');
       const color = palette[0];
-      const pr = useMonthly ? 4 : (chartDates.length > 45 ? 0 : 3);
       return { labels, datasets: [{ label: 'Combined Utilization', data, borderColor: color, backgroundColor: color + '25', borderWidth: 2, tension: 0.4, pointRadius: pr, pointHoverRadius: 5, fill: true }] };
     }
+
     if (!displayCards.length) return { labels: [] as string[], datasets: [] };
-    const ref = toPoints(buildDailyUtilization(allTransactions.get(displayCards[0].id) ?? [], displayCards[0].creditLimit, chartDates, today), 'last');
+    const firstData = utilization.byCard[displayCards[0].id] ?? chartDates.map(() => null as number | null);
+    const { labels } = toPoints(firstData, 'last');
     return {
-      labels: ref.labels,
+      labels,
       datasets: displayCards.map((card, i) => {
-        const { data } = toPoints(buildDailyUtilization(allTransactions.get(card.id) ?? [], card.creditLimit, chartDates, today), 'last');
+        const rawData = utilization.byCard[card.id] ?? chartDates.map(() => null as number | null);
+        const { data } = toPoints(rawData, 'last');
         const color = palette[i % palette.length];
-        const pr = useMonthly ? 4 : (chartDates.length > 45 ? 0 : 3);
         return { label: `${card.bank} ****${card.lastFour}`, data, borderColor: color, backgroundColor: 'transparent', borderWidth: 2, tension: 0.4, pointRadius: pr, pointHoverRadius: 5, fill: false };
       }),
     };
-  }, [viewMode, displayCards, connectedCards, allTransactions, chartDates, useMonthly, palette]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [metricsData, viewMode, displayCards, chartDates, useMonthly, palette]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Spending chart data
+  // Spending chart data (from API daily series)
   const spendingChartData = useMemo(() => {
+    if (!metricsData) return { labels: [] as string[], datasets: [] };
+    const { spending } = metricsData.daily;
+    const pr = useMonthly ? 4 : (chartDates.length > 45 ? 0 : 3);
+
     if (viewMode === 'consolidated') {
-      const allTxns = connectedCards.flatMap(c => allTransactions.get(c.id) ?? []);
-      const { labels, data } = toPoints(buildDailySpending(allTxns, chartDates, today), 'sum');
+      const { labels, data } = toPoints(spending.combined, 'sum');
       const color = palette[1];
-      const pr = useMonthly ? 4 : (chartDates.length > 45 ? 0 : 3);
       return { labels, datasets: [{ label: 'Total Spending', data, borderColor: color, backgroundColor: color + '25', borderWidth: 2, tension: 0.4, pointRadius: pr, pointHoverRadius: 5, fill: true }] };
     }
+
     if (!displayCards.length) return { labels: [] as string[], datasets: [] };
-    const ref = toPoints(buildDailySpending(allTransactions.get(displayCards[0].id) ?? [], chartDates, today), 'sum');
+    const firstData = spending.byCard[displayCards[0].id] ?? chartDates.map(() => 0);
+    const { labels } = toPoints(firstData, 'sum');
     return {
-      labels: ref.labels,
+      labels,
       datasets: displayCards.map((card, i) => {
-        const { data } = toPoints(buildDailySpending(allTransactions.get(card.id) ?? [], chartDates, today), 'sum');
+        const rawData = spending.byCard[card.id] ?? chartDates.map(() => 0);
+        const { data } = toPoints(rawData, 'sum');
         const color = palette[i % palette.length];
-        const pr = useMonthly ? 4 : (chartDates.length > 45 ? 0 : 3);
         return { label: `${card.bank} ****${card.lastFour}`, data, borderColor: color, backgroundColor: 'transparent', borderWidth: 2, tension: 0.4, pointRadius: pr, pointHoverRadius: 5, fill: false };
       }),
     };
-  }, [viewMode, displayCards, connectedCards, allTransactions, chartDates, useMonthly, palette, today]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [metricsData, viewMode, displayCards, chartDates, useMonthly, palette, today]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Chart options
   const utilizationChartOptions: ChartOptions<'line'> = useMemo(() => ({
@@ -221,97 +209,71 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     };
   }, [textColor, gridColor, spendingChartData]);
 
-  // Previous period bounds 
-  const prevDateFilter = useMemo(() => {
+  // Previous-period label for trend badges (display-only string, no computation needed)
+  const prevLabel = useMemo(() => {
     if (filterType === 'month') {
       const [y, m] = selectedMonth.split('-').map(Number);
       const pd = new Date(y, m - 2, 1);
-      const py = pd.getFullYear(), pm = pd.getMonth() + 1;
-      const pms = String(pm).padStart(2, '0');
-      return { startDate: `${py}-${pms}-01`, endDate: new Date(py, pm, 0).toISOString().split('T')[0] };
+      return pd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     }
-    if (filterType === 'year') {
-      const py = Number(selectedYear) - 1;
-      return { startDate: `${py}-01-01`, endDate: `${py}-12-31` };
-    }
-    const s = new Date(dateFilter.startDate + 'T12:00:00');
-    const e = new Date(dateFilter.endDate + 'T12:00:00');
-    const durMs = e.getTime() - s.getTime() + 86400000;
-    const prevE = new Date(s.getTime() - 86400000);
-    const prevS = new Date(prevE.getTime() - durMs + 86400000);
-    return { startDate: prevS.toISOString().split('T')[0], endDate: prevE.toISOString().split('T')[0] };
-  }, [filterType, selectedMonth, selectedYear, dateFilter.startDate, dateFilter.endDate]);
+    if (filterType === 'year') return String(Number(selectedYear) - 1);
+    return 'prev period';
+  }, [filterType, selectedMonth, selectedYear]);
 
-  //  Chart-derived metrics
+  // Chart-level metrics derived from the API response
   const chartMetrics = useMemo(() => {
-    const totalLimit = connectedCards.reduce((s, c) => s + (c.creditLimit || 0), 0);
-    const curUtilData = (utilizationChartData.datasets[0]?.data ?? []) as (number | null)[];
-    const lastNonNullUtil = [...curUtilData].reverse().find(v => v !== null);
-    const lastUtil = lastNonNullUtil ?? 0;
-    const prevEnd = prevDateFilter.endDate;
-    let prevUtil = 0;
-    if (viewMode === 'consolidated' && totalLimit) {
-      prevUtil = Math.min(Math.max(
-        connectedCards.reduce((sum, card) => {
-          const sorted = [...(allTransactions.get(card.id) ?? [])].sort((a, b) => a.date.localeCompare(b.date));
-          return sum + (sorted.filter(t => t.date <= prevEnd).pop()?.balance ?? 0);
-        }, 0) / totalLimit * 100, 0), 100);
-    } else if (displayCards.length && displayCards[0].creditLimit) {
-      const sorted = [...(allTransactions.get(displayCards[0].id) ?? [])].sort((a, b) => a.date.localeCompare(b.date));
-      const lb = sorted.filter(t => t.date <= prevEnd).pop()?.balance ?? 0;
-      prevUtil = Math.min(Math.max(lb / displayCards[0].creditLimit * 100, 0), 100);
-    }
-    const utilDiff = lastUtil - prevUtil;
-    const curSpendData = (spendingChartData.datasets[0]?.data ?? []) as (number | null)[];
-    const totalSpend = curSpendData.reduce<number>((a, b) => a + (b ?? 0), 0);
-    const prevDates = getDatesInRange(prevDateFilter.startDate, prevDateFilter.endDate);
-    let prevSpend = 0;
+    const defaults = { lastUtil: 0, utilDiff: 0, totalSpend: 0, spendTrendPct: 0, prevLabel };
+    if (!metricsData) return defaults;
+
+    let lastUtil: number;
+    let prevLastUtil: number;
+    let totalSpend: number;
+    let prevSpend: number;
+
     if (viewMode === 'consolidated') {
-      const allTxns = connectedCards.flatMap(c => allTransactions.get(c.id) ?? []);
-      prevSpend = buildDailySpending(allTxns, prevDates).reduce<number>((a, b) => a + (b ?? 0), 0);
-    } else if (displayCards.length) {
-      const txns = displayCards.flatMap(c => allTransactions.get(c.id) ?? []);
-      prevSpend = buildDailySpending(txns, prevDates).reduce<number>((a, b) => a + (b ?? 0), 0);
+      lastUtil     = metricsData.totals.totalUtilizationPct;
+      prevLastUtil = metricsData.prevPeriod.totals.totalUtilizationPct;
+      totalSpend   = metricsData.totals.totalSpending;
+      prevSpend    = metricsData.prevPeriod.totals.totalSpending;
+    } else {
+      const displayIds = new Set(displayCards.map(c => c.id));
+      const curCards  = metricsData.cards.filter(c => displayIds.has(c.id));
+      const prevCards = metricsData.prevPeriod.cards.filter(c => displayIds.has(c.id));
+      const totalLimit = displayCards.reduce((s, c) => s + (c.creditLimit || 0), 0);
+
+      const totalBal  = curCards.reduce((s, c) => s + c.endingBalance, 0);
+      const prevBal   = prevCards.reduce((s, c) => s + c.endingBalance, 0);
+      lastUtil     = totalLimit > 0 ? +(totalBal / totalLimit * 100).toFixed(2)  : 0;
+      prevLastUtil = totalLimit > 0 ? +(prevBal  / totalLimit * 100).toFixed(2)  : 0;
+      totalSpend   = curCards.reduce((s, c) => s + c.totalSpending, 0);
+      prevSpend    = prevCards.reduce((s, c) => s + c.totalSpending, 0);
     }
-    const spendTrendPct = prevSpend > 0 ? ((totalSpend - prevSpend) / prevSpend * 100) : 0;
-    // Label for the comparison period shown in trend badges
-    const prevLabel = (() => {
-      if (filterType === 'month') {
-        const [y, m] = selectedMonth.split('-').map(Number);
-        const pd = new Date(y, m - 2, 1);
-        return pd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      }
-      if (filterType === 'year') return String(Number(selectedYear) - 1);
-      return 'prev period';
-    })();
+
+    const utilDiff      = lastUtil - prevLastUtil;
+    const spendTrendPct = prevSpend > 0 ? +((totalSpend - prevSpend) / prevSpend * 100).toFixed(2) : 0;
     return { lastUtil, utilDiff, totalSpend, spendTrendPct, prevLabel };
-  }, [utilizationChartData, spendingChartData, viewMode, connectedCards, displayCards, allTransactions, prevDateFilter, filterType, selectedMonth, selectedYear]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [metricsData, viewMode, displayCards, prevLabel]);
 
-  // Metrics derived from actual transactions, scoped to the current date filter
+  // Metrics scoped to the current date filter — derived from the API response
   const filteredMetrics = useMemo(() => {
-    const effectiveEnd = dateFilter.endDate <= today ? dateFilter.endDate : today;
-    const prevEffectiveEnd = prevDateFilter.endDate <= today ? prevDateFilter.endDate : today;
-    const totalLimit = connectedCards.reduce((s, c) => s + (c.creditLimit || 0), 0);
+    if (!metricsData) return { totalOwed: 0, totalAvailable: 0, cardBalances: [], owedChangePct: 0, availableChangePct: 0 };
 
-    const cardBalances = connectedCards.map(card => {
-      const sorted = [...(allTransactions.get(card.id) ?? [])].sort((a, b) => a.date.localeCompare(b.date));
-      const balance = sorted.filter(t => t.date <= effectiveEnd).pop()?.balance ?? 0;
-      return { name: `${card.bank} ****${card.lastFour}`, balance };
-    });
-    const totalOwed = cardBalances.reduce((sum, c) => sum + c.balance, 0);
-    const totalAvailable = Math.max(totalLimit - totalOwed, 0);
+    const { totals, prevPeriod, cards } = metricsData;
+    const owedChangePct = prevPeriod.totals.totalEndingBalance > 0
+      ? +((totals.totalEndingBalance - prevPeriod.totals.totalEndingBalance) / prevPeriod.totals.totalEndingBalance * 100).toFixed(2)
+      : 0;
+    const availableChangePct = prevPeriod.totals.totalAvailable > 0
+      ? +((totals.totalAvailable - prevPeriod.totals.totalAvailable) / prevPeriod.totals.totalAvailable * 100).toFixed(2)
+      : 0;
 
-    const prevTotalOwed = connectedCards.reduce((sum, card) => {
-      const sorted = [...(allTransactions.get(card.id) ?? [])].sort((a, b) => a.date.localeCompare(b.date));
-      return sum + (sorted.filter(t => t.date <= prevEffectiveEnd).pop()?.balance ?? 0);
-    }, 0);
-    const prevTotalAvailable = Math.max(totalLimit - prevTotalOwed, 0);
-
-    const owedChangePct = prevTotalOwed > 0 ? ((totalOwed - prevTotalOwed) / prevTotalOwed * 100) : 0;
-    const availableChangePct = prevTotalAvailable > 0 ? ((totalAvailable - prevTotalAvailable) / prevTotalAvailable * 100) : 0;
-
-    return { totalOwed, totalAvailable, cardBalances, owedChangePct, availableChangePct };
-  }, [connectedCards, allTransactions, dateFilter, prevDateFilter, today]);
+    return {
+      totalOwed: totals.totalEndingBalance,
+      totalAvailable: totals.totalAvailable,
+      cardBalances: cards.map(c => ({ name: `${c.bank} ****${c.lastFour}`, balance: c.endingBalance })),
+      owedChangePct,
+      availableChangePct,
+    };
+  }, [metricsData]);
 
   // Filtered payment history 
   const filteredPaymentHistory = useMemo(() => {
@@ -340,7 +302,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     compareCardIds, setCompareCardIds,
     palette,
     // loading
-    loading: loadingTxns || loadingAnalysis,
+    loading: loadingMetrics || loadingAnalysis,
     // data
     analysisData,
     filteredMetrics,

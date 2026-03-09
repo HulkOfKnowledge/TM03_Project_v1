@@ -115,3 +115,57 @@ export interface CreditAnalysisData {
     recommendations: any[];
   } | null;
 }
+
+// ─── Period-metrics types (single source of truth from /api/cards/metrics) ───
+
+export interface CardPeriodMetrics {
+  id: string;
+  bank: string;
+  lastFour: string;
+  creditLimit: number;
+  /** Balance owed as of the effective end date of the period (capped at today). */
+  endingBalance: number;
+  /** endingBalance / creditLimit * 100, 2 dp. */
+  utilizationPct: number;
+  /** Sum of all debits (purchases) within [startDate, effectiveEndDate]. */
+  totalSpending: number;
+  /** Sum of all credits (payments) within [startDate, effectiveEndDate]. */
+  totalPayments: number;
+}
+
+export interface PeriodMetricsSummary {
+  totalCreditLimit: number;
+  totalEndingBalance: number;
+  totalUtilizationPct: number;
+  totalSpending: number;
+  totalPayments: number;
+  totalAvailable: number;
+}
+
+export interface CardMetricsResponse {
+  startDate: string;
+  endDate: string;
+  /** min(endDate, today) — the actual cut-off used for balance/utilization. */
+  effectiveEndDate: string;
+  cards: CardPeriodMetrics[];
+  totals: PeriodMetricsSummary;
+  prevPeriod: {
+    startDate: string;
+    endDate: string;
+    cards: CardPeriodMetrics[];
+    totals: PeriodMetricsSummary;
+  };
+  daily: {
+    /** ISO date strings from startDate to endDate. */
+    dates: string[];
+    spending: {
+      byCard: Record<string, number[]>;
+      combined: number[];
+    };
+    utilization: {
+      /** null for future dates. */
+      byCard: Record<string, (number | null)[]>;
+      combined: (number | null)[];
+    };
+  };
+}

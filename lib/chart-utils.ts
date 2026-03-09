@@ -5,6 +5,11 @@
 
 import type { Transaction } from '@/types/card.types';
 
+/** Strips any time component from a date string, returning just "YYYY-MM-DD". */
+export function normalizeDate(d: string): string {
+  return d.slice(0, 10);
+}
+
 export function getDatesInRange(start: string, end: string): string[] {
   const dates: string[] = [];
   const cur = new Date(start + 'T12:00:00');
@@ -29,10 +34,10 @@ export function fmtMonthLabel(ym: string): string {
 /** Last known utilization % for each day in `dates`. Returns null for dates after `today` when provided. */
 export function buildDailyUtilization(txns: Transaction[], creditLimit: number, dates: string[], today?: string): (number | null)[] {
   if (!creditLimit) return dates.map(() => 0);
-  const sorted = [...txns].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = [...txns].sort((a, b) => normalizeDate(a.date).localeCompare(normalizeDate(b.date)));
   return dates.map(day => {
     if (today && day > today) return null;
-    const last = sorted.filter(t => t.date <= day).pop();
+    const last = sorted.filter(t => normalizeDate(t.date) <= day).pop();
     if (!last || last.balance == null) return 0;
     return Math.min(Math.max((last.balance / creditLimit) * 100, 0), 100);
   });
@@ -41,7 +46,10 @@ export function buildDailyUtilization(txns: Transaction[], creditLimit: number, 
 /** Sum of purchases (positive amounts) for each day. Returns null for dates after `today` when provided. */
 export function buildDailySpending(txns: Transaction[], dates: string[], today?: string): (number | null)[] {
   const map = new Map<string, number>();
-  txns.filter(t => t.amount > 0).forEach(t => map.set(t.date, (map.get(t.date) || 0) + t.amount));
+  txns.filter(t => t.amount > 0).forEach(t => {
+    const d = normalizeDate(t.date);
+    map.set(d, (map.get(d) || 0) + t.amount);
+  });
   return dates.map(d => {
     if (today && d > today) return null;
     return map.get(d) || 0;

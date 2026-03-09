@@ -149,18 +149,18 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
       <div className="mb-6 grid grid-cols-1 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-2">
         <MetricCard
           label="Total Credit Available"
-          value={`$${filteredMetrics.totalAvailable.toLocaleString()}`}
+          value={`$${filteredMetrics.totalAvailable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           trend={{
-            value: `${filteredMetrics.availableChangePct >= 0 ? '+' : ''}${filteredMetrics.availableChangePct.toFixed(1)}% vs ${chartMetrics.prevLabel}`,
+            value: `${filteredMetrics.availableChangePct >= 0 ? '+' : ''}${filteredMetrics.availableChangePct.toFixed(2)}% vs ${chartMetrics.prevLabel}`,
             isPositive: filteredMetrics.availableChangePct >= 0,
           }}
           showInfo
         />
         <MetricCard
           label="Total Amount Owed"
-          value={`$${filteredMetrics.totalOwed.toLocaleString()}`}
+          value={`$${filteredMetrics.totalOwed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           trend={{
-            value: `${filteredMetrics.owedChangePct >= 0 ? '+' : ''}${filteredMetrics.owedChangePct.toFixed(1)}% vs ${chartMetrics.prevLabel}`,
+            value: `${filteredMetrics.owedChangePct >= 0 ? '+' : ''}${filteredMetrics.owedChangePct.toFixed(2)}% vs ${chartMetrics.prevLabel}`,
             isPositive: filteredMetrics.owedChangePct <= 0,
           }}
           showInfo
@@ -186,7 +186,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
                   )}
                   <div className="flex flex-col items-center">
                     <p className="mb-1 text-[10px] text-gray-500 dark:text-gray-500 sm:text-xs">{card.name}</p>
-                    <p className="text-2xl text-gray-900 dark:text-white sm:text-3xl md:text-4xl">${card.balance.toLocaleString()}</p>
+                    <p className="text-2xl text-gray-900 dark:text-white sm:text-3xl md:text-4xl">${card.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                 </div>
               ))}
@@ -213,7 +213,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
       {/* Spending Patterns */}
       <ChartSection
         title="Spending Patterns"
-        primaryValue={`$${chartMetrics.totalSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+        primaryValue={`$${chartMetrics.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         primaryLabel="Total spending"
         trend={{
           value: `${chartMetrics.spendTrendPct >= 0 ? '+' : ''}${chartMetrics.spendTrendPct.toFixed(1)}% vs ${chartMetrics.prevLabel}`,
