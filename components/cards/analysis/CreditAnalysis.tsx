@@ -47,6 +47,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
     selectedCardId, setSelectedCardId,
     compareCardIds, setCompareCardIds,
     palette,
+    filteredMetrics,
     loading,
     analysisData,
     utilizationChartData,
@@ -148,14 +149,20 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
       <div className="mb-6 grid grid-cols-1 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-2">
         <MetricCard
           label="Total Credit Available"
-          value={`$${(analysisData?.totalCreditAvailable ?? 0).toLocaleString()}`}
-          trend={{ value: '0.5% Increase', isPositive: true }}
+          value={`$${filteredMetrics.totalAvailable.toLocaleString()}`}
+          trend={{
+            value: `${filteredMetrics.availableChangePct >= 0 ? '+' : ''}${filteredMetrics.availableChangePct.toFixed(1)}% vs ${chartMetrics.prevLabel}`,
+            isPositive: filteredMetrics.availableChangePct >= 0,
+          }}
           showInfo
         />
         <MetricCard
           label="Total Amount Owed"
-          value={`$${(analysisData?.totalAmountOwed ?? 0).toLocaleString()}`}
-          trend={{ value: '0.5% Increase', isPositive: true }}
+          value={`$${filteredMetrics.totalOwed.toLocaleString()}`}
+          trend={{
+            value: `${filteredMetrics.owedChangePct >= 0 ? '+' : ''}${filteredMetrics.owedChangePct.toFixed(1)}% vs ${chartMetrics.prevLabel}`,
+            isPositive: filteredMetrics.owedChangePct <= 0,
+          }}
           showInfo
         />
 
@@ -172,14 +179,14 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-4 sm:gap-0">
-              {(analysisData?.cardBalances ?? []).map((card, index) => (
+              {(filteredMetrics.cardBalances).map((card, index) => (
                 <div key={index} className="flex items-center">
                   {index > 0 && (
                     <div className="mx-4 hidden h-12 w-px bg-gray-200 dark:bg-gray-800 sm:block sm:mx-6 sm:h-16" />
                   )}
                   <div className="flex flex-col items-center">
                     <p className="mb-1 text-[10px] text-gray-500 dark:text-gray-500 sm:text-xs">{card.name}</p>
-                    <p className="text-2xl text-gray-900 dark:text-white sm:text-3xl md:text-4xl">${card.balance}</p>
+                    <p className="text-2xl text-gray-900 dark:text-white sm:text-3xl md:text-4xl">${card.balance.toLocaleString()}</p>
                   </div>
                 </div>
               ))}
@@ -194,7 +201,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
         primaryValue={`${chartMetrics.lastUtil.toFixed(2)}%`}
         primaryLabel="Utilization percentage"
         trend={{
-          value: `${chartMetrics.utilDiff >= 0 ? '+' : ''}${chartMetrics.utilDiff.toFixed(1)}pp vs prev`,
+          value: `${chartMetrics.utilDiff >= 0 ? '+' : ''}${chartMetrics.utilDiff.toFixed(1)}pp vs ${chartMetrics.prevLabel}`,
           isPositive: chartMetrics.utilDiff < 0,
         }}
         valueClassName={chartMetrics.lastUtil > 30 ? 'text-4xl text-red-600 dark:text-red-500 sm:text-5xl' : 'text-4xl text-gray-900 dark:text-white sm:text-5xl'}
@@ -209,7 +216,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
         primaryValue={`$${chartMetrics.totalSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
         primaryLabel="Total spending"
         trend={{
-          value: `${chartMetrics.spendTrendPct >= 0 ? '+' : ''}${chartMetrics.spendTrendPct.toFixed(1)}% vs prev`,
+          value: `${chartMetrics.spendTrendPct >= 0 ? '+' : ''}${chartMetrics.spendTrendPct.toFixed(1)}% vs ${chartMetrics.prevLabel}`,
           isPositive: chartMetrics.spendTrendPct <= 0,
         }}
         headerControls={chartControls}
