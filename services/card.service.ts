@@ -117,28 +117,21 @@ export class CardService {
   calculateTransactionZones(transactions: Transaction[], card: ConnectedCard): Transaction[] {
     if (!transactions || transactions.length === 0) return [];
     
-    // Sort transactions by date (oldest first) to calculate running balance
+    // Sort transactions by date (oldest first)
     const sorted = [...transactions].sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
     
-    let runningBalance = card.currentBalance;
-    
-    // If we have transactions, work backwards from current balance
-    // This is an approximation - in a real system you'd get balance from each transaction
-    const enriched = sorted.map((txn, index) => {
-      // For now, use the balance from the transaction if available
-      // Otherwise calculate based on current balance working backwards
-      const balance = txn.balance || runningBalance;
+    // Enrich each transaction with its zone based on its balance
+    const enriched = sorted.map((txn) => {
+      // Use the balance that came from the database (calculated during seed or from Flinks)
+      // This balance already accounts for all previous transactions
+      const balance = txn.balance ?? card.currentBalance;
+      
       const utilizationPercentage = card.creditLimit > 0 
         ? (balance / card.creditLimit) * 100 
         : 0;
       const zone = this.calculateUtilizationZone(utilizationPercentage);
-      
-      // Update running balance for next transaction (working backwards)
-      if (index < sorted.length - 1) {
-        runningBalance = balance - sorted[index + 1].amount;
-      }
       
       return {
         ...txn,
@@ -148,7 +141,7 @@ export class CardService {
       };
     });
     
-    // Return in reverse chronological order (newest first)
+    // Return in reverse chronological order (newest first for display)
     return enriched.reverse();
   }
 

@@ -142,11 +142,16 @@ function generateMonthTransactions(params: {
   startBalance: number;
   creditLimit: number;
   billingDay: number;
+  isCurrentMonth: boolean;  // NEW: flag for current month
+  currentDay: number;       // NEW: current day of month
 }): { transactions: FlinksTransactionDetail[]; endBalance: number } {
-  const { cardIndex, monthIndex, userSeed, year, month, startBalance, creditLimit, billingDay } = params;
+  const { cardIndex, monthIndex, userSeed, year, month, startBalance, creditLimit, billingDay, isCurrentMonth, currentDay } = params;
   const baseSeed = userSeed + cardIndex * 100_000 + monthIndex * 1_000;
 
   const daysInMonth = new Date(year, month, 0).getDate();
+  // For current month, only generate transactions up to currentDay
+  const maxDay = isCurrentMonth ? currentDay : daysInMonth;
+  
   const txnCount = seededInt(baseSeed, 15, 28);
   const rawTxns: FlinksTransactionDetail[] = [];
   let runningBalance = startBalance;
@@ -163,7 +168,8 @@ function generateMonthTransactions(params: {
     const clamped = Math.min(amount, creditLimit - runningBalance);
     if (clamped <= 0) continue;
 
-    const dayOfMonth = seededInt(txnSeed + 3, 1, daysInMonth);
+    // Only generate transactions up to current day for current month
+    const dayOfMonth = seededInt(txnSeed + 3, 1, maxDay);
     runningBalance = parseFloat((runningBalance + clamped).toFixed(2));
 
     rawTxns.push({
@@ -178,21 +184,26 @@ function generateMonthTransactions(params: {
   }
 
   // Credit transaction (payment) on the billing day
-  const paymentFraction = seededAmount(baseSeed + 500, 0.15, 0.85);
-  const paymentAmount = Math.max(10, parseFloat((runningBalance * paymentFraction).toFixed(2)));
+  // Only add payment if billing day hasn't passed yet (or not current month)
   const paymentDay = Math.min(billingDay, daysInMonth);
+  const shouldAddPayment = !isCurrentMonth || paymentDay <= currentDay;
+  
+  if (shouldAddPayment) {
+    const paymentFraction = seededAmount(baseSeed + 500, 0.15, 0.85);
+    const paymentAmount = Math.max(10, parseFloat((runningBalance * paymentFraction).toFixed(2)));
 
-  runningBalance = parseFloat(Math.max(0, runningBalance - paymentAmount).toFixed(2));
+    runningBalance = parseFloat(Math.max(0, runningBalance - paymentAmount).toFixed(2));
 
-  rawTxns.push({
-    Id: `demo_txn_c${cardIndex}_m${monthIndex}_pmt`,
-    Date: toDateStr(new Date(year, month - 1, paymentDay)),
-    Description: 'PAYMENT - THANK YOU',
-    Debit: null,
-    Credit: paymentAmount,
-    Balance: runningBalance,
-    Code: null,
-  });
+    rawTxns.push({
+      Id: `demo_txn_c${cardIndex}_m${monthIndex}_pmt`,
+      Date: toDateStr(new Date(year, month - 1, paymentDay)),
+      Description: 'PAYMENT - THANK YOU',
+      Debit: null,
+      Credit: paymentAmount,
+      Balance: runningBalance,
+      Code: null,
+    });
+  }
 
   // Sort ascending by date (Flinks contract)
   rawTxns.sort((a, b) => (a.Date < b.Date ? -1 : 1));
@@ -334,6 +345,8 @@ export async function POST(_request: NextRequest) {
         const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
         const year = d.getFullYear();
         const month = d.getMonth() + 1; // 1-based
+        const isCurrentMonth = m === 0;
+        const currentDay = isCurrentMonth ? now.getDate() : 31;
 
         const { transactions, endBalance } = generateMonthTransactions({
           cardIndex,
@@ -344,6 +357,8 @@ export async function POST(_request: NextRequest) {
           startBalance: runningBalance,
           creditLimit,
           billingDay,
+          isCurrentMonth,
+          currentDay,
         });
 
         allTransactions.push(...transactions);

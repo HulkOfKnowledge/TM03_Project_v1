@@ -10,7 +10,6 @@ import { ChevronLeft, ChevronRight, Plus, Info, Search, X } from 'lucide-react';
 import type { ConnectedCard, CardOverviewData, Transaction, DateFilter } from '@/types/card.types';
 import { cardService } from '@/services/card.service';
 import { CreditCardDisplay } from './CreditCardDisplay';
-import { CardHistoryTable } from './CardHistoryTable';
 import { DailyTransactionTable } from './DailyTransactionTable';
 import { VolumeProgressBar } from './VolumeProgressBar';
 import { CardOverviewSkeleton } from './CardOverviewSkeleton';
@@ -36,12 +35,15 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   const loadedCardIds = useRef(new Set<string>());
   const loadedTransactionIds = useRef(new Set<string>());
   
-  // Date filtering state
-  const [filterType, setFilterType] = useState<'month' | 'range' | 'year'>('month');
+  // Date filtering state - default to range (first of month to today)
+  const today = new Date().toISOString().split('T')[0];
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  
+  const [filterType, setFilterType] = useState<'month' | 'range' | 'year'>('range');
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>(firstOfMonth);
+  const [endDate, setEndDate] = useState<string>(today);
   
   // Transaction data storage - Map<cardId, Transaction[]>
   const [allTransactionData, setAllTransactionData] = useState<Map<string, Transaction[]>>(new Map());
@@ -50,7 +52,6 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   // History table filters
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [historyZoneFilter, setHistoryZoneFilter] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'monthly' | 'daily'>('daily');
   
   // Touch/swipe state
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -210,11 +211,17 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
       };
     } else {
       // range
+      const fmt = (d: string) => {
+        const [y, mo, day] = d.split('-').map(Number);
+        return new Date(y, mo - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      };
+      const s = startDate || now.toISOString().split('T')[0];
+      const e = endDate || now.toISOString().split('T')[0];
       return {
         type: 'range',
-        startDate: startDate || now.toISOString().split('T')[0],
-        endDate: endDate || now.toISOString().split('T')[0],
-        label: `${startDate || 'Start'} to ${endDate || 'End'}`
+        startDate: s,
+        endDate: e,
+        label: `${fmt(s)} to ${fmt(e)}`
       };
     }
   };
@@ -225,7 +232,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     
     const dateFilter = getCurrentDateFilter();
     
-    return currentTransactions.filter(txn => {
+    const filtered = currentTransactions.filter(txn => {
       const txnDate = txn.date;
       const inDateRange = txnDate >= dateFilter.startDate && txnDate <= dateFilter.endDate;
       
@@ -239,51 +246,105 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
       
       return inDateRange && matchesSearch && matchesZone;
     });
+    
+    return filtered;
   }, [currentCard, currentTransactions, filterType, selectedMonth, selectedYear, startDate, endDate, historySearchQuery, historyZoneFilter]);
 
-  // Calculate filtered metrics based on date range
-  const filteredMetrics = useMemo(() => {
-    if (!currentCard || !overviewData) return overviewData?.metrics || [];
-    
-    if (filteredTransactions.length === 0) return overviewData.metrics;
-    
-    // Calculate metrics from filtered transactions
+  // Calculate metrics from filtered transactions
+  const displayMetrics = useMemo(() => {
+    if (!overviewData || !currentCard) return [];
+
+    const formatCurrency = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    // Ending balance = the balance field on the most recent transaction in the filtered range.
+    // filteredTransactions is sorted newest-first, so index 0 is the latest.
+    // This is the actual card balance at the end of the period, not the net delta.
+    const endingBalance = filteredTransactions.length > 0
+      ? (filteredTransactions[0]?.balance ?? currentCard.currentBalance)
+      : currentCard.currentBalance;
+
+    const endingUtilization = currentCard.creditLimit > 0
+      ? (endingBalance / currentCard.creditLimit) * 100
+      : 0;
+
+    // Total spending = sum of purchase transactions in the period (positive amounts)
     const purchases = filteredTransactions.filter(t => t.amount > 0);
     const payments = filteredTransactions.filter(t => t.amount < 0);
-    
     const totalSpending = purchases.reduce((sum, t) => sum + t.amount, 0);
-    const totalPayments = payments.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    const avgTransaction = purchases.length > 0 ? totalSpending / purchases.length : 0;
-    
-    const formatCurrency = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    
+
+    // Due date logic:
+    // - Current/future period → show the real upcoming due date from the card
+    // - Historical period → project due date to the month after the filter's end month
+    //   (statement typically closes end of month, payment due in the next month)
+    const getDueDate = (): { value: string; description: string } => {
+      if (!currentCard.paymentDueDate) return { value: 'N/A', description: 'Not available' };
+
+      const dateFilter = getCurrentDateFilter();
+      const [endYear, endMonth] = dateFilter.endDate.split('-').map(Number);
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // 1-indexed
+
+      // Parse the stored due date safely at local midnight (avoid UTC shift)
+      const dueDateStr = currentCard.paymentDueDate.split('T')[0]; // YYYY-MM-DD
+      const [dy, dm, dd] = dueDateStr.split('-').map(Number);
+      const dueDay = dd;
+
+      const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      if (endYear > currentYear || (endYear === currentYear && endMonth >= currentMonth)) {
+        // Current or future period — show the real upcoming due date
+        const realDue = new Date(dy, dm - 1, dd);
+        const msLeft = realDue.getTime() - Date.now();
+        const daysLeft = Math.floor(msLeft / (1000 * 60 * 60 * 24));
+        return {
+          value: fmtDate(realDue),
+          description: daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left` : 'Past due',
+        };
+      }
+
+      // Historical period — project due date to the month after the filter end month.
+      const projMonthIndex = endMonth % 12;
+      const projYear = endMonth === 12 ? endYear + 1 : endYear;
+      const projectedDate = new Date(projYear, projMonthIndex, dueDay);
+      return {
+        value: fmtDate(projectedDate),
+        description: 'Past due date',
+      };
+    };
+
+    const dueInfo = getDueDate();
+
     return [
-      { 
-        label: 'Total Spending', 
-        value: formatCurrency(totalSpending), 
-        info: true, 
-        description: `${purchases.length} transaction${purchases.length !== 1 ? 's' : ''}` 
+      {
+        label: 'Credit Balance',
+        value: formatCurrency(endingBalance),
+        info: true,
+        description: `${purchases.length} purchases, ${payments.length} payments in period`,
       },
-      { 
-        label: 'Total Payments', 
-        value: formatCurrency(totalPayments), 
-        info: true, 
-        description: `${payments.length} payment${payments.length !== 1 ? 's' : ''}` 
+      {
+        label: 'Due Date',
+        value: dueInfo.value,
+        info: false,
+        description: dueInfo.description,
       },
-      { 
-        label: 'Current Balance', 
-        value: formatCurrency(currentCard.currentBalance), 
-        info: true, 
-        description: `Available: ${formatCurrency(currentCard.availableCredit)}` 
+      {
+        label: 'Credit Limit',
+        value: formatCurrency(currentCard.creditLimit),
+        info: true,
+        description: `Utilization: ${endingUtilization.toFixed(1)}%`,
       },
-      { 
-        label: 'Avg Transaction', 
-        value: formatCurrency(avgTransaction), 
-        info: true, 
-        description: purchases.length > 0 ? 'Per purchase' : 'No purchases' 
+      {
+        label: 'Total Spending',
+        value: formatCurrency(totalSpending),
+        info: true,
+        description: `In selected period`,
       },
     ];
-  }, [currentCard, filteredTransactions, overviewData]);
+  }, [overviewData, currentCard, filteredTransactions, filterType, selectedMonth, selectedYear, startDate, endDate]);
+  
+  // Always show the active date range badge
+  const isShowingFilteredData = true;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
@@ -352,33 +413,11 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     }
   };
 
-  // Filter history data based on search and filters
-  const filteredHistory = useMemo(() => {
-    if (!overviewData?.history) return [];
-    
-    return overviewData.history.filter(row => {
-      // Search filter - searches in month field
-      const matchesSearch = !historySearchQuery || 
-        row.month.toLowerCase().includes(historySearchQuery.toLowerCase());
-      
-      // Zone filter
-      const matchesZone = !historyZoneFilter || row.zone === historyZoneFilter;
-      
-      return matchesSearch && matchesZone;
-    });
-  }, [overviewData?.history, historySearchQuery, historyZoneFilter]);
-  
   // Get available zones for filter dropdown
   const availableZones = useMemo(() => {
-    if (viewMode === 'daily') {
-      const zones = new Set(filteredTransactions.map(txn => txn.zone).filter(Boolean));
-      return Array.from(zones).sort();
-    } else {
-      if (!overviewData?.history) return [];
-      const zones = new Set(overviewData.history.map(row => row.zone));
-      return Array.from(zones).sort();
-    }
-  }, [viewMode, filteredTransactions, overviewData?.history]);
+    const zones = new Set(filteredTransactions.map(txn => txn.zone).filter(Boolean));
+    return Array.from(zones).sort();
+  }, [filteredTransactions]);
 
   // Generate month options (last 24 months)
   const monthOptions = useMemo(() => {
@@ -645,7 +684,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
               {currentCard.bank} {currentCard.lastFour} Metrics
             </h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-              {getCurrentDateFilter().label}
+              Current card information
             </p>
           </div>
           
@@ -690,13 +729,23 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  max={today}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    setStartDate(newStart);
+                    // If start date is after end date, adjust end date
+                    if (endDate && newStart > endDate) {
+                      setEndDate(newStart);
+                    }
+                  }}
                   className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
                 />
                 <span className="text-gray-500">to</span>
                 <input
                   type="date"
                   value={endDate}
+                  min={startDate}
+                  max={today}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
                 />
@@ -705,8 +754,16 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           </div>
         </div>
 
+        {/* Badge showing filtered data */}
+        {isShowingFilteredData && (
+          <div className="mb-3 inline-flex items-center gap-2 rounded-lg bg-indigo-100 px-3 py-1.5 text-sm font-medium text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400">
+            <Info className="h-4 w-4" />
+            Data for {getCurrentDateFilter().label}
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {filteredMetrics.map((metric, index) => (
+          {displayMetrics.map((metric, index) => (
             <div
               key={index}
               className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950"
@@ -735,41 +792,14 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex-1">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              {currentCard.bank} {currentCard.lastFour} History
+              {currentCard.bank} {currentCard.lastFour} Transaction History
             </h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-              {viewMode === 'daily' 
-                ? `Showing ${filteredTransactions.length} transaction${filteredTransactions.length !== 1 ? 's' : ''} for ${getCurrentDateFilter().label}`
-                : `Monthly summary for ${currentCard.bank} ${currentCard.name} (****${currentCard.lastFour})`
-              }
+              Showing {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} for {getCurrentDateFilter().label}
             </p>
           </div>
           
           <div className="flex gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex rounded-lg border border-gray-200 dark:border-gray-800">
-              <button
-                onClick={() => setViewMode('daily')}
-                className={`px-3 py-2 text-sm font-medium transition-colors ${
-                  viewMode === 'daily'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-900'
-                }`}
-              >
-                Daily
-              </button>
-              <button
-                onClick={() => setViewMode('monthly')}
-                className={`px-3 py-2 text-sm font-medium transition-colors ${
-                  viewMode === 'monthly'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-900'
-                }`}
-              >
-                Monthly
-              </button>
-            </div>
-            
             <button className="px-4 py-2 text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
               Download Statement
             </button>
@@ -784,7 +814,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
               type="text"
               value={historySearchQuery}
               onChange={(e) => setHistorySearchQuery(e.target.value)}
-              placeholder={viewMode === 'daily' ? "Search description, date..." : "Search month, date, total balance..."}
+              placeholder="Search description, date..."
               className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:placeholder-gray-400"
             />
           </div>
@@ -807,18 +837,13 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           <div className="flex items-center justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
           </div>
-        ) : viewMode === 'daily' ? (
-          <DailyTransactionTable data={filteredTransactions} card={currentCard} />
         ) : (
-          <CardHistoryTable data={filteredHistory} card={currentCard} />
+          <DailyTransactionTable data={filteredTransactions} card={currentCard} />
         )}
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {viewMode === 'daily' 
-              ? `Showing ${filteredTransactions.length} transaction${filteredTransactions.length !== 1 ? 's' : ''}`
-              : 'Page 1 of 1'
-            }
+            Showing {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
           </p>
         </div>
       </div>

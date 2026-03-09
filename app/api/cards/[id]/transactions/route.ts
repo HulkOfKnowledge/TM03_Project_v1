@@ -66,6 +66,7 @@ export async function GET(
       description:  row.description,
       // Expose net amount: debits (purchases) are positive, credits (payments) negative
       amount:       row.debit ?? (row.credit != null ? -row.credit : 0),
+      balance:      row.balance ?? null,  // Include balance from database
       category:     row.raw_category ?? null,
       merchantName: null, // populated when Flinks Enrich /GetCategorization is integrated
     }));

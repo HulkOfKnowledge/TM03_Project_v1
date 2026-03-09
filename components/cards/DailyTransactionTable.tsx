@@ -46,7 +46,8 @@ export function DailyTransactionTable({ data, card }: DailyTransactionTableProps
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // local midnight — avoids UTC-offset day shift
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short', 
@@ -149,7 +150,7 @@ export function DailyTransactionTable({ data, card }: DailyTransactionTableProps
         return direction === 'asc' ? comparison : -comparison;
       },
       render: (row) => (
-        <div className="text-right">
+        <div className="text-left">
           <p className={`text-sm font-medium ${getTransactionTypeColor(row.amount)}`}>
             {row.amount < 0 ? '-' : '+'}{formatCurrency(row.amount)}
           </p>
