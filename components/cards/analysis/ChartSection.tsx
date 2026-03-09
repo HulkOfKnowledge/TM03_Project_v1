@@ -6,7 +6,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { ChevronUp } from 'lucide-react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 interface ChartSectionProps {
   title: string;
@@ -17,15 +17,17 @@ interface ChartSectionProps {
   trend?: {
     value: string;
     label?: string;
+    isPositive?: boolean;
   };
   legend?: Array<{
     color: string;
     label: string;
   }>;
-  selectedPeriod: string;
-  onPeriodChange: (period: string) => void;
+  selectedPeriod?: string;
+  onPeriodChange?: (period: string) => void;
   periodOptions?: string[];
   valueClassName?: string;
+  headerControls?: ReactNode;
 }
 
 export function ChartSection({
@@ -40,14 +42,18 @@ export function ChartSection({
   onPeriodChange,
   periodOptions = ['Yearly', 'Monthly', 'Last 3 months'],
   valueClassName,
+  headerControls,
 }: ChartSectionProps) {
   return (
     <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
       <div className="mb-6">
-        {/* Title */}
-        <h2 className="mb-4 text-base text-gray-700 dark:text-gray-300 sm:text-lg">
-          {title}
-        </h2>
+        {/* Title row */}
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <h2 className="text-base text-gray-700 dark:text-gray-300 sm:text-lg">
+            {title}
+          </h2>
+          {headerControls && <div className="flex-shrink-0">{headerControls}</div>}
+        </div>
 
         {/* Separator */}
         <div className="mb-4 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
@@ -62,9 +68,20 @@ export function ChartSection({
                   {primaryValue}
                 </span>
                 {trend && (
-                  <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
-                    <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800 sm:text-sm">
+                  <div className={`flex items-center gap-1 ${
+                    trend.isPositive === true ? 'text-emerald-500' :
+                    trend.isPositive === false ? 'text-red-500' :
+                    'text-gray-400 dark:text-gray-500'
+                  }`}>
+                    {trend.isPositive === false
+                      ? <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                      : <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                    }
+                    <span className={`rounded px-1.5 py-0.5 text-xs sm:text-sm ${
+                      trend.isPositive === true ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' :
+                      trend.isPositive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
+                      'bg-gray-100 text-gray-500 dark:bg-gray-800'
+                    }`}>
                       {trend.value}
                     </span>
                   </div>
@@ -104,17 +121,19 @@ export function ChartSection({
           )}
 
           {/* Right: Dropdown */}
-          <div className="flex justify-end">
-            <select
-              value={selectedPeriod}
-              onChange={(e) => onPeriodChange(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:text-sm"
-            >
-              {periodOptions.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </div>
+          {selectedPeriod !== undefined && onPeriodChange && periodOptions && periodOptions.length > 0 && (
+            <div className="flex justify-end">
+              <select
+                value={selectedPeriod}
+                onChange={(e) => onPeriodChange(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:text-sm"
+              >
+                {periodOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 

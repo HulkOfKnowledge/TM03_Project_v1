@@ -13,8 +13,12 @@ import { CreditCardDisplay } from './CreditCardDisplay';
 import { DailyTransactionTable } from './DailyTransactionTable';
 import { VolumeProgressBar } from './VolumeProgressBar';
 import { CardOverviewSkeleton } from './CardOverviewSkeleton';
+import { DateFilterControls } from './DateFilterControls';
+import { MetricCard } from './analysis/MetricCard';
 import { useUser } from '@/hooks/useAuth';
 import { getCardGradientIndex } from '@/lib/utils';
+
+const SWIPE_THRESHOLD = 50;
 
 interface CardOverviewProps {
   card: ConnectedCard;
@@ -184,73 +188,39 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     loadTransactions();
   }, [currentCard?.id]);
 
-  // Minimum swipe distance (in pixels)
-  const minSwipeDistance = 50;
-
-  // Get current date filter
-  const getCurrentDateFilter = (): DateFilter => {
-    const now = new Date();
-    
+  // ── Derived date filter 
+  const dateFilter = useMemo((): DateFilter => {
+    const fmt = (d: string) => {
+      const [y, mo, day] = d.split('-').map(Number);
+      return new Date(y, mo - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
     if (filterType === 'month') {
-      const [year, month] = selectedMonth.split('-');
-      const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
-      const endOfMonth = new Date(parseInt(year), parseInt(month), 0);
-      
-      return {
-        type: 'month',
-        startDate: startOfMonth.toISOString().split('T')[0],
-        endDate: endOfMonth.toISOString().split('T')[0],
-        label: startOfMonth.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
-      };
-    } else if (filterType === 'year') {
-      return {
-        type: 'year',
-        startDate: `${selectedYear}-01-01`,
-        endDate: `${selectedYear}-12-31`,
-        label: selectedYear
-      };
-    } else {
-      // range
-      const fmt = (d: string) => {
-        const [y, mo, day] = d.split('-').map(Number);
-        return new Date(y, mo - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      };
-      const s = startDate || now.toISOString().split('T')[0];
-      const e = endDate || now.toISOString().split('T')[0];
-      return {
-        type: 'range',
-        startDate: s,
-        endDate: e,
-        label: `${fmt(s)} to ${fmt(e)}`
-      };
+      const [y, m] = selectedMonth.split('-').map(Number);
+      const start = new Date(y, m - 1, 1).toISOString().split('T')[0];
+      const end   = new Date(y, m, 0).toISOString().split('T')[0];
+      return { type: 'month', startDate: start, endDate: end, label: new Date(y, m - 1, 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) };
     }
-  };
+    if (filterType === 'year') {
+      return { type: 'year', startDate: `${selectedYear}-01-01`, endDate: `${selectedYear}-12-31`, label: selectedYear };
+    }
+    const s = startDate || today, e = endDate || today;
+    return { type: 'range', startDate: s, endDate: e, label: `${fmt(s)} to ${fmt(e)}` };
+  }, [filterType, selectedMonth, selectedYear, startDate, endDate, today]);
 
-  // Apply date filter to transactions
+  // Filtered transactions 
   const filteredTransactions = useMemo(() => {
     if (!currentCard || currentTransactions.length === 0) return [];
-    
-    const dateFilter = getCurrentDateFilter();
-    
-    const filtered = currentTransactions.filter(txn => {
-      const txnDate = txn.date;
-      const inDateRange = txnDate >= dateFilter.startDate && txnDate <= dateFilter.endDate;
-      
-      // Search filter
-      const matchesSearch = !historySearchQuery || 
+    return currentTransactions.filter(txn => {
+      const inDateRange = txn.date >= dateFilter.startDate && txn.date <= dateFilter.endDate;
+      const matchesSearch = !historySearchQuery ||
         txn.description.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
         txn.date.includes(historySearchQuery);
-      
-      // Zone filter
       const matchesZone = !historyZoneFilter || txn.zone === historyZoneFilter;
-      
       return inDateRange && matchesSearch && matchesZone;
     });
-    
-    return filtered;
-  }, [currentCard, currentTransactions, filterType, selectedMonth, selectedYear, startDate, endDate, historySearchQuery, historyZoneFilter]);
+  }, [currentCard, currentTransactions, dateFilter, historySearchQuery, historyZoneFilter]);
 
-  // Calculate metrics from filtered transactions
+  // ── Display metrics
   const displayMetrics = useMemo(() => {
     if (!overviewData || !currentCard) return [];
 
@@ -258,7 +228,6 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
 
     // Ending balance = the balance field on the most recent transaction in the filtered range.
     // filteredTransactions is sorted newest-first, so index 0 is the latest.
-    // This is the actual card balance at the end of the period, not the net delta.
     const endingBalance = filteredTransactions.length > 0
       ? (filteredTransactions[0]?.balance ?? currentCard.currentBalance)
       : currentCard.currentBalance;
@@ -267,85 +236,50 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
       ? (endingBalance / currentCard.creditLimit) * 100
       : 0;
 
-    // Total spending = sum of purchase transactions in the period (positive amounts)
     const purchases = filteredTransactions.filter(t => t.amount > 0);
-    const payments = filteredTransactions.filter(t => t.amount < 0);
+    const payments  = filteredTransactions.filter(t => t.amount < 0);
     const totalSpending = purchases.reduce((sum, t) => sum + t.amount, 0);
 
     // Due date logic:
     // - Current/future period → show the real upcoming due date from the card
-    // - Historical period → project due date to the month after the filter's end month
-    //   (statement typically closes end of month, payment due in the next month)
+    // - Historical period → project due date to the month after the filter’s end month
     const getDueDate = (): { value: string; description: string } => {
       if (!currentCard.paymentDueDate) return { value: 'N/A', description: 'Not available' };
 
-      const dateFilter = getCurrentDateFilter();
       const [endYear, endMonth] = dateFilter.endDate.split('-').map(Number);
       const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1; // 1-indexed
+      const currentYear  = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
 
-      // Parse the stored due date safely at local midnight (avoid UTC shift)
-      const dueDateStr = currentCard.paymentDueDate.split('T')[0]; // YYYY-MM-DD
+      const dueDateStr = currentCard.paymentDueDate.split('T')[0];
       const [dy, dm, dd] = dueDateStr.split('-').map(Number);
-      const dueDay = dd;
 
       const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
       if (endYear > currentYear || (endYear === currentYear && endMonth >= currentMonth)) {
-        // Current or future period — show the real upcoming due date
-        const realDue = new Date(dy, dm - 1, dd);
-        const msLeft = realDue.getTime() - Date.now();
-        const daysLeft = Math.floor(msLeft / (1000 * 60 * 60 * 24));
+        const realDue  = new Date(dy, dm - 1, dd);
+        const daysLeft = Math.floor((realDue.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
         return {
           value: fmtDate(realDue),
           description: daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left` : 'Past due',
         };
       }
 
-      // Historical period — project due date to the month after the filter end month.
       const projMonthIndex = endMonth % 12;
       const projYear = endMonth === 12 ? endYear + 1 : endYear;
-      const projectedDate = new Date(projYear, projMonthIndex, dueDay);
-      return {
-        value: fmtDate(projectedDate),
-        description: 'Past due date',
-      };
+      return { value: fmtDate(new Date(projYear, projMonthIndex, dd)), description: 'Past due date' };
     };
 
     const dueInfo = getDueDate();
 
     return [
-      {
-        label: 'Credit Balance',
-        value: formatCurrency(endingBalance),
-        info: true,
-        description: `${purchases.length} purchases, ${payments.length} payments in period`,
-      },
-      {
-        label: 'Due Date',
-        value: dueInfo.value,
-        info: false,
-        description: dueInfo.description,
-      },
-      {
-        label: 'Credit Limit',
-        value: formatCurrency(currentCard.creditLimit),
-        info: true,
-        description: `Utilization: ${endingUtilization.toFixed(1)}%`,
-      },
-      {
-        label: 'Total Spending',
-        value: formatCurrency(totalSpending),
-        info: true,
-        description: `In selected period`,
-      },
+      { label: 'Credit Balance',  value: formatCurrency(endingBalance),   showInfo: true,  description: `${purchases.length} purchases, ${payments.length} payments in period` },
+      { label: 'Due Date',        value: dueInfo.value,                   showInfo: false, description: dueInfo.description },
+      { label: 'Credit Limit',    value: formatCurrency(currentCard.creditLimit), showInfo: true, description: `Utilization: ${endingUtilization.toFixed(1)}%` },
+      { label: 'Total Spending',  value: formatCurrency(totalSpending),   showInfo: true,  description: 'In selected period' },
     ];
-  }, [overviewData, currentCard, filteredTransactions, filterType, selectedMonth, selectedYear, startDate, endDate]);
+  }, [overviewData, currentCard, filteredTransactions, dateFilter]);
   
-  // Always show the active date range badge
-  const isShowingFilteredData = true;
-
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
     setTouchStart({
@@ -368,7 +302,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     const distanceY = touchStart.y - touchEnd.y;
     const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
 
-    if (isHorizontalSwipe && Math.abs(distanceX) > minSwipeDistance) {
+    if (isHorizontalSwipe && Math.abs(distanceX) > SWIPE_THRESHOLD) {
       if (distanceX > 0) {
         handleNextCard();
       } else {
@@ -413,30 +347,11 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     }
   };
 
-  // Get available zones for filter dropdown
+  // ── Available zones for filter dropdown ─────────────────────────────────────
   const availableZones = useMemo(() => {
     const zones = new Set(filteredTransactions.map(txn => txn.zone).filter(Boolean));
     return Array.from(zones).sort();
   }, [filteredTransactions]);
-
-  // Generate month options (last 24 months)
-  const monthOptions = useMemo(() => {
-    const options = [];
-    const now = new Date();
-    for (let i = 0; i < 24; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const value = d.toISOString().slice(0, 7); // YYYY-MM
-      const label = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      options.push({ value, label });
-    }
-    return options;
-  }, []);
-
-  // Generate year options (last 5 years)
-  const yearOptions = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
-  }, []);
 
   // Safety check: if no current card, don't render
   if (!currentCard) {
@@ -448,14 +363,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     return <CardOverviewSkeleton />;
   }
 
-  // Determine zone text based on utilization percentage
-  const getZoneText = (percentage: number): string => {
-    if (percentage <= 25) return 'Safe Zone';
-    if (percentage <= 30) return 'Caution Zone';
-    return 'Danger Zone';
-  };
-  
-  const zoneText = getZoneText(overviewData.utilizationPercentage);
+  const zoneText = `${overviewData.utilizationZone} Zone`;
 
   return (
     <div className="mx-auto">
@@ -689,100 +597,36 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           </div>
           
           {/* Date Filter Controls */}
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as 'month' | 'range' | 'year')}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
-            >
-              <option value="month">Month</option>
-              <option value="year">Year</option>
-              <option value="range">Date Range</option>
-            </select>
-            
-            {filterType === 'month' && (
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
-              >
-                {monthOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            )}
-            
-            {filterType === 'year' && (
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
-              >
-                {yearOptions.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            )}
-            
-            {filterType === 'range' && (
-              <div className="flex gap-2 items-center">
-                <input
-                  type="date"
-                  value={startDate}
-                  max={today}
-                  onChange={(e) => {
-                    const newStart = e.target.value;
-                    setStartDate(newStart);
-                    // If start date is after end date, adjust end date
-                    if (endDate && newStart > endDate) {
-                      setEndDate(newStart);
-                    }
-                  }}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
-                />
-                <span className="text-gray-500">to</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  min={startDate}
-                  max={today}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
-                />
-              </div>
-            )}
-          </div>
+          <DateFilterControls
+            filterType={filterType}
+            onFilterTypeChange={setFilterType}
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+            endDate={endDate}
+            onEndDateChange={setEndDate}
+            today={today}
+          />
         </div>
 
-        {/* Badge showing filtered data */}
-        {isShowingFilteredData && (
-          <div className="mb-3 inline-flex items-center gap-2 rounded-lg bg-indigo-100 px-3 py-1.5 text-sm font-medium text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400">
-            <Info className="h-4 w-4" />
-            Data for {getCurrentDateFilter().label}
-          </div>
-        )}
+        {/* Date badge */}
+        <div className="mb-3 inline-flex items-center gap-2 rounded-lg bg-indigo-100 px-3 py-1.5 text-sm font-medium text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400">
+          <Info className="h-4 w-4" />
+          Data for {dateFilter.label}
+        </div>
         
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {displayMetrics.map((metric, index) => (
-            <div
+            <MetricCard
               key={index}
-              className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950"
-            >
-              <div className="mb-2 flex items-start justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {metric.label}
-                </span>
-                {metric.info && (
-                  <Info className="h-4 w-4 flex-shrink-0 text-gray-400 dark:text-gray-600" />
-                )}
-              </div>
-              <p className="mb-1 text-2xl font-bold text-gray-900 dark:text-white">
-                {metric.value}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">
-                {metric.description}
-              </p>
-            </div>
+              label={metric.label}
+              value={metric.value}
+              description={metric.description}
+              showInfo={metric.showInfo}
+            />
           ))}
         </div>
       </div>
@@ -795,7 +639,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
               {currentCard.bank} {currentCard.lastFour} Transaction History
             </h2>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-              Showing {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} for {getCurrentDateFilter().label}
+              Showing {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} for {dateFilter.label}
             </p>
           </div>
           
