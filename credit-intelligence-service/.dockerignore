@@ -1,0 +1,28 @@
+# Virtual environment — never copy, image installs its own
+venv/
+.venv/
+env/
+
+# Secrets — set these in Render's environment variables dashboard
+.env
+.env.local
+.env.*.local
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+
+# Jupyter notebooks and data — not needed at runtime
+notebooks/
+data/
+
+# Dev/docs files
+*.md
+setup.sh
+scripts/
+
+# Git
+.git/
+.gitignore
