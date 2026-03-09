@@ -269,7 +269,7 @@ function buildFlinksAccountSnapshot(params: {
  * POST /api/cards/seed-demo
  *
  * Creates demo credit cards with 12 months of Flinks-shaped transaction history.
- * Idempotent — does nothing if demo cards already exist for the user.
+ * Idempotent  does nothing if demo cards already exist for the user.
  */
 export async function POST(_request: NextRequest) {
   try {

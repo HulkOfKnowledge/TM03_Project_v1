@@ -82,7 +82,7 @@ class PaymentRecommender:
         allocated = {card.card_id: min(card.minimum_payment, card.current_balance) for card in cards}
         remaining = available_amount - sum(allocated.values())
 
-        # Step 2: Avalanche — extra goes to highest APR first, then next, etc.
+        # Step 2: Avalanche  extra goes to highest APR first, then next, etc.
         sorted_cards = sorted(cards, key=lambda c: c.interest_rate or 0, reverse=True)
         for card in sorted_cards:
             if remaining <= 0:
@@ -272,7 +272,7 @@ class PaymentRecommender:
             if suggested_amount >= card.current_balance:
                 parts.append(
                     f"This payment of ${suggested_amount:.2f} clears the full balance "
-                    f"— the card will be completely paid off."
+                    f" the card will be completely paid off."
                 )
             else:
                 parts.append(
@@ -294,7 +294,7 @@ class PaymentRecommender:
                 )
             elif days <= 14:
                 parts.append(
-                    f"Your due date is in {days} days — you have a bit of time, but don't wait too long."
+                    f"Your due date is in {days} days  you have a bit of time, but don't wait too long."
                 )
 
             # Minimum payment context
@@ -359,7 +359,7 @@ class PaymentRecommender:
             impact = self.calculate_impact(card, suggested_amount)
 
             if remaining_days <= 0:
-                due_note = "This payment is already overdue — pay immediately."
+                due_note = "This payment is already overdue  pay immediately."
             elif remaining_days <= 3:
                 due_note = f"Only {remaining_days} day{'s' if remaining_days != 1 else ''} left before the due date."
             else:

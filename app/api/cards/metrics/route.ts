@@ -3,7 +3,7 @@
  *
  * Single source of truth for all date-filtered card metrics.
  * Computes balance, utilization, spending, and daily chart series
- * directly from card_transactions — no frontend math required.
+ * directly from card_transactions  no frontend math required.
  *
  * Query params:
  *   startDate  YYYY-MM-DD  (required)

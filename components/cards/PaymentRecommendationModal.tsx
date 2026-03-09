@@ -1,6 +1,6 @@
 /**
  * Payment Recommendation Modal
- * Answers: "I owe $X across N cards but can only pay $Y — which cards do I pay, how much, and why?"
+ * Answers: "I owe $X across N cards but can only pay $Y  which cards do I pay, how much, and why?"
  */
 
 'use client';
@@ -20,7 +20,7 @@ interface PaymentRecommendationModalProps {
 const fmt = (n: number | undefined | null) =>
   n != null && !isNaN(n)
     ? `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : '—';
+    : '';
 
 // Parse a due-date string into a friendly label and numeric days remaining
 function parseDueDate(raw: string | null | undefined): { label: string; daysLeft: number | null } {
@@ -389,7 +389,7 @@ export function PaymentRecommendationModal({
                 </div>
                 {isValidAmount && parsedAmount < totalOwed && (
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {fmt(totalOwed - parsedAmount)} will remain after payment — we&apos;ll split
+                    {fmt(totalOwed - parsedAmount)} will remain after payment  we&apos;ll split
                     your {fmt(parsedAmount)} optimally across all cards.
                   </p>
                 )}

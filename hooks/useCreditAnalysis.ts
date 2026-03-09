@@ -254,7 +254,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     return { lastUtil, utilDiff, totalSpend, spendTrendPct, prevLabel };
   }, [metricsData, viewMode, displayCards, prevLabel]);
 
-  // Metrics scoped to the current date filter — derived from the API response
+  // Metrics scoped to the current date filter  derived from the API response
   const filteredMetrics = useMemo(() => {
     if (!metricsData) return { totalOwed: 0, totalAvailable: 0, cardBalances: [], owedChangePct: 0, availableChangePct: 0 };
 

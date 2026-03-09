@@ -31,7 +31,7 @@ export const BANK_GRADIENTS: Record<string, string> = {
   'amex':         'from-neutral-700 via-stone-800 to-zinc-900',      // Amex: dark platinum
 };
 
-// Fallback gradients for unrecognised institutions — mix of colourful and dark
+// Fallback gradients for unrecognised institutions  mix of colourful and dark
 export const CARD_GRADIENTS = [
   'from-zinc-800 via-gray-900 to-black',
   'from-slate-600 via-slate-700 to-slate-900',

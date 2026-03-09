@@ -46,7 +46,7 @@ function formatCurrency(amount: number | null | undefined): string {
 
 /** Formats ISO/date string → "Month DD" e.g. "March 19" */
 function formatPaymentDue(raw: string | null | undefined): string {
-  if (!raw) return '—';
+  if (!raw) return '';
   const d = new Date(raw);
   if (isNaN(d.getTime())) return raw;
   return d.toLocaleDateString('en-CA', { month: 'long', day: 'numeric' });

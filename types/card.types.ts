@@ -145,7 +145,7 @@ export interface PeriodMetricsSummary {
 export interface CardMetricsResponse {
   startDate: string;
   endDate: string;
-  /** min(endDate, today) — the actual cut-off used for balance/utilization. */
+  /** min(endDate, today)  the actual cut-off used for balance/utilization. */
   effectiveEndDate: string;
   cards: CardPeriodMetrics[];
   totals: PeriodMetricsSummary;

@@ -69,10 +69,10 @@ cd credit-intelligence-service
 # Create venv
 python -m venv venv
 
-# Activate — Windows
+# Activate  Windows
 venv\Scripts\activate
 
-# Activate — macOS / Linux
+# Activate  macOS / Linux
 source venv/bin/activate
 ```
 
