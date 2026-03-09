@@ -5,7 +5,8 @@
 
 'use client';
 
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, useEffect } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export type SortDirection = 'asc' | 'desc' | null;
 
@@ -21,6 +22,7 @@ export interface Column<T> {
 interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
+  pageSize?: number;
   onRowClick?: (row: T, index: number) => void;
   renderRowPrefix?: (row: T, index: number) => ReactNode;
   className?: string;
@@ -29,12 +31,17 @@ interface DataTableProps<T> {
 export function DataTable<T>({
   columns,
   data,
+  pageSize = 20,
   onRowClick,
   renderRowPrefix,
   className = '',
 }: DataTableProps<T>) {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever the data changes (e.g. filter applied)
+  useEffect(() => { setCurrentPage(1); }, [data]);
 
   const handleSort = (column: Column<T>) => {
     if (!column.sortable) return;
@@ -98,6 +105,11 @@ export function DataTable<T>({
     });
   }
 
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const pageData = sortedData.slice(pageStart, pageStart + pageSize);
+
   return (
     <div className={`overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 ${className}`}>
       <table className="w-full min-w-[800px]">
@@ -122,17 +134,17 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-gray-950">
-          {sortedData.map((row, index) => (
+          {pageData.map((row, index) => (
             <tr
-              key={index}
+              key={pageStart + index}
               className={`border-b border-gray-200 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50 ${
                 onRowClick ? 'cursor-pointer' : ''
               }`}
-              onClick={() => onRowClick?.(row, index)}
+              onClick={() => onRowClick?.(row, pageStart + index)}
             >
               {renderRowPrefix && (
                 <td className="px-3 py-3 sm:px-4 sm:py-4">
-                  {renderRowPrefix(row, index)}
+                  {renderRowPrefix(row, pageStart + index)}
                 </td>
               )}
               {columns.map((column) => (
@@ -143,7 +155,7 @@ export function DataTable<T>({
                   }`}
                 >
                   {column.render
-                    ? column.render(row, index)
+                    ? column.render(row, pageStart + index)
                     : (row as any)[column.key]}
                 </td>
               ))}
@@ -151,6 +163,57 @@ export function DataTable<T>({
           ))}
         </tbody>
       </table>
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-950">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {pageStart + 1}–{Math.min(pageStart + pageSize, sortedData.length)} of {sortedData.length}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+              className="rounded p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-800"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+              .reduce<(number | '…')[]>((acc, p, i, arr) => {
+                if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('…');
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === '…' ? (
+                  <span key={`ellipsis-${i}`} className="px-1 text-xs text-gray-400">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p as number)}
+                    className={`min-w-[28px] rounded px-1.5 py-1 text-xs font-medium ${
+                      safePage === p
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+              className="rounded p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-800"
+              aria-label="Next page"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

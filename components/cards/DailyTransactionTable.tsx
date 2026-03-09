@@ -186,8 +186,10 @@ export function DailyTransactionTable({ data, card }: DailyTransactionTableProps
       },
       render: (row) => (
         <span className="text-sm text-gray-900 dark:text-white">
-          {row.utilizationPercentage !== undefined 
-            ? `${row.utilizationPercentage.toFixed(1)}%` 
+          {row.utilizationPercentage !== undefined
+            ? row.utilizationPercentage < 1
+              ? '<1%'
+              : `${row.utilizationPercentage.toFixed(1)}%`
             : 'N/A'}
         </span>
       ),
