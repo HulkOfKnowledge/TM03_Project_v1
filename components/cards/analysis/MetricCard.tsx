@@ -41,7 +41,7 @@ export function MetricCard({
           <Info className="h-3 w-3 flex-shrink-0 text-gray-400 dark:text-gray-600 sm:h-4 sm:w-4" />
         )}
       </div>
-      <p className="mb-2 text-3xl text-gray-900 dark:text-white sm:text-4xl md:text-5xl">
+      <p className="mb-2 text-3xl text-gray-900 dark:text-white">
         {value}
       </p>
       {trend && (

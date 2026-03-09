@@ -16,6 +16,7 @@ import { VolumeProgressBar } from './VolumeProgressBar';
 import { CardOverviewSkeleton } from './CardOverviewSkeleton';
 import { DateFilterControls } from './DateFilterControls';
 import { MetricCard } from './analysis/MetricCard';
+import { PaymentRecommendationModal } from './PaymentRecommendationModal';
 import { useUser } from '@/hooks/useAuth';
 import { getCardGradientIndex } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [transitionPhase, setTransitionPhase] = useState<'idle' | 'exit' | 'enter'>('idle');
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [showPaymentRec, setShowPaymentRec] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [hasInteracted, setHasInteracted] = useState(false);
   
@@ -386,13 +388,24 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             everything is accurate.
           </p>
         </div>
-        <button
-          onClick={onAddCard}
-          className="flex items-center gap-2 self-start whitespace-nowrap rounded-lg border-2 border-indigo-600 px-4 py-2 font-medium text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-500 dark:hover:bg-indigo-950/30"
-        >
-          <Plus className="h-4 w-4" />
-          Add Card
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <button
+            onClick={() => setShowPaymentRec(true)}
+            className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-brand px-4 py-2 font-medium text-white transition-colors hover:bg-brand/90 dark:hover:bg-brand/90"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Payment Recommendation
+          </button>
+          <button
+            onClick={onAddCard}
+            className="flex items-center gap-2 whitespace-nowrap rounded-lg border-2 border-indigo-600 px-4 py-2 font-medium text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-500 dark:hover:bg-indigo-950/30"
+          >
+            <Plus className="h-4 w-4" />
+            Add Card
+          </button>
+        </div>
       </div>
 
       {/* Description Box */}
@@ -728,6 +741,13 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           </div>
         </div>
       )}
+
+      {/* Payment Recommendation Modal */}
+      <PaymentRecommendationModal
+        isOpen={showPaymentRec}
+        onClose={() => setShowPaymentRec(false)}
+        cards={cards}
+      />
     </div>
   );
 }

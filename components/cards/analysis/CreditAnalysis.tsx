@@ -19,6 +19,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { Info } from 'lucide-react';
+import { useState } from 'react';
 import type { ConnectedCard } from '@/types/card.types';
 import { useCreditAnalysis } from '@/hooks/useCreditAnalysis';
 import { DateFilterControls } from '../DateFilterControls';
@@ -27,6 +28,7 @@ import { ChartSection } from './ChartSection';
 import { ChartViewControls } from './ChartViewControls';
 import { PaymentHistoryTable } from './PaymentHistoryTable';
 import { RecommendedActions } from './RecommendedActions';
+import { PaymentRecommendationModal } from '../PaymentRecommendationModal';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
@@ -35,6 +37,8 @@ interface CreditAnalysisProps {
 }
 
 export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
+  const [showPaymentRec, setShowPaymentRec] = useState(false);
+
   const {
     filterType, setFilterType,
     selectedMonth, setSelectedMonth,
@@ -122,20 +126,31 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
           </p>
         </div>
         <div className="self-start md:self-auto">
-          <DateFilterControls
-            filterType={filterType}
-            onFilterTypeChange={setFilterType}
-            selectedMonth={selectedMonth}
-            onMonthChange={setSelectedMonth}
-            selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
-            startDate={startDate}
-            onStartDateChange={setStartDate}
-            endDate={endDate}
-            onEndDateChange={setEndDate}
-            today={today}
-            selectClassName="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:px-4 sm:text-sm"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowPaymentRec(true)}
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand/90 dark:hover:bg-brand/90"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Payment Recommendation
+            </button>
+            <DateFilterControls
+              filterType={filterType}
+              onFilterTypeChange={setFilterType}
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
+              selectedYear={selectedYear}
+              onYearChange={setSelectedYear}
+              startDate={startDate}
+              onStartDateChange={setStartDate}
+              endDate={endDate}
+              onEndDateChange={setEndDate}
+              today={today}
+              selectClassName="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white sm:px-4 sm:text-sm"
+            />
+          </div>
         </div>
       </div>
 
@@ -171,7 +186,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex-shrink-0">
               <span className="mb-2 block text-xs text-gray-600 dark:text-gray-400 sm:text-sm">Data per card</span>
-              <p className="mb-2 text-3xl text-gray-900 dark:text-white sm:text-4xl md:text-5xl">
+              <p className="mb-2 text-3xl text-gray-900 dark:text-white">
                 {connectedCards.length} Cards
               </p>
               <p className="inline-block rounded bg-gray-50 px-3 py-1.5 text-[10px] text-gray-500 dark:bg-gray-900 dark:text-gray-500 sm:text-xs">
@@ -229,6 +244,13 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
 
       {/* Recommended Actions */}
       <RecommendedActions insights={analysisData?.mlInsights?.insights} />
+
+      {/* Payment Recommendation Modal */}
+      <PaymentRecommendationModal
+        isOpen={showPaymentRec}
+        onClose={() => setShowPaymentRec(false)}
+        cards={connectedCards}
+      />
     </div>
   );
 }

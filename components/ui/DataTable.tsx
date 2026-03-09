@@ -31,7 +31,7 @@ interface DataTableProps<T> {
 export function DataTable<T>({
   columns,
   data,
-  pageSize = 20,
+  pageSize = 10,
   onRowClick,
   renderRowPrefix,
   className = '',
