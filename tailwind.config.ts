@@ -8,6 +8,12 @@ const config = {
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
   ],
+  safelist: [
+    // Card offer gradients – values come from the database at runtime so Tailwind
+    // won't scan them. List all from-* / to-* colours used in credit_card_offers.
+    { pattern: /^from-(red|blue|green|sky|orange|indigo|rose|amber|emerald|violet|pink|lime|teal|gray|stone|cyan|yellow|neutral|slate|zinc)-(50|100|200|300|400|500|600|700|800|900|950)$/ },
+    { pattern: /^to-(red|blue|green|sky|orange|indigo|rose|amber|emerald|violet|pink|lime|teal|gray|stone|cyan|yellow|neutral|slate|zinc)-(50|100|200|300|400|500|600|700|800|900|950)$/ },
+  ],
   prefix: '',
   theme: {
     container: {

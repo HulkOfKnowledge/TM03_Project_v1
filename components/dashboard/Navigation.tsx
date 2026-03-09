@@ -81,6 +81,7 @@ export function Navigation() {
   const cardSubNav: SubNavItem[] = [
     { label: 'Card Dashboard', href: '/cards' },
     { label: 'Credit Analysis', href: '/cards/analysis' },
+    { label: 'Card Offers', href: '/cards/offers' },
   ];
 
   // Navigation items - only shown after onboarding

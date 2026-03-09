@@ -74,7 +74,7 @@ function AllocationRow({
       {/* ── Clickable summary row ── */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-gray-50 active:bg-gray-100/70 dark:hover:bg-white/[0.04] dark:active:bg-white/[0.06]"
+        className="flex w-full items-center gap-3 border-b border-gray-200 px-2 py-3.5 text-left transition-colors bg-gray-50/10 hover:bg-gray-100 active:bg-gray-100/70 dark:bg-gray-800 dark:hover:bg-white/[0.04] dark:active:bg-white/[0.06]"
       >
         {/* Numbered dot */}
         <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
@@ -290,12 +290,12 @@ export function PaymentRecommendationModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative flex max-h-[96dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-950 dark:ring-white/10 sm:max-h-[88vh] sm:max-w-lg sm:rounded-3xl">
+      <div className="relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-950 dark:ring-white/10 sm:max-h-[88vh] sm:max-w-lg sm:rounded-3xl">
 
         {/* ── Header ── */}
         <div className="flex flex-shrink-0 items-start justify-between px-5 pt-5 pb-3">
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
+            <h2 className="text-lg font-bold tracking-tight text-brand">
               Payment Recommendations
             </h2>
             <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
@@ -306,7 +306,7 @@ export function PaymentRecommendationModal({
           </div>
           <button
             onClick={onClose}
-            className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-300"
+            className="mt-0.5 flex h-8 w-8 items-center justify-center bg-gray-200 text-gray-400 transition-colors hover:bg-gray-300 rounded-full hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-300"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,7 +323,7 @@ export function PaymentRecommendationModal({
             <div className="px-5 pb-6 pt-2">
 
               {/* Balance summary card */}
-              <div className="mb-5 rounded-2xl bg-gray-50 p-4 dark:bg-white/[0.04]">
+              <div className="mb-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:bg-white/[0.04]">
                 <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   Total balance
                 </p>
