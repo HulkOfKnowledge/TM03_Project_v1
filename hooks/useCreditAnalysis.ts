@@ -111,7 +111,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
   ], [isDark]);
 
   const textColor = isDark ? '#9CA3AF' : '#6B7280';
-  const gridColor = isDark ? '#374151' : '#E5E7EB';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)';
 
   // Cards in scope per view mode
   const displayCards = useMemo(() => {
@@ -187,7 +187,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     },
     scales: {
       x: { grid: { display: false }, ticks: { color: textColor, font: { size: 12 }, maxTicksLimit: 12 }, border: { display: false } },
-      y: { min: 0, max: 100, grid: { color: gridColor, drawTicks: false }, ticks: { color: textColor, font: { size: 12 }, callback: v => `${v}%`, stepSize: 10 }, border: { display: false } },
+      y: { min: 0, max: 100, grid: { color: gridColor, lineWidth: 0.5, drawTicks: false }, ticks: { color: textColor, font: { size: 12 }, callback: v => `${v}%`, stepSize: 10 }, border: { display: false } },
     },
     interaction: { mode: 'index' as const, intersect: false },
   }), [textColor, gridColor]);
@@ -204,7 +204,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: textColor, font: { size: 12 }, maxTicksLimit: 12 }, border: { display: false } },
-        y: { min: 0, max: yMax || 5000, grid: { color: gridColor, drawTicks: false }, ticks: { color: textColor, font: { size: 12 }, callback: v => `$${(Number(v) / 1000).toFixed(0)}k` }, border: { display: false } },
+        y: { min: 0, max: yMax || 5000, grid: { color: gridColor, lineWidth: 0.5, drawTicks: false }, ticks: { color: textColor, font: { size: 12 }, callback: v => `$${(Number(v) / 1000).toFixed(0)}k` }, border: { display: false } },
       },
     };
   }, [textColor, gridColor, spendingChartData]);
