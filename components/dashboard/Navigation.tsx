@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Home, 
@@ -56,13 +56,11 @@ export function Navigation() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
-  const [hoveredNavItem, setHoveredNavItem] = useState<string | null>(null);
+  const [activeDesktopSubNavItem, setActiveDesktopSubNavItem] = useState<string | null>(null);
   const [expandedMobileMenu, setExpandedMobileMenu] = useState<string | null>(null);
   const isDark = useIsDarkMode();
   const { setTheme } = useTheme();
   const [unreadNotifications] = useState(0);
-  const navRef = useRef<HTMLDivElement>(null);
-  const subNavTimeoutRef = useRef<NodeJS.Timeout>();
 
   const onLogout = async () => {
     setShowUserMenu(false);
@@ -142,45 +140,17 @@ export function Navigation() {
   };
 
   // Determine which nav item should show subnav
-  const currentSubNavItem = hoveredNavItem;
+  const currentSubNavItem = activeDesktopSubNavItem;
   const currentNavItem = navItems.find(item => item.label === currentSubNavItem);
   const showSubNav = currentNavItem?.subNav && currentNavItem.subNav.length > 0;
 
-  // Handle mouse enter on nav item
-  const handleNavMouseEnter = (label: string) => {
-    if (subNavTimeoutRef.current) {
-      clearTimeout(subNavTimeoutRef.current);
-    }
-    setHoveredNavItem(label);
-  };
-
-  // Handle mouse leave from nav item
-  const handleNavMouseLeave = () => {
-    subNavTimeoutRef.current = setTimeout(() => {
-      setHoveredNavItem(null);
-    }, 150);
-  };
-
-  // Handle mouse enter on subnav
-  const handleSubNavMouseEnter = () => {
-    if (subNavTimeoutRef.current) {
-      clearTimeout(subNavTimeoutRef.current);
-    }
-  };
-
-  // Handle mouse leave from subnav
-  const handleSubNavMouseLeave = () => {
-    setHoveredNavItem(null);
-  };
-
-  // Cleanup timeout on unmount
+  // Keep desktop subnav in sync with current route when navigating directly
   useEffect(() => {
-    return () => {
-      if (subNavTimeoutRef.current) {
-        clearTimeout(subNavTimeoutRef.current);
-      }
-    };
-  }, []);
+    const activeWithSubNav = navItems.find(item => item.active && item.subNav?.length);
+    if (activeWithSubNav) {
+      setActiveDesktopSubNavItem(activeWithSubNav.label);
+    }
+  }, [pathname]);
 
   // Check if subnav item is active
   const isSubNavActive = (href: string) => {
@@ -206,27 +176,41 @@ export function Navigation() {
 
             {/* Center Navigation - Only show after onboarding */}
             {showNavItems && (
-              <div 
-                ref={navRef}
-                className="hidden lg:flex items-center space-x-1"
-              >
+              <div className="hidden lg:flex items-center space-x-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
+                  const hasSubNav = !!item.subNav?.length;
                   return (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        item.active
-                          ? 'text-brand'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                      }`}
-                      onMouseEnter={() => handleNavMouseEnter(item.label)}
-                      onMouseLeave={handleNavMouseLeave}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </Link>
+                    hasSubNav ? (
+                      <button
+                        key={item.label}
+                        onClick={() => {
+                          setActiveDesktopSubNavItem(item.label);
+                        }}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          item.active || activeDesktopSubNavItem === item.label
+                            ? 'text-brand'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                        }`}
+                        type="button"
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </button>
+                    ) : (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          item.active
+                            ? 'text-brand'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </Link>
+                    )
                   );
                 })}
               </div>
@@ -540,11 +524,7 @@ export function Navigation() {
 
         {/* Sub Navigation Bar - Tabbed UI */}
         {showSubNav && (
-          <div 
-            className="hidden lg:block border-t bg-[#f5f5f5] dark:bg-background"
-            onMouseEnter={handleSubNavMouseEnter}
-            onMouseLeave={handleSubNavMouseLeave}
-          >
+          <div className="hidden lg:block border-t bg-[#f5f5f5] dark:bg-background">
             <div className="container mx-auto px-4 md:px-6">
               <div className="flex items-center justify-center gap-2 h-12 overflow-x-auto scrollbar-hide">
                 {currentNavItem.subNav?.map((subItem) => {
