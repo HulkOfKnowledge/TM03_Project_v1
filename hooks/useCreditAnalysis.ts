@@ -111,7 +111,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
   ], [isDark]);
 
   const textColor = isDark ? '#9CA3AF' : '#6B7280';
-  const gridColor = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
   // Cards in scope per view mode
   const displayCards = useMemo(() => {

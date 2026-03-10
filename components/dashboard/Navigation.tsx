@@ -24,7 +24,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { handleLogout } from '@/lib/auth';
-import { useIsDarkMode } from '@/hooks/useTheme';
+import { useIsDarkMode, useTheme } from '@/hooks/useTheme';
 import { useUser } from '@/hooks/useAuth';
 import {
   DropdownMenu,
@@ -59,6 +59,7 @@ export function Navigation() {
   const [hoveredNavItem, setHoveredNavItem] = useState<string | null>(null);
   const [expandedMobileMenu, setExpandedMobileMenu] = useState<string | null>(null);
   const isDark = useIsDarkMode();
+  const { setTheme } = useTheme();
   const [unreadNotifications] = useState(0);
   const navRef = useRef<HTMLDivElement>(null);
   const subNavTimeoutRef = useRef<NodeJS.Timeout>();
@@ -136,14 +137,7 @@ export function Navigation() {
 
   // Handle theme change
   const handleThemeChange = (theme: 'light' | 'dark' | 'system') => {
-    if (theme === 'system') {
-      localStorage.removeItem('theme');
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      document.documentElement.classList.toggle('dark', systemTheme === 'dark');
-    } else {
-      localStorage.setItem('theme', theme);
-      document.documentElement.classList.toggle('dark', theme === 'dark');
-    }
+    setTheme(theme);
     setShowThemeSubmenu(false);
   };
 

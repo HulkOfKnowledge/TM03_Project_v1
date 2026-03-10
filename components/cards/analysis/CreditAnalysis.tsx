@@ -22,6 +22,7 @@ import { Info, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import type { ConnectedCard } from '@/types/card.types';
 import { useCreditAnalysis } from '@/hooks/useCreditAnalysis';
+import { useTheme } from '@/components/ThemeProvider';
 import { MetricCard } from './MetricCard';
 import { ChartSection } from './ChartSection';
 import { ChartSettingsModal } from './ChartSettingsModal';
@@ -38,6 +39,7 @@ interface CreditAnalysisProps {
 export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
   const [showPaymentRec, setShowPaymentRec] = useState(false);
   const [showChartSettings, setShowChartSettings] = useState(false);
+  const { resolvedTheme } = useTheme();
 
   const {
     filterType, setFilterType,
@@ -199,7 +201,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
         valueClassName={chartMetrics.lastUtil > 30 ? 'text-4xl text-red-600 dark:text-red-500 sm:text-5xl' : 'text-4xl text-gray-900 dark:text-white sm:text-5xl'}
         headerControls={chartSettingsButton}
       >
-        <Line data={utilizationChartData} options={utilizationChartOptions} />
+        <Line key={`util-${resolvedTheme}`} data={utilizationChartData} options={utilizationChartOptions} />
       </ChartSection>
 
       {/* Spending Patterns */}
@@ -213,7 +215,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
         }}
         headerControls={chartSettingsButton}
       >
-        <Line data={spendingChartData} options={spendingChartOptions} />
+        <Line key={`spend-${resolvedTheme}`} data={spendingChartData} options={spendingChartOptions} />
       </ChartSection>
 
       {/* Payment History */}
