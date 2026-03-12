@@ -186,6 +186,9 @@ export function Navigation() {
                         key={item.label}
                         onClick={() => {
                           setActiveDesktopSubNavItem(item.label);
+                          if (item.subNav?.[0]) {
+                            router.push(item.subNav[0].href);
+                          }
                         }}
                         className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                           item.active || activeDesktopSubNavItem === item.label

@@ -28,7 +28,7 @@ export function LearningCard({ content, onClick }: LearningCardProps) {
 
   return (
     <div
-      className="group flex h-[370px] cursor-pointer flex-col overflow-hidden rounded-lg border border-gray-200 bg-background transition-colors hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-700"
+      className="group flex h-[250px] cursor-pointer flex-col overflow-hidden rounded-lg border border-gray-200 bg-background transition-colors hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-700 sm:h-[370px]"
       onClick={onClick}
     >
       {/* Thumbnail */}
