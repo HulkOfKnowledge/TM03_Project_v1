@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { availableAmount, optimizationGoal = 'balanced' } = body;
+    const { cards: requestCards, availableAmount, optimizationGoal = 'balanced' } = body;
 
     if (!availableAmount || availableAmount <= 0) {
       return NextResponse.json(
@@ -32,37 +32,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch user's active credit cards with financial data
-    const { data: cards, error: cardsError } = await supabase
-      .from('connected_credit_cards')
-      .select(`
-        id,
-        institution_name,
-        credit_data_cache (
-          current_balance,
-          credit_limit,
-          utilization_percentage,
-          minimum_payment,
-          payment_due_date,
-          interest_rate,
-          last_payment_amount,
-          last_payment_date
-        )
-      `)
-      .eq('user_id', user.id)
-      .eq('is_active', true);
-
-    if (cardsError) {
+    if (!requestCards || !Array.isArray(requestCards) || requestCards.length === 0) {
       return NextResponse.json(
-        createErrorResponse('INTERNAL_ERROR', 'Failed to fetch cards'),
-        { status: 500 }
-      );
-    }
-
-    if (!cards || cards.length === 0) {
-      return NextResponse.json(
-        createErrorResponse('NO_DATA', 'No active cards found'),
-        { status: 404 }
+        createErrorResponse('VALIDATION_ERROR', 'Cards array is required'),
+        { status: 400 }
       );
     }
 
@@ -72,28 +45,29 @@ export async function POST(request: NextRequest) {
       `${pythonApiUrl}/api/v1/recommendations`,
       {
         user_id: user.id,
-        cards: cards.map(card => {
-          const cacheData = Array.isArray(card.credit_data_cache) 
-            ? card.credit_data_cache[0] 
-            : card.credit_data_cache;
-          
-          if (!cacheData) {
-            throw new Error(`No financial data found for card ${card.id}`);
-          }
-
-          return {
-            card_id: card.id,
-            institution_name: card.institution_name,
-            current_balance: cacheData.current_balance,
-            credit_limit: cacheData.credit_limit,
-            utilization_percentage: cacheData.utilization_percentage,
-            minimum_payment: cacheData.minimum_payment,
-            payment_due_date: cacheData.payment_due_date,
-            interest_rate: cacheData.interest_rate,
-            last_payment_amount: cacheData.last_payment_amount,
-            last_payment_date: cacheData.last_payment_date,
-          };
-        }),
+        cards: requestCards.map((card: {
+          cardId: string;
+          institutionName: string;
+          currentBalance: number;
+          creditLimit: number;
+          utilizationPercentage: number;
+          minimumPayment: number;
+          paymentDueDate: string;
+          interestRate: number;
+          lastPaymentAmount: number;
+          lastPaymentDate: string;
+        }) => ({
+          card_id: card.cardId,
+          institution_name: card.institutionName,
+          current_balance: card.currentBalance,
+          credit_limit: card.creditLimit,
+          utilization_percentage: card.utilizationPercentage,
+          minimum_payment: card.minimumPayment,
+          payment_due_date: card.paymentDueDate,
+          interest_rate: card.interestRate,
+          last_payment_amount: card.lastPaymentAmount,
+          last_payment_date: card.lastPaymentDate,
+        })),
         available_amount: parseFloat(availableAmount),
         optimization_goal: optimizationGoal,
       },
