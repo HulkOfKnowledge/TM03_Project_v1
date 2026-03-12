@@ -105,23 +105,24 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
 
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="mb-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0">
             <h1 className="mb-1.5 text-2xl font-bold text-brand sm:text-3xl md:text-4xl">Credit Analysis</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 sm:text-base">
               Understand your card breakdowns at a glance
             </p>
           </div>
-          <button
-            onClick={() => setShowPaymentRec(true)}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-brand/90 sm:gap-2 sm:px-4 sm:text-sm"
-          >
-            <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span className="hidden sm:inline">Payment Recommendation</span>
-            <span className="sm:hidden">Pay Rec</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 self-start">
+            <button
+              onClick={() => setShowPaymentRec(true)}
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-brand px-4 py-2 font-medium text-white transition-colors hover:bg-brand/90"
+            >
+              <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Payment Recommendation
+            </button>
+          </div>
         </div>
 
         {/* Filter summary — tap to open chart settings */}
