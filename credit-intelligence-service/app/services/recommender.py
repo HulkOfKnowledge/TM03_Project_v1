@@ -50,6 +50,9 @@ class PaymentRecommender:
         elif goal == "improve_score":
             recommendations = self.prioritize_by_utilization(cards, available_amount)
             strategy = "Credit Score Optimization: Focus on reducing high utilization to improve credit score"
+        elif goal == "minimize_balance":
+            recommendations = self.prioritize_by_balance(cards, available_amount)
+            strategy = "Snowball Method: Pay smallest balances first for quick wins and motivation"
         else:  # balanced
             recommendations = self.balanced_approach(cards, available_amount)
             strategy = "Balanced Approach: Optimize for both interest savings and credit score improvement"
@@ -95,6 +98,90 @@ class PaymentRecommender:
 
         return self._build_recommendations_from_allocation(cards, allocated)
     
+    def prioritize_by_balance(
+        self,
+        cards: List[CardData],
+        available_amount: float
+    ) -> List[PaymentRecommendation]:
+        """
+        Snowball Method: Pay minimums on ALL cards first, then put all
+        extra funds into the smallest balance card first. Paying off
+        cards completely gives a psychological win and reduces the number
+        of active debts quickly.
+        """
+        total_minimums = sum(card.minimum_payment for card in cards)
+        if available_amount < total_minimums:
+            return self._emergency_allocation(cards, available_amount)
+
+        # Step 1: Allocate minimums to every card
+        allocated = {card.card_id: min(card.minimum_payment, card.current_balance) for card in cards}
+        remaining = available_amount - sum(allocated.values())
+
+        # Step 2: Snowball — extra goes to smallest balance first
+        sorted_cards = sorted(cards, key=lambda c: c.current_balance)
+        for card in sorted_cards:
+            if remaining <= 0:
+                break
+            headroom = card.current_balance - allocated[card.card_id]
+            if headroom > 0:
+                extra = min(remaining, headroom)
+                allocated[card.card_id] += extra
+                remaining -= extra
+
+        # Build recommendations sorted by balance ascending so priority 1 = smallest
+        sorted_for_display = sorted(cards, key=lambda c: c.current_balance)
+        recommendations = []
+        for priority, card in enumerate(sorted_for_display, 1):
+            suggested_amount = round(allocated.get(card.card_id, 0), 2)
+            if suggested_amount <= 0:
+                continue
+
+            new_balance = max(0, card.current_balance - suggested_amount)
+            new_util = (new_balance / card.credit_limit * 100) if card.credit_limit else 0
+            days = self._calculate_days_until_due(card.payment_due_date)
+            min_pay = card.minimum_payment or 0
+            apr = card.interest_rate or 0
+
+            parts = []
+
+            if suggested_amount >= card.current_balance:
+                parts.append(
+                    f"This is your smallest balance card — paying it off completely "
+                    f"eliminates one debt entirely, giving you a quick win and freeing "
+                    f"up your minimum payment for other cards."
+                )
+            else:
+                parts.append(
+                    f"Paying ${suggested_amount:.2f} reduces this balance from "
+                    f"${card.current_balance:.2f} to ${new_balance:.2f} "
+                    f"({card.utilization_percentage:.0f}% \u2192 {new_util:.0f}% utilization)."
+                )
+
+            if days <= 0:
+                parts.append("Your payment is overdue — pay as soon as possible.")
+            elif days <= 7:
+                parts.append(f"Due in {days} day{'s' if days != 1 else ''} — pay now to avoid a late fee.")
+
+            if min_pay > 0 and suggested_amount > min_pay and suggested_amount < card.current_balance:
+                extra = suggested_amount - min_pay
+                parts.append(
+                    f"This is ${extra:.2f} above your minimum of ${min_pay:.2f}."
+                )
+
+            if apr > 0:
+                parts.append(f"APR: {apr:.2f}%.")
+
+            impact = self.calculate_impact(card, suggested_amount)
+            recommendations.append(PaymentRecommendation(
+                card_id=card.card_id,
+                suggested_amount=suggested_amount,
+                reasoning=self._translate(" ".join(parts)),
+                expected_impact=impact,
+                priority=priority
+            ))
+
+        return recommendations
+
     def prioritize_by_utilization(
         self, 
         cards: List[CardData], 

@@ -54,7 +54,7 @@ export interface PaymentRecommendationRequest {
   userId: string;
   cards: CardDataForAnalysis[];
   availableAmount: number; // Amount user can pay this month
-  optimizationGoal: 'minimize_interest' | 'improve_score' | 'balanced';
+  optimizationGoal: 'minimize_interest' | 'balanced' | 'minimize_balance';
 }
 
 export interface PaymentRecommendation {

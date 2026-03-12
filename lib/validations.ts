@@ -127,7 +127,7 @@ export const paymentRecommendationRequestSchema = z.object({
     })
   ),
   available_amount: z.number().positive(),
-  optimization_goal: z.enum(['minimize_interest', 'improve_score', 'balanced']),
+  optimization_goal: z.enum(['minimize_interest', 'balanced', 'minimize_balance']),
 });
 
 export const payoffSimulationRequestSchema = z.object({

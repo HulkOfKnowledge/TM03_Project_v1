@@ -74,7 +74,7 @@ function AllocationRow({
       {/* ── Clickable summary row ── */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex w-full items-center gap-3 border-b border-gray-200 px-2 py-3.5 text-left transition-colors bg-gray-50/10 hover:bg-gray-100 active:bg-gray-100/70 dark:bg-gray-800 dark:hover:bg-white/[0.04] dark:active:bg-white/[0.06]"
+        className="flex w-full items-center gap-3 border-b border-gray-200 px-2 py-3.5 text-left transition-colors bg-white hover:bg-gray-50 active:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 dark:active:bg-gray-800"
       >
         {/* Numbered dot */}
         <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
@@ -97,7 +97,7 @@ function AllocationRow({
             )}
           </div>
           <div className="mt-1.5 flex items-center gap-2">
-            <div className="h-1 w-24 flex-shrink-0 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+            <div className="h-1 w-24 flex-shrink-0 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
               <div
                 className={`h-full rounded-full transition-all duration-700 ${barColour}`}
                 style={{ width: `${payPct}%` }}
@@ -140,7 +140,7 @@ function AllocationRow({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-gray-100 bg-gray-50/70 px-4 pb-4 pt-3.5 dark:border-gray-800/60 dark:bg-white/[0.025]">
+          <div className="border-t border-gray-100 bg-gray-50/70 px-4 pb-4 pt-3.5 dark:border-gray-700/60 dark:bg-gray-800/50">
             {reasoning && (
               <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-300">{reasoning}</p>
             )}
@@ -164,7 +164,7 @@ function AllocationRow({
               </div>
             )}
             {balance > 0 && (
-              <div className="mt-3 flex flex-wrap gap-3 border-t border-gray-100/80 pt-3 text-[12px] text-gray-500 dark:border-gray-800/40 dark:text-gray-400">
+              <div className="mt-3 flex flex-wrap gap-3 border-t border-gray-100/80 pt-3 text-[12px] text-gray-500 dark:border-gray-700/40 dark:text-gray-400">
                 <span>
                   Remaining:{' '}
                   <strong className="text-gray-700 dark:text-gray-300">
@@ -204,6 +204,7 @@ export function PaymentRecommendationModal({
   const totalOwed = cards.reduce((s, c) => s + (c.currentBalance ?? 0), 0);
 
   const [availableAmount, setAvailableAmount] = useState('');
+  const [optimizationGoal, setOptimizationGoal] = useState<'balanced' | 'minimize_interest' | 'minimize_balance'>('balanced');
   const [result, setResult] = useState<PaymentRecommendationResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -213,6 +214,7 @@ export function PaymentRecommendationModal({
   useEffect(() => {
     if (isOpen) {
       setAvailableAmount('');
+      setOptimizationGoal('balanced');
       setResult(null);
       setError(null);
       setStep('input');
@@ -252,8 +254,7 @@ export function PaymentRecommendationModal({
           lastPaymentDate: card.lastPaymentDate,
         })),
         availableAmount: parsedAmount,
-        // Always use balanced: pays all minimums first, then splits extra by APR + urgency
-        optimizationGoal: 'balanced',
+        optimizationGoal,
       });
 
       // Service returns the ApiResponse wrapper { success, data, meta }; unwrap it
@@ -266,7 +267,7 @@ export function PaymentRecommendationModal({
     } finally {
       setLoading(false);
     }
-  }, [cards, parsedAmount, isValidAmount]);
+  }, [cards, parsedAmount, isValidAmount, optimizationGoal]);
 
   if (!isOpen) return null;
 
@@ -290,7 +291,7 @@ export function PaymentRecommendationModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-950 dark:ring-white/10 sm:max-h-[88vh] sm:max-w-lg sm:rounded-3xl">
+      <div className="relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/[0.08] sm:max-h-[88vh] sm:max-w-lg sm:rounded-3xl">
 
         {/* ── Header ── */}
         <div className="flex flex-shrink-0 items-start justify-between px-5 pt-5 pb-3">
@@ -306,7 +307,7 @@ export function PaymentRecommendationModal({
           </div>
           <button
             onClick={onClose}
-            className="mt-0.5 flex h-8 w-8 items-center justify-center bg-gray-200 text-gray-400 transition-colors hover:bg-gray-300 rounded-full hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-300"
+            className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,7 +324,7 @@ export function PaymentRecommendationModal({
             <div className="px-5 pb-6 pt-2">
 
               {/* Balance summary card */}
-              <div className="mb-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:bg-white/[0.04]">
+              <div className="mb-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
                 <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   Total balance
                 </p>
@@ -336,7 +337,7 @@ export function PaymentRecommendationModal({
                   </p>
                 )}
                 {/* Per-card rows */}
-                <div className="mt-3 divide-y divide-gray-100 dark:divide-gray-800">
+                <div className="mt-3 divide-y divide-gray-100 dark:divide-gray-700">
                   {cards.map(card => {
                     const { label, daysLeft } = parseDueDate(card.paymentDueDate);
                     const urgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
@@ -364,6 +365,28 @@ export function PaymentRecommendationModal({
                 </div>
               </div>
 
+              {/* Strategy picker */}
+              <div className="mb-5 space-y-1.5">
+                <label htmlFor="strategy-select" className="block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                  Strategy
+                </label>
+                <div className="relative">
+                  <select
+                    id="strategy-select"
+                    value={optimizationGoal}
+                    onChange={e => setOptimizationGoal(e.target.value as typeof optimizationGoal)}
+                    className="h-11 w-full appearance-none rounded-2xl border border-gray-200 bg-white pl-4 pr-10 text-sm font-medium text-gray-900 transition-shadow focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  >
+                    <option value="balanced">Balanced: smart mix of APR &amp; urgency</option>
+                    <option value="minimize_interest">Highest interest first: Avalanche, save the most</option>
+                    <option value="minimize_balance">Lowest balance first: Snowball, quick wins</option>
+                  </select>
+                  <svg className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+
               {/* Amount input */}
               <div className="space-y-1.5">
                 <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200">
@@ -381,7 +404,7 @@ export function PaymentRecommendationModal({
                     onChange={e => setAvailableAmount(e.target.value)}
                     placeholder="0.00"
                     autoFocus
-                    className="h-14 w-full rounded-2xl border border-gray-200 bg-white pl-8 pr-4 text-2xl font-bold tracking-tight text-gray-900 placeholder-gray-200 transition-shadow focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:placeholder-gray-700 dark:focus:border-indigo-500"
+                    className="h-14 w-full rounded-2xl border border-gray-200 bg-white pl-8 pr-4 text-2xl font-bold tracking-tight text-gray-900 placeholder-gray-200 transition-shadow focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-600 dark:focus:border-indigo-400"
                     onKeyDown={e => {
                       if (e.key === 'Enter' && isValidAmount) fetchRecommendations();
                     }}
@@ -443,18 +466,18 @@ export function PaymentRecommendationModal({
 
               {/* Allocation list */}
               {recs.length > 0 ? (
-                <div className="mx-5 overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800">
+                <div className="mx-5 overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-700">
                   {recs.map((rec, i) => (
                     <div
                       key={rec.cardId}
-                      className={i > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}
+                      className={i > 0 ? 'border-t border-gray-100 dark:border-gray-700' : ''}
                     >
                       <AllocationRow rec={rec} card={cardById(rec.cardId)} index={i} />
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="mx-5 rounded-2xl bg-gray-50 px-4 py-4 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                <p className="mx-5 rounded-2xl bg-gray-50 px-4 py-4 text-sm text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
                   No allocation was returned. Please try again.
                 </p>
               )}
@@ -467,7 +490,7 @@ export function PaymentRecommendationModal({
         </div>
 
         {/* ── Footer ── */}
-        <div className="flex flex-shrink-0 gap-2.5 border-t border-gray-100 px-5 py-4 dark:border-gray-800">
+        <div className="flex flex-shrink-0 gap-2.5 border-t border-gray-100 px-5 py-4 dark:border-gray-700">
           {step === 'result' ? (
             <>
               <button
@@ -476,7 +499,7 @@ export function PaymentRecommendationModal({
                   setResult(null);
                   setError(null);
                 }}
-                className="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-transparent dark:text-gray-300 dark:hover:bg-white/5"
+                className="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
               >
                 Adjust amount
               </button>
@@ -491,7 +514,7 @@ export function PaymentRecommendationModal({
             <>
               <button
                 onClick={onClose}
-                className="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-transparent dark:text-gray-400 dark:hover:bg-white/5"
+                className="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
               >
                 Cancel
               </button>

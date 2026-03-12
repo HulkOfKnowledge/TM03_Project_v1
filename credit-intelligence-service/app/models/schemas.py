@@ -55,7 +55,7 @@ class PaymentRecommendationRequest(BaseModel):
     user_id: str
     cards: List[CardData]
     available_amount: float = Field(gt=0)
-    optimization_goal: Literal["minimize_interest", "improve_score", "balanced"]
+    optimization_goal: Literal["minimize_interest", "improve_score", "balanced", "minimize_balance"] = "balanced"
 
 
 class ExpectedImpact(BaseModel):
