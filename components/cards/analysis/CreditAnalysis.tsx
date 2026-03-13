@@ -28,6 +28,7 @@ import { ChartSection } from './ChartSection';
 import { ChartSettingsModal } from './ChartSettingsModal';
 import { PaymentHistoryTable } from './PaymentHistoryTable';
 import { RecommendedActions } from './RecommendedActions';
+import { CreditAnalysisSkeleton } from './CreditAnalysisSkeleton';
 import { PaymentRecommendationModal } from '../PaymentRecommendationModal';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
@@ -84,19 +85,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
 
   //  Loading skeleton
   if (loading) {
-    return (
-      <div className="mx-auto">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="mb-1.5 text-2xl font-bold text-brand sm:text-3xl md:text-4xl">Credit Analysis</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 sm:text-base">Understand your card breakdowns at a glance</p>
-        </div>
-        <div className="animate-pulse space-y-4">
-          <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-xl" />
-          <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-xl" />
-          <div className="h-64 bg-gray-200 dark:bg-gray-800 rounded-xl" />
-        </div>
-      </div>
-    );
+    return <CreditAnalysisSkeleton />;
   }
 
   

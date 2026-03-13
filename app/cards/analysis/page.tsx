@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { EmptyCardState } from '@/components/cards/EmptyCardState';
-import { CardOverviewSkeleton } from '@/components/cards/CardOverviewSkeleton';
+import { CreditAnalysisSkeleton } from '@/components/cards/analysis/CreditAnalysisSkeleton';
 import { CardSelectionModal } from '@/components/cards/CardSelectionModal';
 import { SuccessModal } from '@/components/cards/SuccessModal';
 import { CreditAnalysis } from '@/components/cards/analysis/CreditAnalysis';
@@ -88,7 +88,7 @@ export default function CreditAnalysisPage() {
         <Navigation />
         <main className="pt-28 lg:pt-40 pb-16">
           <div className="container mx-auto px-4 md:px-6">
-            <CardOverviewSkeleton />
+            <CreditAnalysisSkeleton />
           </div>
         </main>
         <Footer />
