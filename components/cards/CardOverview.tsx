@@ -617,19 +617,21 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           </div>
           
           {/* Date Filter Controls */}
-          <DateFilterControls
-            filterType={filterType}
-            onFilterTypeChange={setFilterType}
-            selectedMonth={selectedMonth}
-            onMonthChange={setSelectedMonth}
-            selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
-            startDate={startDate}
-            onStartDateChange={setStartDate}
-            endDate={endDate}
-            onEndDateChange={setEndDate}
-            today={today}
-          />
+          <div className="hidden md:block">
+            <DateFilterControls
+              filterType={filterType}
+              onFilterTypeChange={setFilterType}
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
+              selectedYear={selectedYear}
+              onYearChange={setSelectedYear}
+              startDate={startDate}
+              onStartDateChange={setStartDate}
+              endDate={endDate}
+              onEndDateChange={setEndDate}
+              today={today}
+            />
+          </div>
         </div>
 
         {/* Date badge */}
@@ -670,6 +672,23 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
           </div>
         </div>
 
+        {/* Mobile Date Filter Controls (same state as desktop controls) */}
+        <div className="mb-4 md:hidden">
+          <DateFilterControls
+            filterType={filterType}
+            onFilterTypeChange={setFilterType}
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+            endDate={endDate}
+            onEndDateChange={setEndDate}
+            today={today}
+          />
+        </div>
+
         {/* Search and Filters */}
         <div className="mb-4 flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
@@ -682,7 +701,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
               className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:placeholder-gray-400"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="hidden gap-2 sm:flex">
             <select
               value={historyZoneFilter}
               onChange={(e) => setHistoryZoneFilter(e.target.value)}
