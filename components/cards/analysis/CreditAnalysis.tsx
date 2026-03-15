@@ -220,7 +220,20 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
       </ChartSection>
 
       {/* Payment History */}
-      <PaymentHistoryTable data={filteredPaymentHistory} />
+      <PaymentHistoryTable
+        data={filteredPaymentHistory}
+        filterType={filterType}
+        onFilterTypeChange={setFilterType}
+        selectedMonth={selectedMonth}
+        onMonthChange={setSelectedMonth}
+        selectedYear={selectedYear}
+        onYearChange={setSelectedYear}
+        startDate={startDate}
+        onStartDateChange={setStartDate}
+        endDate={endDate}
+        onEndDateChange={setEndDate}
+        today={today}
+      />
 
       {/* Recommended Actions */}
       <RecommendedActions insights={analysisData?.mlInsights?.insights} />

@@ -89,6 +89,18 @@ export interface PaymentHistoryRow {
   alerts: string;
 }
 
+export interface PaymentTransactionRow {
+  id: string;
+  cardId: string;
+  cardName: string;
+  date: string;
+  description: string;
+  amountPaid: number;
+  balance?: number;
+  zone?: 'Safe' | 'Caution' | 'Danger';
+  utilizationPercentage?: number;
+}
+
 export interface ChartDataPoint {
   label: string;
   value: number;
