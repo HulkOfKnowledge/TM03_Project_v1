@@ -80,7 +80,7 @@ export default function LearnDashboard() {
           {/* Welcome Section */}
           <div className="mb-12">
             <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
-              Welcome back, {userName} 👋
+              Welcome back, {userName} <span className="hidden md:inline">👋</span>
             </h1>
             <p className="text-base text-gray-600 dark:text-gray-400">
               Here's your financial path today. We're guiding you step by step.

@@ -5,10 +5,19 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { Transaction, ConnectedCard } from '@/types/card.types';
-import { DataTable, Column } from '@/components/ui/DataTable';
 import { TransactionInsightModal } from './TransactionInsightModal';
+import { MobileTransactionList } from './MobileTransactionList';
+import { PaginationControls } from '@/components/ui/PaginationControls';
+import {
+  formatCurrency,
+  formatDate,
+  getTransactionType,
+  getTransactionTypeColor,
+  getZoneColor,
+  zoneOrder,
+} from './transaction-utils';
 
 interface DailyTransactionTableProps {
   data: Transaction[];
@@ -19,6 +28,14 @@ export function DailyTransactionTable({ data, card }: DailyTransactionTableProps
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [sortField, setSortField] = useState<string | null>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data]);
 
   const handleViewNote = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -40,178 +57,200 @@ export function DailyTransactionTable({ data, card }: DailyTransactionTableProps
     setSelectedRows(newSelected);
   };
 
-  const formatCurrency = (amount: number) => {
-    const absAmount = Math.abs(amount);
-    return `$${absAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, day); // local midnight  avoids UTC-offset day shift
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const getZoneColor = (zone: string | undefined) => {
-    if (!zone) return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
-    switch (zone) {
-      case 'Safe':
-        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case 'Caution':
-        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'Danger':
-        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null);
+        setSortField(null);
+      } else {
+        setSortDirection('asc');
+      }
+      return;
     }
+
+    setSortField(field);
+    setSortDirection('asc');
   };
 
-  const getTransactionType = (amount: number): string => {
-    // Negative amounts are payments/credits (reduce balance)
-    // Positive amounts are purchases/debits (increase balance)
-    return amount < 0 ? 'Payment' : 'Purchase';
+  const getSortIcon = (field: string) => {
+    if (sortField !== field || !sortDirection) return null;
+    return <span className="text-xs text-gray-500 dark:text-gray-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>;
   };
 
-  const getTransactionTypeColor = (amount: number): string => {
-    return amount < 0 
-      ? 'text-green-600 dark:text-green-400' 
-      : 'text-red-600 dark:text-red-400';
+  const getDateValue = (dateValue: string) => {
+    const [year, month, day] = dateValue.split('-').map(Number);
+    return new Date(year, month - 1, day).getTime();
   };
 
-  // Zone order for sorting (Safe -> Caution -> Danger)
-  const zoneOrder: { [key: string]: number } = { 'Safe': 1, 'Caution': 2, 'Danger': 3 };
+  const sortedData = useMemo(() => {
+    const next = [...data];
 
-  const columns: Column<Transaction>[] = useMemo(() => [
-    {
-      key: 'zone',
-      header: 'Zone',
-      sortable: true,
-      sortFn: (a, b, direction) => {
-        const aZone = a.zone || 'Unknown';
-        const bZone = b.zone || 'Unknown';
-        const comparison = (zoneOrder[aZone] || 999) - (zoneOrder[bZone] || 999);
-        return direction === 'asc' ? comparison : -comparison;
-      },
-      render: (row, index) => (
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={selectedRows.has(index)}
-            onChange={() => toggleRow(index)}
-            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <span className={`inline-block rounded px-3 py-1 text-xs font-medium ${getZoneColor(row.zone)}`}>
-            {row.zone || 'N/A'}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'date',
-      header: 'Date',
-      sortable: true,
-      sortFn: (a, b, direction) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        return direction === 'asc' ? dateA - dateB : dateB - dateA;
-      },
-      render: (row) => (
-        <span className="text-sm text-gray-900 dark:text-white">
-          {formatDate(row.date)}
-        </span>
-      ),
-    },
-    {
-      key: 'description',
-      header: 'Description',
-      sortable: true,
-      render: (row) => (
-        <div className="max-w-xs">
-          <p className="truncate text-sm text-gray-900 dark:text-white">
-            {row.description}
-          </p>
-          {row.category && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {row.category}
-            </p>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'amount',
-      header: 'Amount',
-      sortable: true,
-      sortFn: (a, b, direction) => {
-        const comparison = Math.abs(a.amount) - Math.abs(b.amount);
-        return direction === 'asc' ? comparison : -comparison;
-      },
-      render: (row) => (
-        <div className="text-left">
-          <p className={`text-sm font-medium ${getTransactionTypeColor(row.amount)}`}>
-            {row.amount < 0 ? '-' : '+'}{formatCurrency(row.amount)}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {getTransactionType(row.amount)}
-          </p>
-        </div>
-      ),
-    },
-    {
-      key: 'balance',
-      header: 'Balance',
-      sortable: true,
-      sortFn: (a, b, direction) => {
-        const balanceA = a.balance || 0;
-        const balanceB = b.balance || 0;
-        return direction === 'asc' ? balanceA - balanceB : balanceB - balanceA;
-      },
-      render: (row) => (
-        <span className="text-sm text-gray-900 dark:text-white">
-          {row.balance !== undefined ? formatCurrency(row.balance) : 'N/A'}
-        </span>
-      ),
-    },
-    {
-      key: 'utilizationPercentage',
-      header: 'Utilization',
-      sortable: true,
-      sortFn: (a, b, direction) => {
-        const utilA = a.utilizationPercentage || 0;
-        const utilB = b.utilizationPercentage || 0;
-        return direction === 'asc' ? utilA - utilB : utilB - utilA;
-      },
-      render: (row) => (
-        <span className="text-sm text-gray-900 dark:text-white">
-          {row.utilizationPercentage !== undefined
-            ? row.utilizationPercentage < 1
-              ? '<1%'
-              : `${row.utilizationPercentage.toFixed(1)}%`
-            : 'N/A'}
-        </span>
-      ),
-    },
-    {
-      key: 'action',
-      header: 'Action',
-      sortable: false,
-      render: (row) => (
-        <button 
-          onClick={() => handleViewNote(row)}
-          className="text-sm text-gray-900 underline hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400"
-        >
-          View Details
-        </button>
-      ),
-    },
-  ], [selectedRows]);
+    if (!sortField || !sortDirection) return next;
+
+    next.sort((a, b) => {
+      switch (sortField) {
+        case 'zone': {
+          const aZone = a.zone || 'Unknown';
+          const bZone = b.zone || 'Unknown';
+          const comparison = (zoneOrder[aZone] || 999) - (zoneOrder[bZone] || 999);
+          return sortDirection === 'asc' ? comparison : -comparison;
+        }
+        case 'date': {
+          const comparison = getDateValue(a.date) - getDateValue(b.date);
+          return sortDirection === 'asc' ? comparison : -comparison;
+        }
+        case 'description': {
+          const comparison = a.description.localeCompare(b.description);
+          return sortDirection === 'asc' ? comparison : -comparison;
+        }
+        case 'amount': {
+          const comparison = Math.abs(a.amount) - Math.abs(b.amount);
+          return sortDirection === 'asc' ? comparison : -comparison;
+        }
+        case 'balance': {
+          const comparison = (a.balance || 0) - (b.balance || 0);
+          return sortDirection === 'asc' ? comparison : -comparison;
+        }
+        case 'utilizationPercentage': {
+          const comparison = (a.utilizationPercentage || 0) - (b.utilizationPercentage || 0);
+          return sortDirection === 'asc' ? comparison : -comparison;
+        }
+        default:
+          return 0;
+      }
+    });
+
+    return next;
+  }, [data, sortDirection, sortField]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const paginatedTransactions = sortedData.slice(pageStart, pageStart + pageSize);
 
   return (
     <>
-      <DataTable columns={columns} data={data} />
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800">
+        <div className="md:hidden">
+          <MobileTransactionList data={paginatedTransactions} onViewDetails={handleViewNote} />
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[800px]">
+            <thead>
+              <tr className="bg-gray-50 text-left text-xs dark:bg-gray-900 sm:text-sm">
+                <th
+                  className="cursor-pointer px-3 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 sm:px-4"
+                  onClick={() => handleSort('zone')}
+                >
+                  <div className="flex items-center gap-2">Zone {getSortIcon('zone')}</div>
+                </th>
+                <th
+                  className="cursor-pointer px-3 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 sm:px-4"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center gap-2">Date {getSortIcon('date')}</div>
+                </th>
+                <th
+                  className="cursor-pointer px-3 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 sm:px-4"
+                  onClick={() => handleSort('description')}
+                >
+                  <div className="flex items-center gap-2">Description {getSortIcon('description')}</div>
+                </th>
+                <th
+                  className="cursor-pointer px-3 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 sm:px-4"
+                  onClick={() => handleSort('amount')}
+                >
+                  <div className="flex items-center gap-2">Amount {getSortIcon('amount')}</div>
+                </th>
+                <th
+                  className="cursor-pointer px-3 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 sm:px-4"
+                  onClick={() => handleSort('balance')}
+                >
+                  <div className="flex items-center gap-2">Balance {getSortIcon('balance')}</div>
+                </th>
+                <th
+                  className="cursor-pointer px-3 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 sm:px-4"
+                  onClick={() => handleSort('utilizationPercentage')}
+                >
+                  <div className="flex items-center gap-2">Utilization {getSortIcon('utilizationPercentage')}</div>
+                </th>
+                <th className="px-3 py-3 font-medium text-gray-700 dark:text-gray-300 sm:px-4">Action</th>
+              </tr>
+            </thead>
+
+            <tbody className="bg-white dark:bg-gray-950">
+              {paginatedTransactions.map((row, index) => (
+                <tr
+                  key={pageStart + index}
+                  className="border-b border-gray-200 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50"
+                >
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.has(pageStart + index)}
+                        onChange={() => toggleRow(pageStart + index)}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className={`inline-block rounded px-3 py-1 text-xs font-medium ${getZoneColor(row.zone)}`}>
+                        {row.zone || 'N/A'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
+                    {formatDate(row.date)}
+                  </td>
+                  <td className="px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
+                    <div className="max-w-xs">
+                      <p className="truncate">{row.description}</p>
+                      {row.category && <p className="text-xs text-gray-500 dark:text-gray-400">{row.category}</p>}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
+                    <div>
+                      <p className={`font-medium ${getTransactionTypeColor(row.amount)}`}>
+                        {row.amount < 0 ? '-' : '+'}
+                        {formatCurrency(row.amount)}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{getTransactionType(row.amount)}</p>
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
+                    {row.balance !== undefined ? formatCurrency(row.balance) : 'N/A'}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
+                    {row.utilizationPercentage !== undefined
+                      ? row.utilizationPercentage < 1
+                        ? '<1%'
+                        : `${row.utilizationPercentage.toFixed(1)}%`
+                      : 'N/A'}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
+                    <button
+                      onClick={() => handleViewNote(row)}
+                      className="text-sm text-gray-900 underline hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400"
+                    >
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <PaginationControls
+          currentPage={safePage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={sortedData.length}
+          onPageChange={setCurrentPage}
+        />
+      </div>
+
       <TransactionInsightModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}

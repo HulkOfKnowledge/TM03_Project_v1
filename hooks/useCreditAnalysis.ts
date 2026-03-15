@@ -9,7 +9,7 @@ import type { ChartOptions } from 'chart.js';
 import { useTheme } from '@/components/ThemeProvider';
 import { cardService } from '@/services/card.service';
 import { fetchCardMetrics } from '@/lib/api/cards-client';
-import type { ConnectedCard, CreditAnalysisData, CardMetricsResponse } from '@/types/card.types';
+import type { ConnectedCard, CreditAnalysisData, CardMetricsResponse, Transaction, PaymentTransactionRow } from '@/types/card.types';
 import {
   getDatesInRange,
   fmtDayLabel,
@@ -45,8 +45,10 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
   // Data state
   const [metricsData, setMetricsData] = useState<CardMetricsResponse | null>(null);
   const [analysisData, setAnalysisData] = useState<CreditAnalysisData | null>(null);
+  const [transactionsByCard, setTransactionsByCard] = useState<Map<string, Transaction[]>>(new Map());
   const [loadingMetrics, setLoadingMetrics] = useState(true);
   const [loadingAnalysis, setLoadingAnalysis] = useState(true);
+  const [loadingPayments, setLoadingPayments] = useState(true);
 
   const cardIdKey = connectedCards.map(c => c.id).join(',');
 
@@ -60,6 +62,44 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     });
     return () => { active = false; };
   }, [cardIdKey]); 
+
+  useEffect(() => {
+    let active = true;
+
+    const loadTransactions = async () => {
+      if (!connectedCards.length) {
+        setTransactionsByCard(new Map());
+        setLoadingPayments(false);
+        return;
+      }
+
+      setLoadingPayments(true);
+
+      try {
+        const results = await Promise.all(
+          connectedCards.map(async (card) => {
+            try {
+              const transactions = await cardService.getCardTransactions(card.id, 500);
+              return [card.id, transactions] as const;
+            } catch {
+              return [card.id, [] as Transaction[]] as const;
+            }
+          })
+        );
+
+        if (!active) return;
+        setTransactionsByCard(new Map(results));
+      } finally {
+        if (active) setLoadingPayments(false);
+      }
+    };
+
+    loadTransactions();
+
+    return () => {
+      active = false;
+    };
+  }, [cardIdKey]);
 
   // Derived date range 
   const dateFilter = useMemo(() => {
@@ -275,17 +315,39 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     };
   }, [metricsData]);
 
-  // Filtered payment history 
+  // Filtered payment history from real payment transactions (credits)
   const filteredPaymentHistory = useMemo(() => {
-    if (!analysisData?.paymentHistory) return [];
-    const yrStart = parseInt(dateFilter.startDate.slice(0, 4));
-    const yrEnd   = parseInt(dateFilter.endDate.slice(0, 4));
-    return analysisData.paymentHistory.filter(row => {
-      const m = row.month.match(/\d{4}/);
-      if (!m) return true;
-      return parseInt(m[0]) >= yrStart && parseInt(m[0]) <= yrEnd;
-    });
-  }, [analysisData, dateFilter]);
+    if (!connectedCards.length) return [];
+
+    const visibleCardIds = new Set(displayCards.map((c) => c.id));
+    const cardNameById = new Map(connectedCards.map((c) => [c.id, `${c.bank} ****${c.lastFour}`]));
+
+    const rows: PaymentTransactionRow[] = [];
+
+    for (const [cardId, transactions] of transactionsByCard.entries()) {
+      if (!visibleCardIds.has(cardId)) continue;
+
+      for (const txn of transactions) {
+        const isPayment = txn.amount < 0;
+        const inDateRange = txn.date >= dateFilter.startDate && txn.date <= dateFilter.endDate;
+        if (!isPayment || !inDateRange) continue;
+
+        rows.push({
+          id: txn.id,
+          cardId: txn.cardId,
+          cardName: cardNameById.get(cardId) || 'Unknown card',
+          date: txn.date,
+          description: txn.description,
+          amountPaid: Math.abs(txn.amount),
+          balance: txn.balance,
+          zone: txn.zone,
+          utilizationPercentage: txn.utilizationPercentage,
+        });
+      }
+    }
+
+    return rows.sort((a, b) => b.date.localeCompare(a.date));
+  }, [connectedCards, displayCards, transactionsByCard, dateFilter.startDate, dateFilter.endDate]);
 
   return {
     // date filter state
@@ -302,7 +364,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     compareCardIds, setCompareCardIds,
     palette,
     // loading
-    loading: loadingMetrics || loadingAnalysis,
+    loading: loadingMetrics || loadingAnalysis || loadingPayments,
     // data
     analysisData,
     filteredMetrics,

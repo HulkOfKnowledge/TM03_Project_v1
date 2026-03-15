@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, ReactNode, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { PaginationControls } from './PaginationControls';
 
 export type SortDirection = 'asc' | 'desc' | null;
 
@@ -164,56 +164,13 @@ export function DataTable<T>({
         </tbody>
       </table>
 
-      {/* Pagination controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-950">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {pageStart + 1}–{Math.min(pageStart + pageSize, sortedData.length)} of {sortedData.length}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={safePage === 1}
-              className="rounded p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-800"
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-              .reduce<(number | '…')[]>((acc, p, i, arr) => {
-                if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('…');
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((p, i) =>
-                p === '…' ? (
-                  <span key={`ellipsis-${i}`} className="px-1 text-xs text-gray-400">…</span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => setCurrentPage(p as number)}
-                    className={`min-w-[28px] rounded px-1.5 py-1 text-xs font-medium ${
-                      safePage === p
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={safePage === totalPages}
-              className="rounded p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-800"
-              aria-label="Next page"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <PaginationControls
+        currentPage={safePage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={sortedData.length}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 }
