@@ -20,6 +20,16 @@ const nextConfig = {
         hostname: 'images.unsplash.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.nerdwallet.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'nerdwallet.com',
+        pathname: '/**',
+      },
     ],
   },
 

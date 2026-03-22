@@ -68,6 +68,15 @@ export interface CardOffer {
   displayOrder: number;
   applyUrl: string | null;
 
+  // Source metadata
+  sourceProvider?: string | null;
+  sourceExternalId?: string | null;
+  sourceUrl?: string | null;
+  sourceImageUrl?: string | null;
+  sourceCategories?: string[];
+  sourceMatchCount?: number;
+  sourceLastSyncedAt?: string | null;
+
   // Personalization score (computed server-side)
   matchScore?: number;
 }

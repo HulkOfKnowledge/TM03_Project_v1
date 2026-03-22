@@ -6,14 +6,40 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Check, ChevronDown, ChevronUp, ExternalLink, Shield, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CardOffer } from '@/types/card-offers.types';
 
 // ── Mini card visual ──────────────────────────────────────────────────────────
 function MiniCardVisual({ offer }: { offer: CardOffer }) {
+  const [isPortraitImage, setIsPortraitImage] = useState(false);
+
   const networkLabel =
     offer.network === 'visa' ? 'VISA' : offer.network === 'mastercard' ? 'MASTERCARD' : 'AMEX';
+
+  if (offer.sourceImageUrl) {
+    return (
+      <div className="relative w-full aspect-[1.586/1] rounded-xl overflow-hidden border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 shadow-md dark:border-gray-800 dark:from-gray-900 dark:to-gray-950">
+        <Image
+          src={offer.sourceImageUrl}
+          alt={offer.name}
+          fill
+          sizes="(max-width: 768px) 100vw, 33vw"
+          className={cn(
+            'transition-transform duration-300 object-contain p-2',
+            isPortraitImage ? 'rotate-90 scale-[0.84]' : 'scale-[1.02]'
+          )}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onLoadingComplete={(img) => {
+            const portrait = img.naturalHeight > img.naturalWidth * 1.05;
+            setIsPortraitImage(portrait);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={cn('relative w-full aspect-[1.586/1] rounded-xl bg-gradient-to-br overflow-hidden shadow-md', offer.cardGradient)}>
@@ -141,17 +167,17 @@ export function CardOfferCard({
           <div className="flex items-start gap-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 p-3 border border-indigo-100 dark:border-indigo-900/40">
             <Gift className="h-4 w-4 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-0.5">
+              <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-0.5">
                 Welcome Bonus
               </p>
-              <p className="text-xs text-gray-700 dark:text-gray-300 leading-snug">{offer.welcomeBonus}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-snug">{offer.welcomeBonus}</p>
             </div>
           </div>
         )}
 
         {/* Earn rate description */}
         {offer.earnRateDescription && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug border-l-2 border-indigo-200 dark:border-indigo-800 pl-2.5">
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-snug border-l-2 border-indigo-200 dark:border-indigo-800 pl-2.5">
             {offer.earnRateDescription}
           </p>
         )}
@@ -161,7 +187,7 @@ export function CardOfferCard({
           {visiblePerks.map((perk, i) => (
             <li key={i} className="flex items-start gap-2">
               <Check className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
-              <span className="text-xs text-gray-700 dark:text-gray-300 leading-snug">{perk}</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 leading-snug">{perk}</span>
             </li>
           ))}
         </ul>
@@ -169,7 +195,7 @@ export function CardOfferCard({
         {offer.perks.length > 3 && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-medium transition-colors self-start"
+            className="flex items-center gap-1 text-xs text-brand dark:text-brand font-medium transition-colors self-start"
           >
             {expanded ? (
               <><ChevronUp className="h-3.5 w-3.5" /> Show less</>
@@ -215,7 +241,7 @@ export function CardOfferCard({
 
         {offer.applyUrl ? (
           <a
-            href={offer.applyUrl}
+            href={`/cards/offers/apply/${offer.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
