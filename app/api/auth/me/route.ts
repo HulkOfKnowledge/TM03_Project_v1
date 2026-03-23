@@ -6,6 +6,69 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
+import type { AuthProfile, AuthUser } from '@/types/auth.types';
+
+function createNoStoreResponse(body: unknown, status: number) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+  });
+}
+
+function sanitizeUser(user: {
+  id: string;
+  email?: string | null;
+  email_confirmed_at?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+}): AuthUser {
+  const metadata = user.user_metadata || {};
+
+  return {
+    id: user.id,
+    email: user.email || null,
+    email_confirmed_at: user.email_confirmed_at || null,
+    user_metadata: {
+      full_name: typeof metadata.full_name === 'string' ? metadata.full_name : null,
+      name: typeof metadata.name === 'string' ? metadata.name : null,
+      first_name: typeof metadata.first_name === 'string' ? metadata.first_name : null,
+      surname: typeof metadata.surname === 'string' ? metadata.surname : null,
+      mobile_number: typeof metadata.mobile_number === 'string' ? metadata.mobile_number : null,
+      avatar_url: typeof metadata.avatar_url === 'string' ? metadata.avatar_url : null,
+      picture: typeof metadata.picture === 'string' ? metadata.picture : null,
+      preferred_language: typeof metadata.preferred_language === 'string' ? metadata.preferred_language : null,
+    },
+  };
+}
+
+function sanitizeProfile(profile: {
+  onboarding_completed?: boolean | null;
+  preferred_dashboard?: 'learn' | 'card' | null;
+  first_name?: string | null;
+  surname?: string | null;
+  mobile_number?: string | null;
+  avatar_url?: string | null;
+  onboarding_stage?: string | null;
+  onboarding_substep?: string | null;
+  onboarding_data?: unknown;
+} | null): AuthProfile | null {
+  if (!profile) return null;
+
+  return {
+    onboarding_completed: Boolean(profile.onboarding_completed),
+    preferred_dashboard: profile.preferred_dashboard || 'learn',
+    first_name: profile.first_name || null,
+    surname: profile.surname || null,
+    mobile_number: profile.mobile_number || null,
+    avatar_url: profile.avatar_url || null,
+    onboarding_stage: profile.onboarding_stage || null,
+    onboarding_substep: profile.onboarding_substep || null,
+    onboarding_data: profile.onboarding_data || null,
+  };
+}
 
 export async function GET() {
   try {
@@ -13,9 +76,9 @@ export async function GET() {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return NextResponse.json(
+      return createNoStoreResponse(
         createErrorResponse('UNAUTHENTICATED', 'User not authenticated'),
-        { status: 401 }
+        401,
       );
     }
 
@@ -55,21 +118,21 @@ export async function GET() {
           .eq('id', user.id)
           .single();
 
-        return NextResponse.json(
-          createSuccessResponse({ user, profile: createdProfile }),
-          { status: 200 }
+        return createNoStoreResponse(
+          createSuccessResponse({ user: sanitizeUser(user), profile: sanitizeProfile(createdProfile) }),
+          200,
         );
       }
     }
 
-    return NextResponse.json(
-      createSuccessResponse({ user, profile }),
-      { status: 200 }
+    return createNoStoreResponse(
+      createSuccessResponse({ user: sanitizeUser(user), profile: sanitizeProfile(profile) }),
+      200,
     );
   } catch (error) {
-    return NextResponse.json(
+    return createNoStoreResponse(
       createErrorResponse('INTERNAL_ERROR', 'An error occurred'),
-      { status: 500 }
+      500,
     );
   }
 }

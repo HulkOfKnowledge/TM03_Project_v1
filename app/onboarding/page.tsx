@@ -117,7 +117,7 @@ export default function OnboardingPage() {
       email: user.email || '',
       firstName: profile?.first_name || firstName || user.user_metadata?.first_name || '',
       surname: profile?.surname || surname || user.user_metadata?.surname || '',
-      mobileNumber: profile?.mobile_number || user.user_metadata?.phone || user.user_metadata?.mobile_number || '',
+      mobileNumber: profile?.mobile_number || user.user_metadata?.mobile_number || '',
       password: '',
       confirmPassword: '',
     };

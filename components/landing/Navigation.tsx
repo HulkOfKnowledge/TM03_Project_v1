@@ -28,6 +28,7 @@ export function Navigation() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const isDark = useIsDarkMode();
+  const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
 
   // Close one menu when opening another
   const handleUserMenuToggle = () => {
@@ -97,10 +98,10 @@ export function Navigation() {
                     onClick={handleUserMenuToggle}
                     className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-accent transition-colors"
                   >
-                    {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+                    {userAvatar ? (
                       <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-brand">
                         <Image
-                          src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                          src={userAvatar}
                           alt="User profile"
                           width={32}
                           height={32}
@@ -165,13 +166,13 @@ export function Navigation() {
           {/* Mobile Actions */}
           <div className="flex lg:hidden items-center gap-2">
             {user && (
-              user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+              userAvatar ? (
                 <button
                   onClick={handleUserMenuToggle}
                   className="h-9 w-9 rounded-full overflow-hidden border-2 border-brand"
                 >
                   <Image
-                    src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                    src={userAvatar}
                     alt="User profile"
                     width={36}
                     height={36}

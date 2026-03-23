@@ -90,6 +90,7 @@ export function Navigation() {
   const isDark = useIsDarkMode();
   const { setTheme } = useTheme();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
 
   const onLogout = async () => {
     setShowUserMenu(false);
@@ -435,9 +436,9 @@ export function Navigation() {
                         className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-accent/50 transition-colors"
                       >
                         <div className="h-8 w-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-foreground">
-                          {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+                          {userAvatar ? (
                             <Image
-                              src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                              src={userAvatar}
                               alt="User profile"
                               width={40}
                               height={40}

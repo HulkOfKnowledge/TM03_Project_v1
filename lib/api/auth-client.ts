@@ -3,17 +3,19 @@
  * Includes in-memory caching to avoid unnecessary API calls
  */
 
-import type { User } from '@supabase/supabase-js';
+import type { AuthProfile, AuthUser } from '@/types/auth.types';
 
 // In-memory cache for auth requests (session duration)
-let authCache: { user: User | null; profile: any | null } | null = null;
+let authCache: { user: AuthUser | null; profile: AuthProfile | null } | null = null;
 
 /**
  * Fetch current user and profile with caching support
  * @param forceRefresh - If true, bypass cache and fetch fresh data
  * @returns User and profile data
  */
-export async function fetchAuthMe(forceRefresh: boolean = false): Promise<{ user: User | null; profile: any | null }> {
+export async function fetchAuthMe(
+  forceRefresh: boolean = false,
+): Promise<{ user: AuthUser | null; profile: AuthProfile | null }> {
   // Return cached data if available (unless force refresh)
   if (!forceRefresh && authCache) {
     return authCache;
@@ -48,7 +50,7 @@ export function clearAuthCache(): void {
 }
 
 // Update auth cache without API call (useful after profile updates)
-export function updateAuthCache(user: User | null, profile: any | null): void {
+export function updateAuthCache(user: AuthUser | null, profile: AuthProfile | null): void {
   authCache = { user, profile };
 }
 

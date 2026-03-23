@@ -8,28 +8,12 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { User } from '@supabase/supabase-js';
 import { fetchAuthMe } from '@/lib/api/auth-client';
-
-interface UserProfile {
-  id: string;
-  email: string;
-  first_name: string | null;
-  surname: string | null;
-  mobile_number: string | null;
-  avatar_url?: string | null;
-  preferred_language: string;
-  preferred_dashboard: 'learn' | 'card' | null;
-  onboarding_completed: boolean;
-  status_in_canada: string | null;
-  province: string | null;
-  primary_goal: string | null;
-  credit_knowledge: string | null;
-}
+import type { AuthProfile, AuthUser } from '@/types/auth.types';
 
 interface UseUserReturn {
-  user: User | null;
-  profile: UserProfile | null;
+  user: AuthUser | null;
+  profile: AuthProfile | null;
   loading: boolean;
   error: string | null;
   refreshProfile: () => Promise<void>;
@@ -48,11 +32,11 @@ const AuthContext = createContext<UseUserReturn | undefined>(undefined);
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const inFlightRequest = useRef<Promise<{ user: User | null; profile: UserProfile | null }> | null>(null);
+  const inFlightRequest = useRef<Promise<{ user: AuthUser | null; profile: AuthProfile | null }> | null>(null);
   const isPublicRoute =
     pathname === '/' ||
     pathname?.startsWith('/login') ||
