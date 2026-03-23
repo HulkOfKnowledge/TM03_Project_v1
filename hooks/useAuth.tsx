@@ -53,7 +53,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const inFlightRequest = useRef<Promise<{ user: User | null; profile: UserProfile | null }> | null>(null);
-  const hasInitialized = useRef(false);
   const isPublicRoute =
     pathname === '/' ||
     pathname?.startsWith('/login') ||
@@ -96,16 +95,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Only fetch user data when needed (avoid auth checks on public routes)
   useEffect(() => {
-    if (hasInitialized.current) return;
-
     if (shouldSkipInitialAuthFetch) {
       setLoading(false);
       return;
     }
 
-    hasInitialized.current = true;
-
     const initializeAuth = async () => {
+      setLoading(true);
       await fetchUserAndProfile();
       setLoading(false);
     };
@@ -114,12 +110,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [fetchUserAndProfile, shouldSkipInitialAuthFetch]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || inFlightRequest.current) return;
 
     if (!user && !isPublicRoute) {
       router.replace('/login');
     }
-  }, [loading, user, pathname, router]);
+  }, [loading, user, isPublicRoute, router]);
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, error, refreshProfile }}>
