@@ -45,7 +45,7 @@ export function CheckboxGrid({
           return (
             <label
               key={option.value}
-              className={`relative flex items-center  p-4 rounded-lg border-2 cursor-pointer transition-all ${
+              className={`relative flex items-center p-2 md:p-4 rounded-lg border-2 cursor-pointer transition-all ${
                 isSelected
                   ? 'border-brand bg-brand/5'
                   : 'border-border hover:border-brand/50'

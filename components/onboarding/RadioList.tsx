@@ -38,7 +38,7 @@ export function RadioList({
               key={option.value}
               onClick={() => onChange(option.value)}
               type="button"
-              className={`w-full px-6 py-4 rounded-lg border-2 flex items-center justify-between text-left transition-all ${
+              className={`w-full md:px-6 px-3 py-4 rounded-lg border-2 flex items-center justify-between text-left transition-all ${
                 isSelected
                   ? 'border-brand bg-brand/5 text-brand'
                   : 'border-border hover:border-brand/50'

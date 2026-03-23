@@ -39,7 +39,7 @@ export function CheckboxList({
           return (
             <label
               key={option}
-              className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
+              className={`flex items-center justify-between md:px-6 px-3 py-4 rounded-lg border-2 cursor-pointer transition-all ${
                 isSelected
                   ? 'border-brand bg-brand/5'
                   : 'border-border hover:border-brand/50'

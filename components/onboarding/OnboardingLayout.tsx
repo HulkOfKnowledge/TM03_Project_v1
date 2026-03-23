@@ -30,7 +30,7 @@ export function OnboardingLayout({
   const currentStepNumber = stages.find((s) => s.stage === currentStage)?.step || 1;
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-8">
+    <div className="md:container mx-auto md:px-6 md:py-8">
       <div className="">
         <div className="grid lg:grid-cols-[500px,1fr] gap-8">
           {/* Left Sidebar */}
@@ -39,7 +39,7 @@ export function OnboardingLayout({
             {showBack && onBack && (
               <button
                 onClick={onBack}
-                className="flex items-center justify-center h-12 w-12 rounded-full border border-border hover:border-brand transition-colors"
+                className="flex items-center justify-center md:h-12 md:w-12 h-8 w-8 rounded-full border border-border hover:border-brand transition-colors"
                 aria-label="Go back"
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -98,7 +98,7 @@ export function OnboardingLayout({
           </div>
 
           {/* Right Content Area */}
-          <div className="bg-card rounded-2xl border border-border p-6 sm:p-8 lg:p-12">
+          <div className="bg-card rounded-xl border border-border p-3 md:p-8 lg:p-12">
             {children}
           </div>
         </div>
