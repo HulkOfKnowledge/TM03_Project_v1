@@ -58,42 +58,98 @@ export function OnboardingLayout({
 
             {/* Progress Steps */}
             <div className="relative">
-              {stages.map((step, index) => {
-                const isActive = currentStage === step.stage;
-                const isCompleted = currentStepNumber > step.step;
-                const shouldLineBeColored = currentStepNumber > step.step;
+              {/* Mobile: Horizontal stepper with label under each dot */}
+              <div className="lg:hidden p-2">
+                <div className="relative">
+                  {/* Full-width base line */}
+                  <div className="absolute left-0 right-0 top-1 h-0.5 bg-muted" />
 
-                return (
-                  <div key={step.stage} className="relative flex items-start pb-8 last:pb-0">
-                    {/* Vertical Line */}
-                    {index < stages.length - 1 && (
-                      <div
-                        className={`absolute left-[3px] top-2 bottom-0 w-0.5 ${
-                          shouldLineBeColored ? 'bg-brand' : 'bg-muted'
-                        }`}
-                      />
-                    )}
+                  {/* Colored progress line */}
+                  <div
+                    className="absolute left-0 top-1 h-0.5 bg-brand transition-all"
+                    style={{
+                      width:
+                        stages.length > 1
+                          ? `${((currentStepNumber - 1) / (stages.length - 1)) * 100}%`
+                          : '0%',
+                    }}
+                  />
 
-                    {/* Step Indicator */}
-                    <div className="relative z-10 flex items-center space-x-3">
-                      <div
-                        className={`h-2 w-2 rounded-full flex-shrink-0 ${
-                          isActive || isCompleted ? 'bg-brand' : 'bg-muted'
-                        }`}
-                      />
-                      <span
-                        className={`text-base ${
-                          isActive || isCompleted
-                            ? 'text-foreground'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        {step.label}
-                      </span>
-                    </div>
+                  <div className="relative z-10 grid grid-cols-3">
+                    {stages.map((step, index) => {
+                      const isActive = currentStage === step.stage;
+                      const isCompleted = currentStepNumber > step.step;
+                      const alignmentClass =
+                        index === 0
+                          ? 'items-start text-left'
+                          : index === stages.length - 1
+                            ? 'items-end text-right'
+                            : 'items-center text-center';
+
+                      return (
+                        <div key={step.stage} className={`flex flex-col ${alignmentClass}`}>
+                          {/* Step indicator */}
+                          <div
+                            className={`h-2 w-2 rounded-full ${
+                              isActive || isCompleted ? 'bg-brand' : 'bg-muted'
+                            }`}
+                          />
+
+                          <span
+                            className={`mt-2 text-xs leading-tight ${
+                              isActive || isCompleted
+                                ? 'text-foreground'
+                                : 'text-muted-foreground'
+                            }`}
+                          >
+                            {step.label}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              </div>
+
+              {/* Desktop: Vertical stepper */}
+              <div className="hidden lg:block">
+                {stages.map((step, index) => {
+                  const isActive = currentStage === step.stage;
+                  const isCompleted = currentStepNumber > step.step;
+                  const shouldLineBeColored = currentStepNumber > step.step;
+
+                  return (
+                    <div key={step.stage} className="relative flex items-start pb-8 last:pb-0">
+                      {/* Vertical line */}
+                      {index < stages.length - 1 && (
+                        <div
+                          className={`absolute left-[3px] top-2 bottom-0 w-0.5 ${
+                            shouldLineBeColored ? 'bg-brand' : 'bg-muted'
+                          }`}
+                        />
+                      )}
+
+                      {/* Step indicator */}
+                      <div className="relative z-10 flex items-center space-x-3">
+                        <div
+                          className={`h-2 w-2 rounded-full flex-shrink-0 ${
+                            isActive || isCompleted ? 'bg-brand' : 'bg-muted'
+                          }`}
+                        />
+                        <span
+                          className={`text-base ${
+                            isActive || isCompleted
+                              ? 'text-foreground'
+                              : 'text-muted-foreground'
+                          }`}
+                        >
+                          {step.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
