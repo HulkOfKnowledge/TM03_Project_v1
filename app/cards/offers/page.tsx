@@ -5,18 +5,21 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { CardOfferCard } from '@/components/cards/offers/CardOfferCard';
 import { CardCompareModal } from '@/components/cards/offers/CardCompareModal';
 import { OffersFilterBar } from '@/components/cards/offers/OffersFilterBar';
 import { CardOffersSkeleton } from '@/components/cards/offers/CardOffersSkeleton';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 import { CreditCard, X, GitCompare } from 'lucide-react';
 import type { CardOffer, CardCategory, IncomeRange, OccupationType } from '@/types/card-offers.types';
 
 const MAX_COMPARE = 3;
 const MOBILE_MAX_COMPARE = 2;
+const OFFERS_PER_PAGE_DESKTOP = 12;
+const OFFERS_PER_PAGE_MOBILE = 10;
 
 export default function CardOffersPage() {
   const [offers, setOffers] = useState<CardOffer[]>([]);
@@ -33,6 +36,8 @@ export default function CardOffersPage() {
   const [showCompare, setShowCompare] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const maxCompare = isMobile ? MOBILE_MAX_COMPARE : MAX_COMPARE;
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = isMobile ? OFFERS_PER_PAGE_MOBILE : OFFERS_PER_PAGE_DESKTOP;
 
   const isPersonalized = incomeRange !== 'any' || occupation !== 'all';
 
@@ -69,6 +74,10 @@ export default function CardOffersPage() {
   }, [fetchOffers]);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [category, incomeRange, occupation]);
+
+  useEffect(() => {
     const media = window.matchMedia('(max-width: 639px)');
     const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     setIsMobile(media.matches);
@@ -82,6 +91,20 @@ export default function CardOffersPage() {
       return new Set(Array.from(prev).slice(0, maxCompare));
     });
   }, [maxCompare]);
+
+  const totalPages = Math.max(1, Math.ceil(offers.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+
+  useEffect(() => {
+    if (currentPage !== safePage) {
+      setCurrentPage(safePage);
+    }
+  }, [currentPage, safePage]);
+
+  const paginatedOffers = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return offers.slice(start, start + pageSize);
+  }, [offers, safePage, pageSize]);
 
   const handleToggleCompare = (offer: CardOffer) => {
     setCompareIds((prev) => {
@@ -170,16 +193,26 @@ export default function CardOffersPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-              {offers.map((offer) => (
-                <CardOfferCard
-                  key={offer.id}
-                  offer={offer}
-                  isCompareSelected={compareIds.has(offer.id)}
-                  onToggleCompare={handleToggleCompare}
-                  compareDisabled={compareIds.size >= maxCompare && !compareIds.has(offer.id)}
-                />
-              ))}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+              <div className="grid grid-cols-1 gap-5 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-3 lg:gap-6 lg:p-6">
+                {paginatedOffers.map((offer) => (
+                  <CardOfferCard
+                    key={offer.id}
+                    offer={offer}
+                    isCompareSelected={compareIds.has(offer.id)}
+                    onToggleCompare={handleToggleCompare}
+                    compareDisabled={compareIds.size >= maxCompare && !compareIds.has(offer.id)}
+                  />
+                ))}
+              </div>
+
+              <PaginationControls
+                currentPage={safePage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={offers.length}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>
