@@ -79,7 +79,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
         const results = await Promise.all(
           connectedCards.map(async (card) => {
             try {
-              const transactions = await cardService.getCardTransactions(card.id, 500);
+              const transactions = await cardService.getCardTransactions(card.id, 200);
               return [card.id, transactions] as const;
             } catch {
               return [card.id, [] as Transaction[]] as const;
@@ -99,7 +99,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     return () => {
       active = false;
     };
-  }, [cardIdKey]);
+  }, [cardIdKey, connectedCards]);
 
   // Derived date range 
   const dateFilter = useMemo(() => {
@@ -364,7 +364,8 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     compareCardIds, setCompareCardIds,
     palette,
     // loading
-    loading: loadingMetrics || loadingAnalysis || loadingPayments,
+    loading: loadingMetrics || loadingAnalysis,
+    loadingPayments,
     // data
     analysisData,
     filteredMetrics,

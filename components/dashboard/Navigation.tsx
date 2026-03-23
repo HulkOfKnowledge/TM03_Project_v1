@@ -211,6 +211,13 @@ export function Navigation() {
   }, [user, showNavItems]);
 
   useEffect(() => {
+    if (!showNavItems) return;
+
+    router.prefetch('/cards');
+    router.prefetch('/cards/analysis');
+  }, [router, showNavItems]);
+
+  useEffect(() => {
     if (!showNotifications) return;
 
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {

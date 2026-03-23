@@ -13,8 +13,8 @@ import type {
 
 // In-memory caches (session duration, no time-based expiration)
 let cardsCache: ConnectedCard[] | null = null;
-let transactionsCache: Map<string, Transaction[]> = new Map();
-let monthlyHistoryCache: Map<string, CardHistoryRow[]> = new Map();
+const transactionsCache: Map<string, Transaction[]> = new Map();
+const monthlyHistoryCache: Map<string, CardHistoryRow[]> = new Map();
 let creditAnalysisCache: CreditAnalysisData | null = null;
 
 /**
@@ -79,6 +79,7 @@ export function addCardToCache(card: ConnectedCard): void {
   if (cardsCache) {
     cardsCache = [...cardsCache, card];
   }
+  clearCardDerivedCaches();
 }
 
 /**
@@ -91,6 +92,15 @@ export function removeCardFromCache(cardId: string): void {
   // Also clear related data for this card
   transactionsCache.delete(`${cardId}`);
   monthlyHistoryCache.delete(cardId);
+  clearCardDerivedCaches();
+}
+
+/**
+ * Clear caches derived from card composition (add/remove/activation state)
+ */
+export function clearCardDerivedCaches(): void {
+  clearCreditAnalysisCache();
+  clearMetricsCache();
 }
 
 // ============= TRANSACTIONS CACHING =============
@@ -111,7 +121,7 @@ export async function fetchCardTransactions(
   
   // Return cached data if available (unless force refresh)
   if (!forceRefresh && transactionsCache.has(cacheKey)) {
-    return transactionsCache.get(cacheKey)!;
+    return transactionsCache.get(cacheKey) || [];
   }
 
   try {
@@ -170,7 +180,7 @@ export async function fetchCardMonthlyHistory(
 ): Promise<CardHistoryRow[]> {
   // Return cached data if available (unless force refresh)
   if (!forceRefresh && monthlyHistoryCache.has(cardId)) {
-    return monthlyHistoryCache.get(cardId)!;
+    return monthlyHistoryCache.get(cardId) || [];
   }
 
   try {
@@ -283,7 +293,7 @@ export async function fetchCardMetrics(
   forceRefresh: boolean = false,
 ): Promise<CardMetricsResponse | null> {
   const key = `${startDate}:${endDate}`;
-  if (!forceRefresh && metricsCache.has(key)) return metricsCache.get(key)!;
+  if (!forceRefresh && metricsCache.has(key)) return metricsCache.get(key) || null;
 
   try {
     const response = await fetch(

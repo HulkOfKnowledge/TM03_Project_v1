@@ -10,7 +10,8 @@ import type { ConnectedCard } from '@/types/card.types';
 import { 
   fetchCards, 
   addCardToCache,
-  removeCardFromCache 
+  removeCardFromCache,
+  clearCardDerivedCaches,
 } from '@/lib/api/cards-client';
 
 interface CardContextType {
@@ -50,6 +51,9 @@ export function CardProvider({ children }: { children: ReactNode }) {
   const loadCards = async (forceRefresh: boolean = false) => {
     try {
       setIsLoading(true);
+      if (forceRefresh) {
+        clearCardDerivedCaches();
+      }
       const cards = await fetchCards(forceRefresh);
       setConnectedCards(cards);
     } catch (error) {
