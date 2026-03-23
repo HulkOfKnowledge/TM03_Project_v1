@@ -35,6 +35,7 @@ import {
 import { Submenu, SubmenuItem } from '@/components/ui/Submenu';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationDetailModal } from '@/components/notifications/NotificationDetailModal';
+import { NotificationDropdownSkeleton } from '@/components/notifications/NotificationSkeletons';
 import type { NotificationsSummary, RewardNotification } from '@/types/notification.types';
 import {
   flattenNotifications,
@@ -321,7 +322,7 @@ export function Navigation() {
                       </div>
                       <div className="max-h-[min(60vh,24rem)] overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] dark:[scrollbar-color:#374151_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb:hover]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-600">
                         {notificationsLoading ? (
-                          <div className="p-6 text-sm text-center text-muted-foreground">Loading notifications...</div>
+                          <NotificationDropdownSkeleton rows={4} />
                         ) : notificationPreview.length === 0 ? (
                           <div className="p-8 text-center text-muted-foreground">
                             <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -339,8 +340,8 @@ export function Navigation() {
                                 onClick={() => {
                                   openNotificationDetails(item);
                                 }}
-                                className={`block w-full text-left px-4 py-3 transition-colors hover:bg-accent/50 ${
-                                  isRead ? 'bg-background' : 'bg-brand/5'
+                                className={`block w-full text-left px-4 py-3 transition-colors hover:bg-accent/50 dark:hover:bg-accent/40 ${
+                                  isRead ? 'bg-background' : 'bg-brand/5 dark:bg-brand/10'
                                 }`}
                               >
                                 <div className="flex items-start justify-between gap-3">
@@ -369,7 +370,7 @@ export function Navigation() {
                             setShowNotifications(false);
                             router.push('/notifications');
                           }}
-                          className="w-full rounded-lg border border-brand/30 px-3 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand/5"
+                          className="w-full px-3 py-2 rounded-lg border border-brand text-brand font-medium hover:bg-brand hover:text-white transition-colors text-sm md:text-base"
                         >
                           View all notifications
                         </button>

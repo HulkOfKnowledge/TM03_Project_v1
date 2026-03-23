@@ -6,6 +6,7 @@ import { Bell, CheckCheck } from 'lucide-react';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { NotificationDetailModal } from '@/components/notifications/NotificationDetailModal';
+import { NotificationsPageSkeleton } from '@/components/notifications/NotificationSkeletons';
 import { PaginationControls } from '@/components/ui/PaginationControls';
 import {
   flattenNotifications,
@@ -36,7 +37,7 @@ function NotificationRow({
       type="button"
       onClick={() => onOpen(item)}
       className={cn(
-        'w-full rounded-lg px-1 py-3 text-left transition-colors',
+        'w-full rounded-lg p-2 text-left transition-colors',
         isRead
           ? 'bg-white dark:bg-black'
           : 'bg-gray-50 dark:bg-gray-900/80',
@@ -198,7 +199,7 @@ export default function NotificationsPage() {
           </div>
 
           {isLoading ? (
-            <div className="rounded-xl bg-white p-8 text-center text-muted-foreground dark:bg-black">Loading notifications...</div>
+            <NotificationsPageSkeleton rows={pageSize} />
           ) : error ? (
             <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">{error}</div>
           ) : filteredNotifications.length === 0 ? (
