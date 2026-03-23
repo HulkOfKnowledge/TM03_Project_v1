@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Home, 
@@ -57,6 +57,20 @@ interface NavItem {
   subNav?: SubNavItem[];
 }
 
+const LEARN_SUB_NAV: SubNavItem[] = [
+  { label: 'Learning Space', href: '/learn/learning-space' },
+  { label: 'Resources', href: '/learn/resources' },
+  { label: 'Articles & Guides', href: '/learn/articles' },
+  { label: 'Credit Platform Overview', href: '/learn/overview' },
+  { label: 'Learning History', href: '/learn/history' },
+];
+
+const CARD_SUB_NAV: SubNavItem[] = [
+  { label: 'Card Dashboard', href: '/cards' },
+  { label: 'Credit Analysis', href: '/cards/analysis' },
+  { label: 'Card Offers', href: '/cards/offers' },
+];
+
 export function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
@@ -72,6 +86,7 @@ export function Navigation() {
   const [selectedNotification, setSelectedNotification] = useState<RewardNotification | null>(null);
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
   const { readNotificationIds, markAsRead } = useReadNotificationIds();
+  const notificationsContainerRef = useRef<HTMLDivElement | null>(null);
   const isDark = useIsDarkMode();
   const { setTheme } = useTheme();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -81,50 +96,38 @@ export function Navigation() {
     handleLogout();
   };
 
-  // Define subnav items for each main nav
-  const learnSubNav: SubNavItem[] = [
-    { label: 'Learning Space', href: '/learn/learning-space' },
-    { label: 'Resources', href: '/learn/resources' },
-    { label: 'Articles & Guides', href: '/learn/articles' },
-    { label: 'Credit Platform Overview', href: '/learn/overview' },
-    { label: 'Learning History', href: '/learn/history' },
-  ];
-
-  const cardSubNav: SubNavItem[] = [
-    { label: 'Card Dashboard', href: '/cards' },
-    { label: 'Credit Analysis', href: '/cards/analysis' },
-    { label: 'Card Offers', href: '/cards/offers' },
-  ];
-
   // Navigation items - only shown after onboarding
-  const navItems: NavItem[] = [
-    { 
-      label: 'Home', 
-      href: '/learn', 
-      icon: Home,
-      active: pathname === '/learn'
-    },
-    { 
-      label: 'Learn', 
-      href: '#', 
-      icon: BookOpen,
-      active: pathname?.startsWith('/learn/'),
-      subNav: learnSubNav
-    },
-    { 
-      label: 'Cards & Accounts', 
-      href: '#', 
-      icon: CreditCard,
-      active: pathname === '/cards' || pathname?.startsWith('/cards'),
-      subNav: cardSubNav
-    },
-    { 
-      label: 'Profile', 
-      href: '/profile', 
-      icon: User,
-      active: pathname === '/profile' || pathname?.startsWith('/profile')
-    },
-  ];
+  const navItems: NavItem[] = useMemo(
+    () => [
+      {
+        label: 'Home',
+        href: '/learn',
+        icon: Home,
+        active: pathname === '/learn',
+      },
+      {
+        label: 'Learn',
+        href: '#',
+        icon: BookOpen,
+        active: pathname?.startsWith('/learn/'),
+        subNav: LEARN_SUB_NAV,
+      },
+      {
+        label: 'Cards & Accounts',
+        href: '#',
+        icon: CreditCard,
+        active: pathname === '/cards' || pathname?.startsWith('/cards'),
+        subNav: CARD_SUB_NAV,
+      },
+      {
+        label: 'Profile',
+        href: '/profile',
+        icon: User,
+        active: pathname === '/profile' || pathname?.startsWith('/profile'),
+      },
+    ],
+    [pathname],
+  );
 
   // Show navigation items only if onboarding is completed
   const showNavItems = profile?.onboarding_completed;
@@ -164,7 +167,7 @@ export function Navigation() {
     if (activeWithSubNav) {
       setActiveDesktopSubNavItem(activeWithSubNav.label);
     }
-  }, [pathname]);
+  }, [navItems]);
 
   useEffect(() => {
     setUnreadNotifications(notifications.filter((item) => !readNotificationIds.has(item.id)).length);
@@ -206,6 +209,37 @@ export function Navigation() {
 
     loadNotifications();
   }, [user, showNavItems]);
+
+  useEffect(() => {
+    if (!showNotifications) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+
+      if (notificationsContainerRef.current?.contains(target)) {
+        return;
+      }
+
+      setShowNotifications(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showNotifications]);
 
   const notificationPreview = useMemo(() => notifications.slice(0, 6), [notifications]);
 
@@ -287,7 +321,7 @@ export function Navigation() {
             {/* Right Side Actions */}
             <div className="flex items-center space-x-1">
               {/* Notifications */}
-              <div className="relative">
+              <div className="relative" ref={notificationsContainerRef}>
                 <button
                   onClick={() => {
                     setShowNotifications(!showNotifications);
