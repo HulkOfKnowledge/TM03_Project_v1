@@ -21,7 +21,7 @@ import type { NotificationsSummary, NotificationTimeframe, RewardNotification } 
 type NotificationFilter = 'all' | 'unread' | NotificationTimeframe;
 
 const SELECT_CLASS =
-  'rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white';
+  'w-[88px] rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-auto sm:px-3 sm:py-2 sm:text-sm dark:border-gray-800 dark:bg-gray-950 dark:text-white';
 
 function NotificationRow({
   item,
@@ -165,16 +165,16 @@ export default function NotificationsPage() {
 
       <main className="pb-16 pt-28 lg:pt-40">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-3xl font-bold text-brand md:text-4xl">Notifications</h1>
+          <div className="mb-4 grid grid-cols-[1fr_auto] items-center gap-2">
+            <h1 className="text-2xl font-bold text-brand sm:text-3xl md:text-4xl">Notifications</h1>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <select
                 value={activeTab}
                 onChange={(e) => setActiveTab(e.target.value as NotificationFilter)}
                 className={SELECT_CLASS}
               >
-                <option value="all">All ({counts.all})</option>
+                <option value="all">All</option>
                 <option value="unread">Unread ({counts.unread})</option>
                 <option value="daily">Daily ({counts.daily})</option>
                 <option value="weekly">Weekly ({counts.weekly})</option>
@@ -185,10 +185,10 @@ export default function NotificationsPage() {
                 <button
                   type="button"
                   onClick={markAllAsRead}
-                  className="inline-flex items-center gap-1 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/80"
+                  className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent/80 sm:px-3 sm:py-2 sm:text-sm"
                 >
                   <CheckCheck className="h-4 w-4" />
-                  Mark read
+                  <span>Mark read</span>
                 </button>
               )}
             </div>
