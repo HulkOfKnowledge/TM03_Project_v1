@@ -23,8 +23,10 @@ import {
   X,
   ChevronDown,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { handleLogout } from '@/lib/auth';
 import { useIsDarkMode, useTheme } from '@/hooks/useTheme';
+import { useReadNotificationIds } from '@/hooks/useReadNotificationIds';
 import { useUser } from '@/hooks/useAuth';
 import {
   DropdownMenu,
@@ -40,9 +42,6 @@ import type { NotificationsSummary, RewardNotification } from '@/types/notificat
 import {
   flattenNotifications,
   formatNotificationTimestamp,
-  loadReadNotificationIds,
-  markNotificationAsRead,
-  persistReadNotificationIds,
 } from '@/lib/notifications/ui';
 
 interface SubNavItem {
@@ -53,7 +52,7 @@ interface SubNavItem {
 interface NavItem {
   label: string;
   href: string;
-  icon: any;
+  icon: LucideIcon;
   active: boolean;
   subNav?: SubNavItem[];
 }
@@ -72,7 +71,7 @@ export function Navigation() {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<RewardNotification | null>(null);
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
-  const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
+  const { readNotificationIds, markAsRead } = useReadNotificationIds();
   const isDark = useIsDarkMode();
   const { setTheme } = useTheme();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -168,10 +167,6 @@ export function Navigation() {
   }, [pathname]);
 
   useEffect(() => {
-    setReadNotificationIds(loadReadNotificationIds());
-  }, []);
-
-  useEffect(() => {
     setUnreadNotifications(notifications.filter((item) => !readNotificationIds.has(item.id)).length);
   }, [notifications, readNotificationIds]);
 
@@ -215,9 +210,7 @@ export function Navigation() {
   const notificationPreview = useMemo(() => notifications.slice(0, 6), [notifications]);
 
   const openNotificationDetails = (item: RewardNotification) => {
-    const nextReadIds = markNotificationAsRead(readNotificationIds, item.id);
-    setReadNotificationIds(nextReadIds);
-    persistReadNotificationIds(nextReadIds);
+    markAsRead(item.id);
 
     setSelectedNotification(item);
     setNotificationModalOpen(true);

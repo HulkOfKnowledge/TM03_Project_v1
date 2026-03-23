@@ -1,6 +1,7 @@
 import type { NotificationsSummary, NotificationTimeframe, RewardNotification } from '@/types/notification.types';
 
 export const NOTIFICATION_READ_STORAGE_KEY = 'creduman.readNotificationIds';
+export const NOTIFICATION_READ_SYNC_EVENT = 'creduman:notification-read-sync';
 
 export interface NotificationPillMeta {
   label: string;
@@ -95,6 +96,7 @@ export function loadReadNotificationIds(): Set<string> {
 export function persistReadNotificationIds(ids: Set<string>) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(NOTIFICATION_READ_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+  window.dispatchEvent(new Event(NOTIFICATION_READ_SYNC_EVENT));
 }
 
 export function markNotificationAsRead(readIds: Set<string>, id: string): Set<string> {
@@ -102,4 +104,25 @@ export function markNotificationAsRead(readIds: Set<string>, id: string): Set<st
   const next = new Set(readIds);
   next.add(id);
   return next;
+}
+
+export function subscribeToReadNotificationIds(onChange: (ids: Set<string>) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  const syncFromStorage = (event: StorageEvent) => {
+    if (event.key && event.key !== NOTIFICATION_READ_STORAGE_KEY) return;
+    onChange(loadReadNotificationIds());
+  };
+
+  const syncFromCustomEvent = () => {
+    onChange(loadReadNotificationIds());
+  };
+
+  window.addEventListener('storage', syncFromStorage);
+  window.addEventListener(NOTIFICATION_READ_SYNC_EVENT, syncFromCustomEvent);
+
+  return () => {
+    window.removeEventListener('storage', syncFromStorage);
+    window.removeEventListener(NOTIFICATION_READ_SYNC_EVENT, syncFromCustomEvent);
+  };
 }

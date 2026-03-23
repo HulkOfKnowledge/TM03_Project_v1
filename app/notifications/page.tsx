@@ -8,12 +8,10 @@ import { Footer } from '@/components/landing/Footer';
 import { NotificationDetailModal } from '@/components/notifications/NotificationDetailModal';
 import { NotificationsPageSkeleton } from '@/components/notifications/NotificationSkeletons';
 import { PaginationControls } from '@/components/ui/PaginationControls';
+import { useReadNotificationIds } from '@/hooks/useReadNotificationIds';
 import {
   flattenNotifications,
   formatNotificationTimestamp,
-  loadReadNotificationIds,
-  markNotificationAsRead,
-  persistReadNotificationIds,
 } from '@/lib/notifications/ui';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { NotificationsSummary, NotificationTimeframe, RewardNotification } from '@/types/notification.types';
@@ -71,12 +69,8 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<NotificationFilter>('all');
   const [selectedNotification, setSelectedNotification] = useState<RewardNotification | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
+  const { readNotificationIds, markAsRead, markAllAsRead } = useReadNotificationIds();
   const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    setReadNotificationIds(loadReadNotificationIds());
-  }, []);
 
   useEffect(() => {
     const loadNotifications = async () => {
@@ -145,18 +139,13 @@ export default function NotificationsPage() {
   }, [currentPage, filteredNotifications]);
 
   const openDetails = (item: RewardNotification) => {
-    const nextReadIds = markNotificationAsRead(readNotificationIds, item.id);
-    setReadNotificationIds(nextReadIds);
-    persistReadNotificationIds(nextReadIds);
+    markAsRead(item.id);
     setSelectedNotification(item);
     setDetailModalOpen(true);
   };
 
-  const markAllAsRead = () => {
-    const nextReadIds = new Set(readNotificationIds);
-    allNotifications.forEach((item) => nextReadIds.add(item.id));
-    setReadNotificationIds(nextReadIds);
-    persistReadNotificationIds(nextReadIds);
+  const handleMarkAllAsRead = () => {
+    markAllAsRead(allNotifications.map((item) => item.id));
   };
 
   return (
@@ -184,7 +173,7 @@ export default function NotificationsPage() {
               {counts.unread > 0 && (
                 <button
                   type="button"
-                  onClick={markAllAsRead}
+                  onClick={handleMarkAllAsRead}
                   className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent/80 sm:px-3 sm:py-2 sm:text-sm"
                 >
                   <CheckCheck className="h-4 w-4" />
