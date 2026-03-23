@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Home, 
@@ -34,6 +34,15 @@ import {
 } from '@/components/ui/DropdownMenu';
 import { Submenu, SubmenuItem } from '@/components/ui/Submenu';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { NotificationDetailModal } from '@/components/notifications/NotificationDetailModal';
+import type { NotificationsSummary, RewardNotification } from '@/types/notification.types';
+import {
+  flattenNotifications,
+  formatNotificationTimestamp,
+  loadReadNotificationIds,
+  markNotificationAsRead,
+  persistReadNotificationIds,
+} from '@/lib/notifications/ui';
 
 interface SubNavItem {
   label: string;
@@ -58,9 +67,14 @@ export function Navigation() {
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
   const [activeDesktopSubNavItem, setActiveDesktopSubNavItem] = useState<string | null>(null);
   const [expandedMobileMenu, setExpandedMobileMenu] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<RewardNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<RewardNotification | null>(null);
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
   const isDark = useIsDarkMode();
   const { setTheme } = useTheme();
-  const [unreadNotifications] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const onLogout = async () => {
     setShowUserMenu(false);
@@ -151,6 +165,63 @@ export function Navigation() {
       setActiveDesktopSubNavItem(activeWithSubNav.label);
     }
   }, [pathname]);
+
+  useEffect(() => {
+    setReadNotificationIds(loadReadNotificationIds());
+  }, []);
+
+  useEffect(() => {
+    setUnreadNotifications(notifications.filter((item) => !readNotificationIds.has(item.id)).length);
+  }, [notifications, readNotificationIds]);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (!user || !showNavItems) {
+        setNotifications([]);
+        setUnreadNotifications(0);
+        return;
+      }
+
+      try {
+        setNotificationsLoading(true);
+        const response = await fetch('/api/notifications', {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          setNotifications([]);
+          setUnreadNotifications(0);
+          return;
+        }
+
+        const payload = await response.json();
+        const summary = payload.data as NotificationsSummary;
+        const all = flattenNotifications(summary);
+
+        setNotifications(all);
+      } catch {
+        setNotifications([]);
+        setUnreadNotifications(0);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+
+    loadNotifications();
+  }, [user, showNavItems]);
+
+  const notificationPreview = useMemo(() => notifications.slice(0, 6), [notifications]);
+
+  const openNotificationDetails = (item: RewardNotification) => {
+    const nextReadIds = markNotificationAsRead(readNotificationIds, item.id);
+    setReadNotificationIds(nextReadIds);
+    persistReadNotificationIds(nextReadIds);
+
+    setSelectedNotification(item);
+    setNotificationModalOpen(true);
+    setShowNotifications(false);
+  };
 
   // Check if subnav item is active
   const isSubNavActive = (href: string) => {
@@ -244,15 +315,64 @@ export function Navigation() {
                       className="fixed inset-0 z-40"
                       onClick={() => setShowNotifications(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-80 bg-background border border-border rounded-lg shadow-lg z-50 overflow-hidden">
-                      <div className="p-4 border-b border-border">
+                    <div className="fixed left-3 right-3 top-16 mt-2 z-50 overflow-hidden rounded-lg border border-border bg-background shadow-lg sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80">
+                      <div className="border-b border-border p-4">
                         <h3 className="font-semibold">Notifications</h3>
                       </div>
-                      <div className="max-h-96 overflow-y-auto">
-                        <div className="p-8 text-center text-muted-foreground">
-                          <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No new notifications</p>
-                        </div>
+                      <div className="max-h-[min(60vh,24rem)] overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] dark:[scrollbar-color:#374151_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb:hover]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-600">
+                        {notificationsLoading ? (
+                          <div className="p-6 text-sm text-center text-muted-foreground">Loading notifications...</div>
+                        ) : notificationPreview.length === 0 ? (
+                          <div className="p-8 text-center text-muted-foreground">
+                            <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No new notifications</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-border">
+                            {notificationPreview.map((item) => {
+                              const isRead = readNotificationIds.has(item.id);
+
+                              return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  openNotificationDetails(item);
+                                }}
+                                className={`block w-full text-left px-4 py-3 transition-colors hover:bg-accent/50 ${
+                                  isRead ? 'bg-background' : 'bg-brand/5'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className={`line-clamp-1 text-sm ${isRead ? ' text-foreground/90' : 'font-medium text-foreground'}`}>
+                                    {item.title}
+                                  </p>
+                                  <div className="shrink-0 flex items-center gap-1.5">
+                                    {!isRead && <span className="inline-flex h-2 w-2 rounded-full bg-brand" />}
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {formatNotificationTimestamp(item.transactionDate)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{item.message}</p>
+                                <p className="mt-1 text-xs text-brand">+${item.incrementalReward.toFixed(2)} potential</p>
+                              </button>
+                            );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <div className="border-t border-border p-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowNotifications(false);
+                            router.push('/notifications');
+                          }}
+                          className="w-full rounded-lg border border-brand/30 px-3 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand/5"
+                        >
+                          View all notifications
+                        </button>
                       </div>
                     </div>
                   </>
@@ -408,6 +528,15 @@ export function Navigation() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
+                        router.push('/notifications');
+                        setShowUserMenu(false);
+                      }}
+                      icon={<Bell className="h-4 w-4" />}
+                    >
+                      Notifications
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
                         router.push('/settings');
                         setShowUserMenu(false);
                       }}
@@ -552,6 +681,12 @@ export function Navigation() {
         )}
       </nav>
 
+      <NotificationDetailModal
+        isOpen={notificationModalOpen}
+        notification={selectedNotification}
+        onClose={() => setNotificationModalOpen(false)}
+      />
+
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden bg-background/95 backdrop-blur">
@@ -630,6 +765,14 @@ export function Navigation() {
 
               {user ? (
                 <>
+                  <Link
+                    href="/notifications"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium text-foreground hover:bg-accent transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Bell className="h-5 w-5" />
+                    <span>Notifications</span>
+                  </Link>
                   <Link
                     href="/settings"
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium text-foreground hover:bg-accent transition-colors"

@@ -3,7 +3,7 @@ Pydantic Models - Request/Response Schemas
 """
 
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict
 from datetime import datetime
 
 
@@ -127,6 +127,18 @@ class TransactionData(BaseModel):
     merchant_name: Optional[str] = None
 
 
+class StochasticTransactionData(BaseModel):
+    """Transaction data used by Markov/MDP models"""
+    id: str
+    card_id: str
+    date: str
+    description: str
+    amount: float
+    category: Optional[str] = None
+    merchant_name: Optional[str] = None
+    balance: Optional[float] = None
+
+
 class TransactionInsightRequest(BaseModel):
     """Request for transaction-level insights"""
     user_id: str
@@ -146,6 +158,100 @@ class TransactionInsightResponse(BaseModel):
     """Response with transaction insights"""
     transaction_id: str
     insights: List[TransactionInsight]
+
+
+# ==================== STOCHASTIC DECISIONING ====================
+class CategoryProbability(BaseModel):
+    """Probability of spending in a category on next transaction"""
+    category: str
+    probability: float = Field(ge=0, le=1)
+
+
+class SpendingProbabilityRequest(BaseModel):
+    """Request for Markov-chain spending category prediction"""
+    user_id: str
+    transactions: List[StochasticTransactionData]
+    current_category: Optional[str] = None
+    lookback_days: int = Field(default=180, ge=30, le=730)
+
+
+class SpendingProbabilityResponse(BaseModel):
+    """Response for Markov-chain category probabilities"""
+    user_id: str
+    current_category: str
+    probabilities: List[CategoryProbability]
+    top_category: str
+    transition_counts: Dict[str, Dict[str, int]]
+    computed_at: str
+
+
+class CardDecisionCandidate(BaseModel):
+    """Candidate card for merchant-level card choice (MDP action set)"""
+    card_id: str
+    institution_name: str
+    current_balance: float = Field(ge=0)
+    credit_limit: float = Field(gt=0)
+    utilization_percentage: float = Field(ge=0, le=100)
+    minimum_payment: float = Field(ge=0)
+    payment_due_date: Optional[str] = None
+    interest_rate: Optional[float] = Field(None, ge=0)
+    estimated_reward_rate_by_category: Optional[Dict[str, float]] = None
+
+
+class CardChoiceRequest(BaseModel):
+    """Request for merchant-level card selection via MDP"""
+    user_id: str
+    merchant_name: str
+    merchant_category: Optional[str] = None
+    estimated_amount: float = Field(default=50.0, ge=1)
+    lookback_days: int = Field(default=180, ge=30, le=730)
+    cards: List[CardDecisionCandidate]
+    transactions: List[StochasticTransactionData]
+
+
+class CardActionValue(BaseModel):
+    """MDP action value (Q-value) per card"""
+    card_id: str
+    q_value: float
+    immediate_reward: float
+    expected_next_value: float
+    estimated_post_utilization: float
+
+
+class CardChoiceCounterfactual(BaseModel):
+    """What user could gain by using recommended card instead of current behavior"""
+    baseline_card_id: Optional[str] = None
+    recommended_card_id: str
+    estimated_reward_baseline: float
+    estimated_reward_recommended: float
+    estimated_incremental_reward: float
+    estimated_monthly_incremental_reward: float
+    estimated_annual_incremental_reward: float
+
+
+class UpgradeOpportunity(BaseModel):
+    """Phase-2 opportunity to suggest a better external card for top spend category"""
+    top_spend_category: str
+    estimated_monthly_spend: float
+    current_best_reward_rate: float
+    suggested_offer_name: Optional[str] = None
+    suggested_offer_issuer: Optional[str] = None
+    suggested_offer_reward_rate: Optional[float] = None
+    estimated_monthly_incremental_reward: Optional[float] = None
+    estimated_annual_incremental_reward: Optional[float] = None
+
+
+class CardChoiceResponse(BaseModel):
+    """Response with recommended card and policy diagnostics"""
+    user_id: str
+    merchant_name: str
+    merchant_category: str
+    recommended_card_id: str
+    policy_reasoning: Dict[str, str]
+    action_values: List[CardActionValue]
+    counterfactual: CardChoiceCounterfactual
+    upgrade_opportunity: Optional[UpgradeOpportunity] = None
+    computed_at: str
 
 
 # Update forward references

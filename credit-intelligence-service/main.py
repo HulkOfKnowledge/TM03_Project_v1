@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 from app.core.config import settings
-from app.api import analyze, recommendations, simulate
+from app.api import analyze, recommendations, simulate, stochastic
 from app.ml.models import ml_models
 
 
@@ -107,6 +107,7 @@ async def health_check():
 app.include_router(analyze.router, prefix="/api/v1", tags=["analyze"])
 app.include_router(recommendations.router, prefix="/api/v1", tags=["recommendations"])
 app.include_router(simulate.router, prefix="/api/v1", tags=["simulate"])
+app.include_router(stochastic.router, prefix="/api/v1", tags=["stochastic"])
 
 
 if __name__ == "__main__":

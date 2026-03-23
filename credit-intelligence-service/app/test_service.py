@@ -12,10 +12,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.services.analyzer import CreditAnalyzer
 from app.services.recommender import PaymentRecommender
 from app.services.transaction_insights import transaction_insights
+from app.services.stochastic_planner import stochastic_planner
 from app.models.schemas import (
     AnalyzeCreditRequest,
     PaymentRecommendationRequest,
-    CardData
+    CardData,
+    SpendingProbabilityRequest,
+    CardChoiceRequest,
+    StochasticTransactionData,
+    CardDecisionCandidate,
 )
 
 
@@ -297,6 +302,134 @@ def test_spending_analysis():
     print("\n✓ Test 4 passed")
 
 
+def test_stochastic_decision_support():
+    """Test Markov chain probabilities and MDP card-choice counterfactual"""
+    print_section("TEST 5: Stochastic Decision Support (Markov + MDP)")
+
+    transactions = [
+        StochasticTransactionData(
+            id="txn_1",
+            card_id="card_a",
+            date="2026-02-01",
+            description="Sobeys Groceries",
+            amount=120.0,
+            category="groceries",
+            merchant_name="Sobeys",
+            balance=950.0,
+        ),
+        StochasticTransactionData(
+            id="txn_2",
+            card_id="card_a",
+            date="2026-02-05",
+            description="Shell Gas",
+            amount=65.0,
+            category="gas",
+            merchant_name="Shell",
+            balance=1015.0,
+        ),
+        StochasticTransactionData(
+            id="txn_3",
+            card_id="card_a",
+            date="2026-02-10",
+            description="Air Canada",
+            amount=420.0,
+            category="travel",
+            merchant_name="Air Canada",
+            balance=1200.0,
+        ),
+        StochasticTransactionData(
+            id="txn_4",
+            card_id="card_a",
+            date="2026-02-15",
+            description="Metro Groceries",
+            amount=110.0,
+            category="groceries",
+            merchant_name="Metro",
+            balance=1125.0,
+        ),
+        StochasticTransactionData(
+            id="txn_5",
+            card_id="card_b",
+            date="2026-02-20",
+            description="Uber Eats",
+            amount=55.0,
+            category="dining",
+            merchant_name="Uber Eats",
+            balance=1255.0,
+        ),
+    ]
+
+    # Markov-chain next-category probabilities
+    markov_request = SpendingProbabilityRequest(
+        user_id="test_user_1",
+        transactions=transactions,
+        current_category="groceries",
+        lookback_days=180,
+    )
+    markov_response = stochastic_planner.predict_spending_probability(markov_request)
+
+    print("\nMarkov output:")
+    print(f"  Current category: {markov_response.current_category}")
+    print(f"  Top next category: {markov_response.top_category}")
+    print("  Top probabilities:")
+    for p in markov_response.probabilities[:3]:
+        print(f"    - {p.category}: {p.probability:.4f}")
+
+    # MDP card choice with counterfactual uplift
+    mdp_request = CardChoiceRequest(
+        user_id="test_user_1",
+        merchant_name="Air Canada",
+        merchant_category="travel",
+        estimated_amount=350.0,
+        lookback_days=180,
+        cards=[
+            CardDecisionCandidate(
+                card_id="card_a",
+                institution_name="Tangerine Mastercard",
+                current_balance=1100.0,
+                credit_limit=4000.0,
+                utilization_percentage=27.5,
+                minimum_payment=40.0,
+                payment_due_date="2026-03-25T00:00:00Z",
+                interest_rate=20.99,
+                estimated_reward_rate_by_category={"travel": 0.01, "default": 0.01},
+            ),
+            CardDecisionCandidate(
+                card_id="card_b",
+                institution_name="Amex Cobalt",
+                current_balance=900.0,
+                credit_limit=5000.0,
+                utilization_percentage=18.0,
+                minimum_payment=35.0,
+                payment_due_date="2026-03-20T00:00:00Z",
+                interest_rate=21.99,
+                estimated_reward_rate_by_category={"travel": 0.03, "default": 0.01},
+            ),
+        ],
+        transactions=transactions,
+    )
+    mdp_response = stochastic_planner.choose_card_for_merchant(mdp_request)
+
+    print("\nMDP output:")
+    print(f"  Merchant: {mdp_response.merchant_name}")
+    print(f"  Recommended card: {mdp_response.recommended_card_id}")
+    print(f"  Baseline card: {mdp_response.counterfactual.baseline_card_id}")
+    print(
+        "  Incremental reward on this transaction: "
+        f"${mdp_response.counterfactual.estimated_incremental_reward:.2f}"
+    )
+    print(
+        "  Monthly incremental reward: "
+        f"${mdp_response.counterfactual.estimated_monthly_incremental_reward:.2f}"
+    )
+    print(
+        "  Annual incremental reward: "
+        f"${mdp_response.counterfactual.estimated_annual_incremental_reward:.2f}"
+    )
+
+    print("\n✓ Test 5 passed")
+
+
 def main():
     """Run all tests"""
     print("\n" + "╔" + "═" * 68 + "╗")
@@ -308,6 +441,7 @@ def main():
         test_payment_recommendations()
         test_transaction_insights()
         test_spending_analysis()
+        test_stochastic_decision_support()
         
         print("\n" + "=" * 70)
         print("  ✅ ALL TESTS PASSED!")

@@ -54,7 +54,7 @@ export interface PaymentRecommendationRequest {
   userId: string;
   cards: CardDataForAnalysis[];
   availableAmount: number; // Amount user can pay this month
-  optimizationGoal: 'minimize_interest' | 'balanced' | 'minimize_balance';
+  optimizationGoal: 'minimize_interest' | 'improve_score' | 'balanced' | 'minimize_balance';
 }
 
 export interface PaymentRecommendation {
@@ -105,6 +105,91 @@ export interface PayoffScenario {
   totalInterestPaid: number;
   totalAmountPaid: number;
   payoffDate: string;
+}
+
+// ==================== STOCHASTIC DECISION SUPPORT ====================
+export interface StochasticTransactionData {
+  id: string;
+  cardId: string;
+  date: string;
+  description: string;
+  amount: number;
+  category: string | null;
+  merchantName: string | null;
+  balance?: number | null;
+}
+
+export interface SpendingProbabilityRequest {
+  lookbackDays?: number;
+  currentCategory?: string | null;
+  cardId?: string;
+}
+
+export interface CategoryProbability {
+  category: string;
+  probability: number;
+}
+
+export interface SpendingProbabilityResponse {
+  userId: string;
+  currentCategory: string;
+  probabilities: CategoryProbability[];
+  topCategory: string;
+  transitionCounts: Record<string, Record<string, number>>;
+  computedAt: string;
+}
+
+export interface CardChoiceRequest {
+  merchantName: string;
+  merchantCategory?: string | null;
+  estimatedAmount?: number;
+  lookbackDays?: number;
+  rewardRatesByCard?: Record<string, Record<string, number>>;
+}
+
+export interface CardActionValue {
+  cardId: string;
+  qValue: number;
+  immediateReward: number;
+  expectedNextValue: number;
+  estimatedPostUtilization: number;
+}
+
+export interface CardChoiceCounterfactual {
+  baselineCardId?: string | null;
+  recommendedCardId: string;
+  estimatedRewardBaseline: number;
+  estimatedRewardRecommended: number;
+  estimatedIncrementalReward: number;
+  estimatedMonthlyIncrementalReward: number;
+  estimatedAnnualIncrementalReward: number;
+}
+
+export interface UpgradeOpportunity {
+  topSpendCategory: string;
+  estimatedMonthlySpend: number;
+  currentBestRewardRate: number;
+  suggestedOfferName?: string | null;
+  suggestedOfferIssuer?: string | null;
+  suggestedOfferRewardRate?: number | null;
+  estimatedMonthlyIncrementalReward?: number | null;
+  estimatedAnnualIncrementalReward?: number | null;
+}
+
+export interface CardChoiceResponse {
+  userId: string;
+  merchantName: string;
+  merchantCategory: string;
+  recommendedCardId: string;
+  policyReasoning: {
+    en: string;
+    fr: string;
+    ar: string;
+  };
+  actionValues: CardActionValue[];
+  counterfactual: CardChoiceCounterfactual;
+  upgradeOpportunity?: UpgradeOpportunity | null;
+  computedAt: string;
 }
 
 // ==================== WEBHOOK PAYLOADS ====================
