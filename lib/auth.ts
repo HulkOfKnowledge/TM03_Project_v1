@@ -4,6 +4,7 @@
  */
 
 import { clearAuthCache } from './api/auth-client';
+import { clearAllCardCaches } from './api/cards-client';
 
 /**
  * Handle user logout
@@ -12,6 +13,7 @@ import { clearAuthCache } from './api/auth-client';
 export function handleLogout(): void {
   // Clear client-side cache first so UI updates immediately.
   clearAuthCache();
+  clearAllCardCaches();
 
   void (async () => {
     try {

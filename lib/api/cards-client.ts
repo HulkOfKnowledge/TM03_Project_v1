@@ -36,9 +36,7 @@ export async function fetchCards(forceRefresh: boolean = false): Promise<Connect
 
     if (!response.ok) {
       console.error('Failed to fetch cards:', response.statusText);
-      const result: ConnectedCard[] = [];
-      cardsCache = result;
-      return result;
+      return [];
     }
 
     const result = await response.json();
@@ -50,9 +48,7 @@ export async function fetchCards(forceRefresh: boolean = false): Promise<Connect
     return cards;
   } catch (error) {
     console.error('Error fetching cards:', error);
-    const result: ConnectedCard[] = [];
-    cardsCache = result;
-    return result;
+    return [];
   }
 }
 

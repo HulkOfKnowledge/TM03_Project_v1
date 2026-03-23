@@ -7,10 +7,12 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ConnectedCard } from '@/types/card.types';
+import { useUser } from '@/hooks/useAuth';
 import { 
   fetchCards, 
   addCardToCache,
   removeCardFromCache,
+  clearAllCardCaches,
   clearCardDerivedCaches,
 } from '@/lib/api/cards-client';
 
@@ -27,14 +29,28 @@ interface CardContextType {
 const CardContext = createContext<CardContextType | undefined>(undefined);
 
 export function CardProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useUser();
   const [connectedCards, setConnectedCards] = useState<ConnectedCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<ConnectedCard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load cards from API on mount
+  // Load cards whenever auth state enters a signed-in session.
   useEffect(() => {
-    loadCards();
-  }, []);
+    if (authLoading) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (!user) {
+      clearAllCardCaches();
+      setConnectedCards([]);
+      setSelectedCard(null);
+      setIsLoading(false);
+      return;
+    }
+
+    void loadCards(true);
+  }, [user, authLoading]);
 
   // Update selected card when cards change
   useEffect(() => {
