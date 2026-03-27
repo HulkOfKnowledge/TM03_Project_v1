@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/DropdownMenu';
 import { Submenu, SubmenuItem } from '@/components/ui/Submenu';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { NotificationDetailModal } from '@/components/notifications/NotificationDetailModal';
+import { NotificationsCenterModal } from '@/components/notifications/NotificationsCenterModal';
 import { NotificationDropdownSkeleton } from '@/components/notifications/NotificationSkeletons';
 import type { NotificationsSummary, RewardNotification } from '@/types/notification.types';
 import {
@@ -79,13 +79,13 @@ export function Navigation() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
+  const [showNotificationsCenter, setShowNotificationsCenter] = useState(false);
   const [activeDesktopSubNavItem, setActiveDesktopSubNavItem] = useState<string | null>(null);
   const [expandedMobileMenu, setExpandedMobileMenu] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<RewardNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<RewardNotification | null>(null);
-  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
-  const { readNotificationIds, markAsRead } = useReadNotificationIds();
+  const { readNotificationIds, markAsRead, markAllAsRead } = useReadNotificationIds();
   const notificationsContainerRef = useRef<HTMLDivElement | null>(null);
   const isDark = useIsDarkMode();
   const { setTheme } = useTheme();
@@ -255,8 +255,10 @@ export function Navigation() {
     markAsRead(item.id);
 
     setSelectedNotification(item);
-    setNotificationModalOpen(true);
     setShowNotifications(false);
+    setShowUserMenu(false);
+    setShowThemeSubmenu(false);
+    setShowNotificationsCenter(true);
   };
 
   // Check if subnav item is active
@@ -403,7 +405,8 @@ export function Navigation() {
                           type="button"
                           onClick={() => {
                             setShowNotifications(false);
-                            router.push('/notifications');
+                            setSelectedNotification(null);
+                            setShowNotificationsCenter(true);
                           }}
                           className="w-full px-3 py-2 rounded-lg border border-brand text-brand font-medium hover:bg-brand hover:text-white transition-colors text-sm md:text-base"
                         >
@@ -525,8 +528,11 @@ export function Navigation() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
-                        router.push('/notifications');
                         setShowUserMenu(false);
+                        setShowNotifications(false);
+                        setShowThemeSubmenu(false);
+                        setSelectedNotification(null);
+                        setShowNotificationsCenter(true);
                       }}
                       icon={<Bell className="h-4 w-4" />}
                     >
@@ -678,10 +684,18 @@ export function Navigation() {
         )}
       </nav>
 
-      <NotificationDetailModal
-        isOpen={notificationModalOpen}
-        notification={selectedNotification}
-        onClose={() => setNotificationModalOpen(false)}
+      <NotificationsCenterModal
+        isOpen={showNotificationsCenter}
+        onClose={() => {
+          setShowNotificationsCenter(false);
+          setSelectedNotification(null);
+        }}
+        notifications={notifications}
+        notificationsLoading={notificationsLoading}
+        readNotificationIds={readNotificationIds}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        initialNotification={selectedNotification}
       />
 
       {/* Mobile Menu */}
@@ -762,14 +776,18 @@ export function Navigation() {
 
               {user ? (
                 <>
-                  <Link
-                    href="/notifications"
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium text-foreground hover:bg-accent transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setSelectedNotification(null);
+                      setShowNotificationsCenter(true);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
                   >
                     <Bell className="h-5 w-5" />
                     <span>Notifications</span>
-                  </Link>
+                  </button>
                   <Link
                     href="/settings"
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium text-foreground hover:bg-accent transition-colors"

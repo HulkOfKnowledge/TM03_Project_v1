@@ -15,8 +15,9 @@ interface ModalProps {
   description?: string;
   children?: React.ReactNode;
   showCloseButton?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   preventClose?: boolean; // Prevent closing on backdrop click or escape
+  withContentWrapper?: boolean;
 }
 
 export function Modal({
@@ -28,6 +29,7 @@ export function Modal({
   showCloseButton = true,
   size = 'md',
   preventClose = false,
+  withContentWrapper = true,
 }: ModalProps) {
   useEffect(() => {
     if (!isOpen) return;
@@ -53,6 +55,7 @@ export function Modal({
     sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
+    xl: 'max-w-5xl',
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -82,19 +85,23 @@ export function Modal({
         )}
 
         {/* Content */}
-        <div className="p-6 md:p-8">
-          {title && ( 
-            <h2 className={`text-2xl font-bold text-gray-900 dark:text-white mb-3 ${showCloseButton && !preventClose ? 'pr-12 sm:pr-14' : ''}`}>
-              {title}
-            </h2>
-          )}
-          {description && (
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {description}
-            </p>
-          )}
-          {children}
-        </div>
+        {withContentWrapper ? (
+          <div className="p-6 md:p-8">
+            {title && (
+              <h2 className={`text-2xl font-bold text-gray-900 dark:text-white mb-3 ${showCloseButton && !preventClose ? 'pr-12 sm:pr-14' : ''}`}>
+                {title}
+              </h2>
+            )}
+            {description && (
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                {description}
+              </p>
+            )}
+            {children}
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );
