@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, CheckCheck, X } from 'lucide-react';
+import { Bell, CheckCheck, Search, X } from 'lucide-react';
 
 import { NotificationDetailsContent } from '@/components/notifications/NotificationDetailsContent';
 import { NotificationDropdownSkeleton } from '@/components/notifications/NotificationSkeletons';
@@ -11,8 +11,16 @@ import { formatNotificationTimestamp } from '@/lib/notifications/ui';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { RewardNotification } from '@/types/notification.types';
 
-type NotificationFilter = 'all' | 'unread';
+type NotificationFilter = 'all' | 'unread' | 'today' | 'last7days' | 'thisMonth';
 const PAGE_SIZE = 8;
+
+const FILTER_ITEMS: Array<{ key: NotificationFilter; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'unread', label: 'Unread' },
+  { key: 'today', label: 'Today' },
+  { key: 'last7days', label: 'Last 7 days' },
+  { key: 'thisMonth', label: 'This month' },
+];
 
 interface NotificationsCenterModalProps {
   isOpen: boolean;
@@ -36,6 +44,7 @@ export function NotificationsCenterModal({
   initialNotification,
 }: NotificationsCenterModalProps) {
   const [activeTab, setActiveTab] = useState<NotificationFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedNotification, setSelectedNotification] = useState<RewardNotification | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -54,7 +63,7 @@ export function NotificationsCenterModal({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab]);
+  }, [activeTab, searchQuery]);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !readNotificationIds.has(item.id)).length,
@@ -62,9 +71,49 @@ export function NotificationsCenterModal({
   );
 
   const filteredNotifications = useMemo(() => {
-    if (activeTab === 'all') return notifications;
-    return notifications.filter((item) => !readNotificationIds.has(item.id));
-  }, [activeTab, notifications, readNotificationIds]);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    let next = notifications;
+
+    if (activeTab === 'unread') {
+      next = next.filter((item) => !readNotificationIds.has(item.id));
+    }
+
+    if (activeTab === 'today') {
+      next = next.filter((item) => new Date(item.transactionDate) >= startOfToday);
+    }
+
+    if (activeTab === 'last7days') {
+      next = next.filter((item) => new Date(item.transactionDate) >= sevenDaysAgo);
+    }
+
+    if (activeTab === 'thisMonth') {
+      next = next.filter((item) => {
+        const itemDate = new Date(item.transactionDate);
+        return itemDate.getFullYear() === now.getFullYear() && itemDate.getMonth() === now.getMonth();
+      });
+    }
+
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) return next;
+
+    return next.filter((item) => {
+      const haystack = [
+        item.title,
+        item.message,
+        item.merchant,
+        item.category,
+        item.recommendedCardLabel,
+        item.baselineCardLabel,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [activeTab, notifications, readNotificationIds, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filteredNotifications.length / PAGE_SIZE));
 
@@ -98,7 +147,7 @@ export function NotificationsCenterModal({
       isOpen={isOpen}
       onClose={handleClose}
       showCloseButton={false}
-      size="xl"
+      size="2xl"
       withContentWrapper={false}
     >
       <div className="relative overflow-hidden rounded-2xl border border-border bg-background shadow-[0_14px_48px_rgba(0,0,0,0.22)]">
@@ -116,44 +165,52 @@ export function NotificationsCenterModal({
             <h2 className="text-xl font-semibold text-foreground sm:text-2xl">Notifications</h2>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">Stay on top of your credit reward opportunities.</p>
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-            <div className="inline-flex items-center rounded-lg bg-background p-1 shadow-sm ring-1 ring-border/70">
-              <button
-                type="button"
-                onClick={() => setActiveTab('all')}
-                className={cn(
-                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
-                  activeTab === 'all'
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                All ({notifications.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('unread')}
-                className={cn(
-                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
-                  activeTab === 'unread'
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                Unread ({unreadCount})
-              </button>
+          <div className="mt-4 flex flex-col gap-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search notifications"
+                className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-brand"
+                aria-label="Search notifications"
+              />
             </div>
 
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={() => onMarkAllAsRead(notifications.map((item) => item.id))}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent sm:text-sm"
-              >
-                <CheckCheck className="h-4 w-4" />
-                Mark all as read
-              </button>
-            )}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {FILTER_ITEMS.map((filter) => {
+                  const isActive = activeTab === filter.key;
+                  return (
+                    <button
+                      key={filter.key}
+                      type="button"
+                      onClick={() => setActiveTab(filter.key)}
+                      className={cn(
+                        'rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
+                        isActive
+                          ? 'bg-brand text-white'
+                          : 'bg-background text-muted-foreground hover:text-foreground ring-1 ring-border',
+                      )}
+                    >
+                      {filter.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onMarkAllAsRead(notifications.map((item) => item.id))}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent sm:text-sm"
+                >
+                  <CheckCheck className="h-4 w-4" />
+                  Mark all as read
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -164,7 +221,7 @@ export function NotificationsCenterModal({
                 <NotificationDropdownSkeleton rows={8} />
               ) : filteredNotifications.length === 0 ? (
                 <div className="p-12 text-center text-muted-foreground">
-                  <Bell className="mx-auto mb-2 h-10 w-10 opacity-50" />
+                  <Bell className="mx-auto mb-2 h-20 w-20 opacity-50" />
                   <p className="text-sm font-medium text-foreground">No notifications in this view</p>
                   <p className="mt-1 text-xs">Try another filter or check back later.</p>
                 </div>
@@ -183,14 +240,10 @@ export function NotificationsCenterModal({
                           !isRead && 'bg-brand/5 dark:bg-brand/10',
                         )}
                       >
-                        <div className="flex items-start gap-3">
-                          <span className={cn('mt-1 h-2.5 w-2.5 rounded-full', isRead ? 'bg-transparent' : 'bg-brand')} aria-hidden="true" />
-
+                        {isRead ? (
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
-                              <p className={cn('line-clamp-1 text-sm sm:text-[15px]', isRead ? 'text-foreground/85' : 'font-semibold text-foreground')}>
-                                {item.title}
-                              </p>
+                              <p className="line-clamp-1 text-sm text-foreground/85 sm:text-[15px]">{item.title}</p>
                               <p className="shrink-0 text-[11px] text-muted-foreground sm:text-xs">
                                 {formatNotificationTimestamp(item.transactionDate)}
                               </p>
@@ -198,16 +251,26 @@ export function NotificationsCenterModal({
 
                             <p className="mt-1 line-clamp-1 text-xs text-muted-foreground sm:text-sm">{item.message}</p>
 
-                            <div className="mt-1.5 flex items-center gap-2">
-                              <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[11px]">
-                                {item.timeframe}
-                              </span>
-                              <span className="text-xs font-medium text-brand sm:text-sm">
-                                +{formatCurrency(item.incrementalReward)}
-                              </span>
+                            <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-3">
+                            <span className="mt-1 h-2.5 w-2.5 rounded-full bg-brand" aria-hidden="true" />
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <p className="line-clamp-1 text-sm font-semibold text-foreground sm:text-[15px]">{item.title}</p>
+                                <p className="shrink-0 text-[11px] text-muted-foreground sm:text-xs">
+                                  {formatNotificationTimestamp(item.transactionDate)}
+                                </p>
+                              </div>
+
+                              <p className="mt-1 line-clamp-1 text-xs text-muted-foreground sm:text-sm">{item.message}</p>
+
+                              <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </button>
                     );
                   })}

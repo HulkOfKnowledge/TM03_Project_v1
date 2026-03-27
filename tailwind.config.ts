@@ -13,6 +13,8 @@ const config = {
     // won't scan them. List all from-* / to-* colours used in credit_card_offers.
     { pattern: /^from-(red|blue|green|sky|orange|indigo|rose|amber|emerald|violet|pink|lime|teal|gray|stone|cyan|yellow|neutral|slate|zinc)-(50|100|200|300|400|500|600|700|800|900|950)$/ },
     { pattern: /^to-(red|blue|green|sky|orange|indigo|rose|amber|emerald|violet|pink|lime|teal|gray|stone|cyan|yellow|neutral|slate|zinc)-(50|100|200|300|400|500|600|700|800|900|950)$/ },
+    // Dynamic modal sizes, e.g. max-w-2xl, max-w-3xl, max-w-5xl.
+    { pattern: /^max-w-(sm|md|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl)$/ },
   ],
   prefix: '',
   theme: {

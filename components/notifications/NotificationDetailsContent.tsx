@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Tag, Wallet } from 'lucide-react';
 
 import { Skeleton } from '@/components/ui/Skeleton';
 import { formatCurrency } from '@/lib/utils';
@@ -61,41 +60,34 @@ export function NotificationDetailsContent({ notification, isActive }: Notificat
   }, [notification, isActive]);
 
   return (
-    <div className="max-h-[min(66vh,34rem)] space-y-5 overflow-y-auto pr-1 overscroll-contain [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] dark:[scrollbar-color:#374151_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb:hover]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-600">
-      <section className="space-y-3">
-        <p className="text-sm leading-relaxed text-foreground">{notification.message}</p>
+    <div className="max-h-[min(66vh,34rem)] space-y-6 overflow-y-auto pr-1 overscroll-contain [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] dark:[scrollbar-color:#374151_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb:hover]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-600">
+      <div className="space-y-2">
+        <p className="text-sm leading-7 text-foreground">{notification.message}</p>
+        <p className="text-xs text-muted-foreground">
+          {notification.merchant} • {notification.category.toUpperCase()}
+        </p>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>{notification.merchant}</span>
-          <span aria-hidden="true">•</span>
-          <span>{notification.timeframe}</span>
-          <span aria-hidden="true">•</span>
-          <span className="font-medium text-brand">+{formatCurrency(notification.incrementalReward)} potential</span>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Amount</p>
+          <p className="mt-1 font-medium text-foreground">{formatCurrency(notification.amount)}</p>
         </div>
-      </section>
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Potential reward</p>
+          <p className="mt-1 font-medium text-brand">+{formatCurrency(notification.incrementalReward)}</p>
+        </div>
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Recommended card</p>
+          <p className="mt-1 font-medium text-foreground">{notification.recommendedCardLabel}</p>
+        </div>
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Current baseline</p>
+          <p className="mt-1 font-medium text-foreground">{notification.baselineCardLabel}</p>
+        </div>
+      </div>
 
-      <section className="space-y-2 text-sm">
-        <div className="flex items-center justify-between gap-3 py-1">
-          <p className="text-muted-foreground">Amount</p>
-          <p className="flex items-center gap-1.5 font-medium text-foreground">
-            <Wallet className="h-4 w-4 shrink-0 text-brand" />
-            <span>{formatCurrency(notification.amount)}</span>
-          </p>
-        </div>
-        <div className="flex items-center justify-between gap-3 py-1">
-          <p className="text-muted-foreground">Category</p>
-          <p className="flex items-center gap-1.5 font-medium text-foreground">
-            <Tag className="h-4 w-4 shrink-0 text-brand" />
-            <span>{notification.category.toUpperCase()}</span>
-          </p>
-        </div>
-        <div className="flex items-center justify-between gap-3 py-1">
-          <p className="text-muted-foreground">Recommended card</p>
-          <p className="text-right font-medium text-foreground">{notification.recommendedCardLabel}</p>
-        </div>
-      </section>
-
-      <section className="space-y-2">
+      <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Transaction details</p>
         {isLoading ? (
           <div className="grid grid-cols-2 gap-x-3 gap-y-3 pt-1">
@@ -143,7 +135,7 @@ export function NotificationDetailsContent({ notification, isActive }: Notificat
             </div>
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
 }

@@ -8,6 +8,8 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | `${number}xl`;
+
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -15,7 +17,7 @@ interface ModalProps {
   description?: string;
   children?: React.ReactNode;
   showCloseButton?: boolean;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: ModalSize;
   preventClose?: boolean; // Prevent closing on backdrop click or escape
   withContentWrapper?: boolean;
 }
@@ -51,12 +53,7 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-5xl',
-  };
+  const maxWidthClass = `max-w-${size}`;
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget && !preventClose) {
@@ -70,7 +67,7 @@ export function Modal({
       onClick={handleBackdropClick}
     >
       <div
-        className={`relative bg-white dark:bg-gray-950 rounded-2xl ${sizeClasses[size]} w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200`}
+        className={`relative bg-white dark:bg-gray-950 rounded-2xl ${maxWidthClass} w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
