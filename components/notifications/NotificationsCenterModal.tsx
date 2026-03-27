@@ -150,19 +150,19 @@ export function NotificationsCenterModal({
       size="2xl"
       withContentWrapper={false}
     >
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-background shadow-[0_14px_48px_rgba(0,0,0,0.22)]">
+      <div className="relative flex h-[min(90vh,46rem)] w-full flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-[0_14px_48px_rgba(0,0,0,0.22)]">
         <button
           type="button"
           onClick={handleClose}
-          className="absolute right-4 top-4 z-30 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="absolute right-3 top-3 z-30 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:right-4 sm:top-4"
           aria-label="Close notifications modal"
         >
           <X className="h-5 w-5" />
         </button>
 
-        <div className="border-b border-border/80 bg-muted/20 px-4 py-4 sm:px-5">
-          <div className="pr-12">
-            <h2 className="text-xl font-semibold text-foreground sm:text-2xl">Notifications</h2>
+        <div className="border-b border-border/80 bg-muted/20 px-3 py-3 sm:px-5 sm:py-4">
+          <div className="pr-10 sm:pr-12">
+            <h2 className="text-lg font-semibold text-foreground sm:text-2xl">Notifications</h2>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">Stay on top of your credit reward opportunities.</p>
           </div>
           <div className="mt-4 flex flex-col gap-3">
@@ -178,8 +178,8 @@ export function NotificationsCenterModal({
               />
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="-mx-0.5 flex items-center gap-1.5 overflow-x-auto px-0.5 pb-3 pt-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
                 {FILTER_ITEMS.map((filter) => {
                   const isActive = activeTab === filter.key;
                   return (
@@ -188,7 +188,7 @@ export function NotificationsCenterModal({
                       type="button"
                       onClick={() => setActiveTab(filter.key)}
                       className={cn(
-                        'rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
+                        'shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
                         isActive
                           ? 'bg-brand text-white'
                           : 'bg-background text-muted-foreground hover:text-foreground ring-1 ring-border',
@@ -204,7 +204,7 @@ export function NotificationsCenterModal({
                 <button
                   type="button"
                   onClick={() => onMarkAllAsRead(notifications.map((item) => item.id))}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent sm:text-sm"
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent sm:w-auto sm:text-sm"
                 >
                   <CheckCheck className="h-4 w-4" />
                   Mark all as read
@@ -214,14 +214,14 @@ export function NotificationsCenterModal({
           </div>
         </div>
 
-        <div className="relative min-h-[460px]">
-          <div className="flex max-h-[min(68vh,40rem)] flex-col">
-            <div className="overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] dark:[scrollbar-color:#374151_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb:hover]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-600">
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] dark:[scrollbar-color:#374151_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb:hover]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-600">
               {notificationsLoading ? (
                 <NotificationDropdownSkeleton rows={8} />
               ) : filteredNotifications.length === 0 ? (
-                <div className="p-12 text-center text-muted-foreground">
-                  <Bell className="mx-auto mb-2 h-20 w-20 opacity-50" />
+                <div className="p-8 text-center text-muted-foreground sm:p-12">
+                  <Bell className="mx-auto mb-2 h-12 w-12 opacity-50 sm:h-16 sm:w-16" />
                   <p className="text-sm font-medium text-foreground">No notifications in this view</p>
                   <p className="mt-1 text-xs">Try another filter or check back later.</p>
                 </div>
@@ -284,6 +284,7 @@ export function NotificationsCenterModal({
               pageSize={PAGE_SIZE}
               totalItems={filteredNotifications.length}
               onPageChange={setCurrentPage}
+              className="px-3 sm:px-4"
             />
           </div>
         </div>
@@ -299,7 +300,7 @@ export function NotificationsCenterModal({
 
         <aside
           className={cn(
-            'absolute inset-y-0 right-0 z-30 w-[75%] bg-background shadow-2xl transition-transform duration-300 ease-out',
+            'absolute inset-y-0 right-0 z-30 w-full bg-background shadow-2xl transition-transform duration-300 ease-out sm:w-[75%]',
             selectedNotification ? 'translate-x-0' : 'translate-x-full',
           )}
           aria-hidden={!selectedNotification}
@@ -309,13 +310,13 @@ export function NotificationsCenterModal({
               <button
                 type="button"
                 onClick={closeDetails}
-                className="absolute right-4 top-4 z-40 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="absolute right-3 top-3 z-40 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:right-4 sm:top-4"
                 aria-label="Close notification details"
               >
                 <X className="h-5 w-5" />
               </button>
 
-              <div className="px-5 py-4 pr-12">
+              <div className="px-3 py-3 pr-10 sm:px-5 sm:py-4 sm:pr-12">
                 <p className="line-clamp-2 text-sm font-semibold text-foreground sm:text-base">
                   {selectedNotification.title}
                 </p>
@@ -324,7 +325,7 @@ export function NotificationsCenterModal({
                 </p>
               </div>
 
-              <div className="flex-1 px-5 pb-5">
+              <div className="flex-1 min-h-0 overflow-hidden px-3 pb-4 sm:px-5 sm:pb-5">
                 <NotificationDetailsContent notification={selectedNotification} isActive={!!selectedNotification && isOpen} />
               </div>
             </div>
