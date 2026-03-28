@@ -144,7 +144,6 @@ export interface CardChoiceRequest {
   merchantCategory?: string | null;
   estimatedAmount?: number;
   lookbackDays?: number;
-  rewardRatesByCard?: Record<string, Record<string, number>>;
 }
 
 export interface CardActionValue {

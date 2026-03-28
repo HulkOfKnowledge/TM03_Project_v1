@@ -43,6 +43,34 @@ function isAuthorized(request: NextRequest): boolean {
   return providedToken === expectedToken;
 }
 
+async function invalidatePythonRewardCatalogCache(): Promise<boolean> {
+  const pythonApiUrl = process.env.CREDIT_INTELLIGENCE_API_URL || 'http://localhost:8000';
+  const pythonApiKey = process.env.CREDIT_INTELLIGENCE_API_KEY || '';
+
+  try {
+    const response = await fetch(`${pythonApiUrl}/api/v1/reward-catalog/invalidate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': pythonApiKey,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) {
+      console.warn('Card offers sync completed but Python cache invalidation failed', {
+        status: response.status,
+      });
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.warn('Card offers sync completed but Python cache invalidation errored', error);
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     if (!isAuthorized(request)) {
@@ -217,6 +245,8 @@ export async function POST(request: NextRequest) {
 
     const successfulSources = sourcePages.filter((page) => page.status === 'success').length;
     const failedSources = sourcePages.length - successfulSources;
+    const offersChanged = updatedOffers > 0 || insertedOffers > 0;
+    const cacheInvalidated = offersChanged ? await invalidatePythonRewardCatalogCache() : true;
 
     return NextResponse.json(
       createSuccessResponse({
@@ -226,6 +256,7 @@ export async function POST(request: NextRequest) {
         failedSources,
         updatedOffers,
         insertedOffers,
+        cacheInvalidated,
         totalSourceOffersParsed: sourceOffers.length,
         syncedAt,
       }),

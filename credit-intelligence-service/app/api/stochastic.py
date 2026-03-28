@@ -13,7 +13,7 @@ from app.models.schemas import (
     CardChoiceRequest,
     CardChoiceResponse,
 )
-from app.services.stochastic_planner import stochastic_planner
+from app.services.stochastic_planner import NoRewardDataError, stochastic_planner
 
 router = APIRouter()
 
@@ -38,5 +38,23 @@ async def get_card_choice(
     """Recommend best card at a merchant using an MDP-style policy."""
     try:
         return stochastic_planner.choose_card_for_merchant(request)
+    except NoRewardDataError as e:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "NO_REWARD_DATA",
+                "message": str(e),
+                "skipped_cards": e.skipped_cards,
+            },
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to compute card choice policy: {str(e)}")
+
+
+@router.post("/reward-catalog/invalidate")
+async def invalidate_reward_catalog(
+    api_key: str = Depends(verify_api_key),
+):
+    """Invalidate cached reward catalog so next card-choice reloads from DB."""
+    stochastic_planner.invalidate_reward_catalog_cache()
+    return {"success": True, "message": "Reward catalog cache invalidated"}

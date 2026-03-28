@@ -9,7 +9,11 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+import os
+from typing import Any, Dict, List, Optional, Tuple
+
+import httpx
+from dotenv import load_dotenv
 
 from app.models.schemas import (
     SpendingProbabilityRequest,
@@ -59,8 +63,23 @@ class _Txn:
     balance: Optional[float]
 
 
+class NoRewardDataError(Exception):
+    """Raised when reward rates are unavailable for all candidate cards."""
+
+    def __init__(self, message: str, skipped_cards: Optional[List[str]] = None):
+        super().__init__(message)
+        self.skipped_cards = skipped_cards or []
+
+
 class StochasticPlanner:
     """Hybrid stochastic engine for category and card decisions."""
+
+    def __init__(self):
+        self._reward_catalog_cache: Optional[List[Dict[str, Any]]] = None
+        self._env_loaded: bool = False
+
+    def invalidate_reward_catalog_cache(self) -> None:
+        self._reward_catalog_cache = None
 
     def predict_spending_probability(
         self,
@@ -118,6 +137,21 @@ class StochasticPlanner:
         self,
         request: CardChoiceRequest,
     ) -> CardChoiceResponse:
+        if not request.cards:
+            raise NoRewardDataError("No benefit to card yet", [])
+
+        resolved_reward_maps, skipped_card_ids = self._resolve_reward_maps(request.cards)
+        eligible_cards = []
+        for card in request.cards:
+            reward_map = resolved_reward_maps.get(card.card_id)
+            if not reward_map:
+                continue
+            card.estimated_reward_rate_by_category = reward_map
+            eligible_cards.append(card)
+
+        if not eligible_cards:
+            raise NoRewardDataError("No benefit to card yet", skipped_card_ids)
+
         merchant_category = self._normalize_category(request.merchant_category or request.merchant_name)
 
         txns = self._filter_and_normalize_transactions(
@@ -125,7 +159,7 @@ class StochasticPlanner:
             lookback_days=request.lookback_days,
         )
 
-        card_limits = {card.card_id: card.credit_limit for card in request.cards}
+        card_limits = {card.card_id: card.credit_limit for card in eligible_cards}
         transition_by_card = self._build_card_bucket_transitions(
             transactions=txns,
             merchant_category=merchant_category,
@@ -135,7 +169,7 @@ class StochasticPlanner:
         gamma = 0.9
         action_values: List[CardActionValue] = []
 
-        for card in request.cards:
+        for card in eligible_cards:
             transitions = transition_by_card.get(card.card_id) or self._default_bucket_transition_matrix()
             state_bucket = self._bucket_for_utilization(card.utilization_percentage)
 
@@ -179,7 +213,7 @@ class StochasticPlanner:
             )
 
         action_values.sort(key=lambda a: a.q_value, reverse=True)
-        recommended = action_values[0].card_id if action_values else request.cards[0].card_id
+        recommended = action_values[0].card_id if action_values else eligible_cards[0].card_id
 
         baseline_card_id, estimated_monthly_spend = self._infer_baseline_and_monthly_spend(
             txns=txns,
@@ -188,15 +222,15 @@ class StochasticPlanner:
             lookback_days=request.lookback_days,
         )
 
-        baseline_card = next((card for card in request.cards if card.card_id == baseline_card_id), None)
-        recommended_card = next((card for card in request.cards if card.card_id == recommended), None)
+        baseline_card = next((card for card in eligible_cards if card.card_id == baseline_card_id), None)
+        recommended_card = next((card for card in eligible_cards if card.card_id == recommended), None)
 
         baseline_rate = self._estimate_reward_rate(
-            baseline_card or request.cards[0],
+            baseline_card or eligible_cards[0],
             merchant_category,
         )
         recommended_rate = self._estimate_reward_rate(
-            recommended_card or request.cards[0],
+            recommended_card or eligible_cards[0],
             merchant_category,
         )
 
@@ -423,15 +457,152 @@ class StochasticPlanner:
             default = card.estimated_reward_rate_by_category.get("default")
             if default is not None:
                 return max(0.0, min(float(default), 0.2))
+        return 0.0
 
-        inst = (card.institution_name or "").lower()
-        if "amex" in inst and merchant_category in {"dining", "groceries", "travel"}:
-            return 0.03
-        if "tangerine" in inst:
-            return 0.02
-        if "scotia" in inst and merchant_category in {"groceries", "gas", "bills"}:
-            return 0.02
-        return 0.01
+    def _resolve_reward_maps(self, cards) -> Tuple[Dict[str, Dict[str, float]], List[str]]:
+        offers = self._load_reward_catalog()
+        reward_maps: Dict[str, Dict[str, float]] = {}
+        skipped_card_ids: List[str] = []
+
+        for card in cards:
+            rate_map = self._find_reward_map_for_institution(card.institution_name, offers)
+            if rate_map:
+                reward_maps[card.card_id] = rate_map
+            else:
+                skipped_card_ids.append(card.card_id)
+
+        return reward_maps, skipped_card_ids
+
+    def _load_reward_catalog(self) -> List[Dict[str, Any]]:
+        if self._reward_catalog_cache is not None:
+            return self._reward_catalog_cache
+
+        if not self._env_loaded:
+            # Allow the service to run from its own folder while still reading root project env files.
+            load_dotenv(dotenv_path=".env", override=False)
+            load_dotenv(dotenv_path="../.env", override=False)
+            load_dotenv(dotenv_path="../.env.local", override=False)
+            self._env_loaded = True
+
+        supabase_url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+
+        if not supabase_url or not service_role_key:
+            return []
+
+        endpoint = f"{supabase_url.rstrip('/')}/rest/v1/credit_card_offers"
+        headers = {
+            "apikey": service_role_key,
+            "Authorization": f"Bearer {service_role_key}",
+        }
+        params = {
+            "select": "name,issuer,earn_rate_grocery,earn_rate_travel,earn_rate_dining,earn_rate_other,is_active",
+            "is_active": "eq.true",
+            "limit": "1000",
+        }
+
+        offers: List[Dict[str, Any]] = []
+        try:
+            with httpx.Client(timeout=8.0) as client:
+                response = client.get(endpoint, headers=headers, params=params)
+                response.raise_for_status()
+                payload = response.json()
+                if isinstance(payload, list):
+                    offers = [item for item in payload if isinstance(item, dict)]
+        except Exception:
+            offers = []
+
+        self._reward_catalog_cache = offers
+        return offers
+
+    def _find_reward_map_for_institution(
+        self,
+        institution_name: Optional[str],
+        offers: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, float]]:
+        institution_key = self._normalize_identity(institution_name)
+        if not institution_key:
+            return None
+
+        best_score = -1
+        best_offers: List[Dict[str, Any]] = []
+
+        for offer in offers:
+            score = self._match_offer_score(institution_key, offer)
+            if score < 0:
+                continue
+            if score > best_score:
+                best_score = score
+                best_offers = [offer]
+            elif score == best_score:
+                best_offers.append(offer)
+
+        if not best_offers:
+            return None
+
+        # Merge best-matching offers to keep the highest available rate per category.
+        merged: Dict[str, float] = {}
+        for offer in best_offers:
+            offer_map = self._offer_to_rate_map(offer)
+            for category, value in offer_map.items():
+                merged[category] = max(merged.get(category, 0.0), value)
+
+        return merged or None
+
+    def _match_offer_score(self, institution_key: str, offer: Dict[str, Any]) -> int:
+        issuer_key = self._normalize_identity(offer.get("issuer"))
+        name_key = self._normalize_identity(offer.get("name"))
+
+        keys = [k for k in (issuer_key, name_key) if k]
+        if not keys:
+            return -1
+
+        for key in keys:
+            if institution_key == key:
+                return 100
+            if institution_key in key or key in institution_key:
+                return 80
+
+        institution_tokens = set(institution_key.split())
+        best_overlap = 0
+        for key in keys:
+            overlap = len(institution_tokens.intersection(set(key.split())))
+            best_overlap = max(best_overlap, overlap)
+
+        if best_overlap == 0:
+            return -1
+        return best_overlap
+
+    def _offer_to_rate_map(self, offer: Dict[str, Any]) -> Dict[str, float]:
+        def normalize(raw_value: Any) -> float:
+            try:
+                raw = float(raw_value)
+            except Exception:
+                return 0.0
+
+            if raw <= 0:
+                return 0.0
+            if raw <= 0.2:
+                return raw
+            if raw <= 10:
+                return raw / 100
+            return raw / 1000
+
+        categories = {
+            "groceries": normalize(offer.get("earn_rate_grocery")),
+            "travel": normalize(offer.get("earn_rate_travel")),
+            "dining": normalize(offer.get("earn_rate_dining")),
+            "default": normalize(offer.get("earn_rate_other")),
+        }
+
+        return {key: value for key, value in categories.items() if value > 0}
+
+    def _normalize_identity(self, value: Optional[str]) -> str:
+        if not value:
+            return ""
+
+        normalized = "".join(ch.lower() if ch.isalnum() else " " for ch in value)
+        return " ".join(token for token in normalized.split() if token)
 
     def _utilization_from_txn(self, txn: _Txn, credit_limit: float) -> float:
         if txn.balance is not None:
