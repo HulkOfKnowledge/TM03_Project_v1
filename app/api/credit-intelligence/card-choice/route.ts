@@ -176,9 +176,9 @@ export async function POST(request: NextRequest) {
       const errorCode = typeof detail?.code === 'string' ? detail.code : null;
       const errorMessage = typeof detail?.message === 'string' ? detail.message : null;
 
-      if (status === 422 && errorCode === 'NO_REWARD_DATA') {
+      if (status === 422 && (errorCode === 'NO_REWARD_DATA' || errorCode === 'LOW_INCREMENTAL_REWARD')) {
         return NextResponse.json(
-          createErrorResponse('NO_REWARD_DATA', errorMessage || 'No benefit to card yet', {
+          createErrorResponse(errorCode, errorMessage || 'No benefit to card yet', {
             skippedCards: detail?.skipped_cards,
           }),
           { status: 422 }

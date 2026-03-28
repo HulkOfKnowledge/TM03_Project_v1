@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # Service Configuration
     SERVICE_NAME: str = "credit-intelligence-service"
     DEBUG: bool = True
+    MIN_INCREMENTAL_REWARD_DOLLARS: float = 3.0
     
     # Next.js Backend URL (for callbacks)
     NEXTJS_API_URL: str = "http://localhost:3000/api"

@@ -212,11 +212,12 @@ export function buildRewardNotifications(params: {
 
     const item: RewardNotification = {
       id: `${txn.id}-${timeframe}`,
+      kind: 'reward_optimization',
       transactionId: txn.id,
       cardId: txn.cardId,
       timeframe,
       createdAt: now.toISOString(),
-      transactionDate: txnDate.toISOString(),
+      eventDate: txnDate.toISOString(),
       merchant: txn.description,
       category,
       amount: Number(txn.amount.toFixed(2)),
@@ -238,6 +239,7 @@ export function buildRewardNotifications(params: {
         incremental,
         transactionId: txn.id,
       }),
+      actionUrl: `/transactions/${txn.id}`,
       viewTransactionUrl: `/transactions/${txn.id}`,
     };
 
@@ -247,7 +249,7 @@ export function buildRewardNotifications(params: {
   }
 
   const sortDesc = (a: RewardNotification, b: RewardNotification) =>
-    new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime();
+    new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
 
   daily.sort(sortDesc);
   weekly.sort(sortDesc);
@@ -258,5 +260,11 @@ export function buildRewardNotifications(params: {
     daily,
     weekly,
     monthly,
+    byKind: {
+      reward_optimization: daily.length + weekly.length + monthly.length,
+      system: 0,
+      profile: 0,
+      activity: 0,
+    },
   };
 }

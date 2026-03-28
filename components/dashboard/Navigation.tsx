@@ -38,7 +38,7 @@ import { Submenu, SubmenuItem } from '@/components/ui/Submenu';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationsCenterModal } from '@/components/notifications/NotificationsCenterModal';
 import { NotificationDropdownSkeleton } from '@/components/notifications/NotificationSkeletons';
-import type { NotificationsSummary, RewardNotification } from '@/types/notification.types';
+import type { AppNotification, NotificationsSummary } from '@/types/notification.types';
 import {
   flattenNotifications,
   formatNotificationTimestamp,
@@ -82,9 +82,9 @@ export function Navigation() {
   const [showNotificationsCenter, setShowNotificationsCenter] = useState(false);
   const [activeDesktopSubNavItem, setActiveDesktopSubNavItem] = useState<string | null>(null);
   const [expandedMobileMenu, setExpandedMobileMenu] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<RewardNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<RewardNotification | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<AppNotification | null>(null);
   const { readNotificationIds, markAsRead, markAllAsRead } = useReadNotificationIds();
   const notificationsContainerRef = useRef<HTMLDivElement | null>(null);
   const isDark = useIsDarkMode();
@@ -251,7 +251,7 @@ export function Navigation() {
 
   const notificationPreview = useMemo(() => notifications.slice(0, 6), [notifications]);
 
-  const openNotificationDetails = (item: RewardNotification) => {
+  const openNotificationDetails = (item: AppNotification) => {
     markAsRead(item.id);
 
     setSelectedNotification(item);
@@ -388,12 +388,14 @@ export function Navigation() {
                                   <div className="shrink-0 flex items-center gap-1.5">
                                     {!isRead && <span className="inline-flex h-2 w-2 rounded-full bg-brand" />}
                                     <p className="text-[11px] text-muted-foreground">
-                                      {formatNotificationTimestamp(item.transactionDate)}
+                                      {formatNotificationTimestamp(item.eventDate)}
                                     </p>
                                   </div>
                                 </div>
                                 <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{item.message}</p>
-                                <p className="mt-1 text-xs text-brand">+${item.incrementalReward.toFixed(2)} potential</p>
+                                {item.kind === 'reward_optimization' && (
+                                  <p className="mt-1 text-xs text-brand">+${item.incrementalReward.toFixed(2)} potential</p>
+                                )}
                               </button>
                             );
                             })}

@@ -9,7 +9,7 @@ import { Modal } from '@/components/ui/Modal';
 import { PaginationControls } from '@/components/ui/PaginationControls';
 import { formatNotificationTimestamp } from '@/lib/notifications/ui';
 import { cn, formatCurrency } from '@/lib/utils';
-import type { RewardNotification } from '@/types/notification.types';
+import type { AppNotification } from '@/types/notification.types';
 
 type NotificationFilter = 'all' | 'unread' | 'today' | 'last7days' | 'thisMonth';
 const PAGE_SIZE = 8;
@@ -25,12 +25,12 @@ const FILTER_ITEMS: Array<{ key: NotificationFilter; label: string }> = [
 interface NotificationsCenterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  notifications: RewardNotification[];
+  notifications: AppNotification[];
   notificationsLoading: boolean;
   readNotificationIds: Set<string>;
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: (ids: string[]) => void;
-  initialNotification: RewardNotification | null;
+  initialNotification: AppNotification | null;
 }
 
 export function NotificationsCenterModal({
@@ -45,7 +45,7 @@ export function NotificationsCenterModal({
 }: NotificationsCenterModalProps) {
   const [activeTab, setActiveTab] = useState<NotificationFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedNotification, setSelectedNotification] = useState<RewardNotification | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<AppNotification | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -82,16 +82,16 @@ export function NotificationsCenterModal({
     }
 
     if (activeTab === 'today') {
-      next = next.filter((item) => new Date(item.transactionDate) >= startOfToday);
+      next = next.filter((item) => new Date(item.eventDate) >= startOfToday);
     }
 
     if (activeTab === 'last7days') {
-      next = next.filter((item) => new Date(item.transactionDate) >= sevenDaysAgo);
+      next = next.filter((item) => new Date(item.eventDate) >= sevenDaysAgo);
     }
 
     if (activeTab === 'thisMonth') {
       next = next.filter((item) => {
-        const itemDate = new Date(item.transactionDate);
+        const itemDate = new Date(item.eventDate);
         return itemDate.getFullYear() === now.getFullYear() && itemDate.getMonth() === now.getMonth();
       });
     }
@@ -103,10 +103,11 @@ export function NotificationsCenterModal({
       const haystack = [
         item.title,
         item.message,
-        item.merchant,
-        item.category,
-        item.recommendedCardLabel,
-        item.baselineCardLabel,
+        item.kind,
+        item.kind === 'reward_optimization' ? item.merchant : '',
+        item.kind === 'reward_optimization' ? item.category : '',
+        item.kind === 'reward_optimization' ? item.recommendedCardLabel : '',
+        item.kind === 'reward_optimization' ? item.baselineCardLabel : '',
       ]
         .join(' ')
         .toLowerCase();
@@ -128,7 +129,7 @@ export function NotificationsCenterModal({
     return filteredNotifications.slice(start, start + PAGE_SIZE);
   }, [currentPage, filteredNotifications]);
 
-  const openDetails = (item: RewardNotification) => {
+  const openDetails = (item: AppNotification) => {
     onMarkAsRead(item.id);
     setSelectedNotification(item);
   };
@@ -245,13 +246,15 @@ export function NotificationsCenterModal({
                             <div className="flex items-start justify-between gap-3">
                               <p className="line-clamp-1 text-sm text-foreground/85 sm:text-[15px]">{item.title}</p>
                               <p className="shrink-0 text-[11px] text-muted-foreground sm:text-xs">
-                                {formatNotificationTimestamp(item.transactionDate)}
+                                    {formatNotificationTimestamp(item.eventDate)}
                               </p>
                             </div>
 
                             <p className="mt-1 line-clamp-1 text-xs text-muted-foreground sm:text-sm">{item.message}</p>
 
-                            <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
+                            {item.kind === 'reward_optimization' && (
+                              <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
+                            )}
                           </div>
                         ) : (
                           <div className="flex items-start gap-3">
@@ -261,13 +264,15 @@ export function NotificationsCenterModal({
                               <div className="flex items-start justify-between gap-3">
                                 <p className="line-clamp-1 text-sm font-semibold text-foreground sm:text-[15px]">{item.title}</p>
                                 <p className="shrink-0 text-[11px] text-muted-foreground sm:text-xs">
-                                  {formatNotificationTimestamp(item.transactionDate)}
+                                  {formatNotificationTimestamp(item.eventDate)}
                                 </p>
                               </div>
 
                               <p className="mt-1 line-clamp-1 text-xs text-muted-foreground sm:text-sm">{item.message}</p>
 
-                              <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
+                              {item.kind === 'reward_optimization' && (
+                                <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
+                              )}
                             </div>
                           </div>
                         )}
@@ -321,7 +326,7 @@ export function NotificationsCenterModal({
                   {selectedNotification.title}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                  {formatNotificationTimestamp(selectedNotification.transactionDate)}
+                  {formatNotificationTimestamp(selectedNotification.eventDate)}
                 </p>
               </div>
 

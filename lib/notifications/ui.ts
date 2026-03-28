@@ -1,4 +1,4 @@
-import type { NotificationsSummary, NotificationTimeframe, RewardNotification } from '@/types/notification.types';
+import type { AppNotification, NotificationsSummary, NotificationTimeframe } from '@/types/notification.types';
 
 export const NOTIFICATION_READ_STORAGE_KEY = 'creduman.readNotificationIds';
 export const NOTIFICATION_READ_SYNC_EVENT = 'creduman:notification-read-sync';
@@ -23,11 +23,11 @@ export const notificationPillMeta: Record<NotificationTimeframe, NotificationPil
   },
 };
 
-export function flattenNotifications(summary: NotificationsSummary | null): RewardNotification[] {
+export function flattenNotifications(summary: NotificationsSummary | null): AppNotification[] {
   if (!summary) return [];
 
   return [...summary.daily, ...summary.weekly, ...summary.monthly].sort(
-    (a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime(),
+    (a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime(),
   );
 }
 

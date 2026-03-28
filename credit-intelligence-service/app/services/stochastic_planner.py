@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from dotenv import load_dotenv
+from app.core.config import settings
 
 from app.models.schemas import (
     SpendingProbabilityRequest,
@@ -66,9 +67,15 @@ class _Txn:
 class NoRewardDataError(Exception):
     """Raised when reward rates are unavailable for all candidate cards."""
 
-    def __init__(self, message: str, skipped_cards: Optional[List[str]] = None):
+    def __init__(
+        self,
+        message: str,
+        skipped_cards: Optional[List[str]] = None,
+        code: str = "NO_REWARD_DATA",
+    ):
         super().__init__(message)
         self.skipped_cards = skipped_cards or []
+        self.code = code
 
 
 class StochasticPlanner:
@@ -237,6 +244,14 @@ class StochasticPlanner:
         baseline_reward = request.estimated_amount * baseline_rate
         recommended_reward = request.estimated_amount * recommended_rate
         incremental_reward = max(0.0, recommended_reward - baseline_reward)
+
+        min_incremental = max(0.0, float(settings.MIN_INCREMENTAL_REWARD_DOLLARS))
+        if incremental_reward < min_incremental:
+            raise NoRewardDataError(
+                f"No benefit to card yet (below ${min_incremental:.2f} minimum)",
+                [card.card_id for card in eligible_cards],
+                code="LOW_INCREMENTAL_REWARD",
+            )
 
         monthly_incremental = max(0.0, estimated_monthly_spend * (recommended_rate - baseline_rate))
         annual_incremental = monthly_incremental * 12

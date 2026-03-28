@@ -2,11 +2,11 @@
 
 import { Modal } from '@/components/ui/Modal';
 import { NotificationDetailsContent } from '@/components/notifications/NotificationDetailsContent';
-import type { RewardNotification } from '@/types/notification.types';
+import type { AppNotification } from '@/types/notification.types';
 
 interface NotificationDetailModalProps {
   isOpen: boolean;
-  notification: RewardNotification | null;
+  notification: AppNotification | null;
   onClose: () => void;
 }
 

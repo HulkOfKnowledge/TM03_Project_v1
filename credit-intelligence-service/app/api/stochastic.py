@@ -42,7 +42,7 @@ async def get_card_choice(
         raise HTTPException(
             status_code=422,
             detail={
-                "code": "NO_REWARD_DATA",
+                "code": e.code,
                 "message": str(e),
                 "skipped_cards": e.skipped_cards,
             },
