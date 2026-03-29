@@ -13,7 +13,7 @@ import { CardCompareModal } from '@/components/cards/offers/CardCompareModal';
 import { OffersFilterBar } from '@/components/cards/offers/OffersFilterBar';
 import { CardOffersSkeleton } from '@/components/cards/offers/CardOffersSkeleton';
 import { PaginationControls } from '@/components/ui/PaginationControls';
-import { CreditCard, X, GitCompare } from 'lucide-react';
+import { CreditCard, X, GitCompare, Search } from 'lucide-react';
 import type { CardOffer, CardCategory, IncomeRange, OccupationType } from '@/types/card-offers.types';
 
 const MAX_COMPARE = 3;
@@ -30,6 +30,7 @@ export default function CardOffersPage() {
   const [category, setCategory] = useState<CardCategory>('all');
   const [incomeRange, setIncomeRange] = useState<IncomeRange>('any');
   const [occupation, setOccupation] = useState<OccupationType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Comparison
   const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
@@ -75,7 +76,18 @@ export default function CardOffersPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [category, incomeRange, occupation]);
+  }, [category, incomeRange, occupation, searchQuery]);
+
+  const filteredOffers = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return offers;
+
+    return offers.filter((offer) => {
+      const cardName = offer.name.toLowerCase();
+      const bankName = offer.issuer.toLowerCase();
+      return cardName.includes(query) || bankName.includes(query);
+    });
+  }, [offers, searchQuery]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 639px)');
@@ -92,7 +104,13 @@ export default function CardOffersPage() {
     });
   }, [maxCompare]);
 
-  const totalPages = Math.max(1, Math.ceil(offers.length / pageSize));
+  useEffect(() => {
+    if (showCompare && compareIds.size < 2) {
+      setShowCompare(false);
+    }
+  }, [showCompare, compareIds]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredOffers.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
 
   useEffect(() => {
@@ -103,8 +121,8 @@ export default function CardOffersPage() {
 
   const paginatedOffers = useMemo(() => {
     const start = (safePage - 1) * pageSize;
-    return offers.slice(start, start + pageSize);
-  }, [offers, safePage, pageSize]);
+    return filteredOffers.slice(start, start + pageSize);
+  }, [filteredOffers, safePage, pageSize]);
 
   const handleToggleCompare = (offer: CardOffer) => {
     setCompareIds((prev) => {
@@ -124,7 +142,6 @@ export default function CardOffersPage() {
       next.delete(offerId);
       return next;
     });
-    if (compareIds.size <= 1) setShowCompare(false);
   };
 
   const selectedOffers = offers.filter((o) => compareIds.has(o.id));
@@ -153,9 +170,33 @@ export default function CardOffersPage() {
                 onCategoryChange={setCategory}
                 onIncomeChange={setIncomeRange}
                 onOccupationChange={setOccupation}
-                totalCount={offers.length}
+                totalCount={filteredOffers.length}
                 isPersonalized={isPersonalized}
               />
+              <div className="mt-4">
+                <label htmlFor="offer-search" className="sr-only">Search by card or bank name</label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    id="offer-search"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by card or bank name"
+                    className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm text-gray-700 transition-colors placeholder:text-gray-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200 dark:placeholder:text-gray-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                      aria-label="Clear search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -172,20 +213,23 @@ export default function CardOffersPage() {
                 Try again
               </button>
             </div>
-          ) : offers.length === 0 ? (
+          ) : filteredOffers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
                 <CreditCard className="h-8 w-8 text-gray-400" />
               </div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300">No cards found</p>
+              <p className="font-semibold text-gray-700 dark:text-gray-300">
+                {searchQuery ? 'No matching cards found' : 'No cards found'}
+              </p>
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm">
-                Try adjusting your filters or income range to see more options.
+                Try adjusting your filters, income range, or search term to see more options.
               </p>
               <button
                 onClick={() => {
                   setCategory('all');
                   setIncomeRange('any');
                   setOccupation('all');
+                  setSearchQuery('');
                 }}
                 className="px-5 py-2 rounded-xl border border-brand text-brand text-sm font-medium hover:bg-brand/5 transition-colors"
               >
@@ -210,7 +254,7 @@ export default function CardOffersPage() {
                 currentPage={safePage}
                 totalPages={totalPages}
                 pageSize={pageSize}
-                totalItems={offers.length}
+                totalItems={filteredOffers.length}
                 onPageChange={setCurrentPage}
               />
             </div>
