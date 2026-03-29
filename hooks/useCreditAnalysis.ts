@@ -233,14 +233,41 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
 
   // Previous-period label for trend badges (display-only string, no computation needed)
   const prevLabel = useMemo(() => {
+    const parseIsoDate = (value: string) => {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+
     if (filterType === 'month') {
       const [y, m] = selectedMonth.split('-').map(Number);
       const pd = new Date(y, m - 2, 1);
       return pd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     }
+
     if (filterType === 'year') return String(Number(selectedYear) - 1);
-    return 'prev period';
-  }, [filterType, selectedMonth, selectedYear]);
+
+    const start = parseIsoDate(startDate || today);
+    const end = parseIsoDate(endDate || today);
+    const todayDate = parseIsoDate(today);
+
+    const isMonthToDate =
+      start.getFullYear() === todayDate.getFullYear()
+      && start.getMonth() === todayDate.getMonth()
+      && start.getDate() === 1
+      && end.getTime() === todayDate.getTime();
+
+    if (isMonthToDate) {
+      const prevMonth = new Date(todayDate.getFullYear(), todayDate.getMonth() - 1, 1);
+      return prevMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+
+    const durationMs = end.getTime() - start.getTime() + 86_400_000;
+    const prevEnd = new Date(start.getTime() - 86_400_000);
+    const prevStart = new Date(prevEnd.getTime() - durationMs + 86_400_000);
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    return `${fmt(prevStart)} to ${fmt(prevEnd)}`;
+  }, [filterType, selectedMonth, selectedYear, startDate, endDate, today]);
 
   // Chart-level metrics derived from the API response
   const chartMetrics = useMemo(() => {

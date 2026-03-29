@@ -183,7 +183,7 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
         primaryValue={`${chartMetrics.lastUtil.toFixed(2)}%`}
         primaryLabel="Utilization percentage"
         trend={{
-          value: `${chartMetrics.utilDiff >= 0 ? '+' : ''}${chartMetrics.utilDiff.toFixed(1)}pp vs ${chartMetrics.prevLabel}`,
+          value: `${chartMetrics.utilDiff >= 0 ? '+' : ''}${chartMetrics.utilDiff.toFixed(1)}% vs ${chartMetrics.prevLabel}`,
           isPositive: chartMetrics.utilDiff < 0,
         }}
         valueClassName={chartMetrics.lastUtil > 30 ? 'text-4xl text-red-600 dark:text-red-500 sm:text-5xl' : 'text-4xl text-gray-900 dark:text-white sm:text-5xl'}
