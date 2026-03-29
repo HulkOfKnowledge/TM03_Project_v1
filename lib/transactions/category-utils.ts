@@ -1,17 +1,16 @@
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  payments: ['payment', 'thank you', 'autopay', 'auto pay', 'preauthorized payment', 'bill payment', 'credit card payment'],
-  groceries: ['grocery', 'supermarket', 'food basics', 'costco', 'loblaws', 'metro', 'sobeys'],
-  gas: ['gas', 'fuel', 'shell', 'esso', 'petro', 'ultramar', 'chevron'],
-  dining: ['restaurant', 'cafe', 'coffee', 'tim hortons', 'mcdonald', 'ubereats', 'uber eats', 'doordash'],
-  shopping: ['amazon', 'walmart', 'best buy', 'winners', 'mall', 'retail'],
-  travel: ['air', 'flight', 'hotel', 'airbnb', 'uber', 'lyft', 'expedia', 'air canada'],
-  entertainment: ['netflix', 'spotify', 'cineplex', 'steam', 'itunes', 'disney'],
-  bills: ['hydro', 'internet', 'phone', 'insurance', 'bill', 'utility', 'rogers', 'bell'],
-  healthcare: ['pharmacy', 'clinic', 'dental', 'hospital', 'vision', 'med'],
-  education: ['tuition', 'course', 'university', 'college', 'bookstore', 'udemy'],
+import taxonomy from '@/shared/category-taxonomy.json';
+
+type TaxonomyShape = {
+  otherCategory: string;
+  unknownLabels: string[];
+  keywords: Record<string, string[]>;
 };
 
-export const UNCATEGORIZED_CATEGORY = 'uncategorized';
+const SHARED_TAXONOMY = taxonomy as TaxonomyShape;
+const CATEGORY_KEYWORDS: Record<string, string[]> = SHARED_TAXONOMY.keywords;
+const UNKNOWN_LABELS = new Set(SHARED_TAXONOMY.unknownLabels.map((label) => label.toLowerCase()));
+
+export const UNCATEGORIZED_CATEGORY = SHARED_TAXONOMY.otherCategory;
 
 function toSlug(value: string): string {
   return value
@@ -43,7 +42,7 @@ export function inferTransactionCategory(
     }
 
     const slug = toSlug(raw);
-    if (slug) return slug;
+    if (slug && !UNKNOWN_LABELS.has(slug.replace(/[-_]/g, ' ')) && !UNKNOWN_LABELS.has(slug)) return slug;
   }
 
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
@@ -51,6 +50,8 @@ export function inferTransactionCategory(
       return category;
     }
   }
+
+  if (UNKNOWN_LABELS.has(raw)) return UNCATEGORIZED_CATEGORY;
 
   return UNCATEGORIZED_CATEGORY;
 }
@@ -60,7 +61,7 @@ export function formatCategoryLabel(category: string): string {
   if (category === 'payments') return 'Credit Card Payments';
 
   return category
-    .split('-')
+    .split(/[-_]/)
     .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : part))
     .join(' ');
 }

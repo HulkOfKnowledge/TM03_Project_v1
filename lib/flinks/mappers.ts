@@ -7,6 +7,7 @@
 
 import type { FlinksAccountDetail, FlinksTransactionDetail } from '@/types/flinks.types';
 import type { CreateCreditDataInput, CreateCardTransactionInput } from '@/types/database.types';
+import { inferTransactionCategory } from '@/lib/transactions/category-utils';
 
 /**
  * Derive a credit_data_cache row from a Flinks account snapshot.
@@ -70,6 +71,7 @@ export function mapFlinksTransactions(
   syncedAt?: string
 ): CreateCardTransactionInput[] {
   return transactions.map((t) => ({
+    // Persist inferred category so both Next.js and Python intelligence read the same taxonomy.
     card_id: cardId,
     flinks_transaction_id: t.Id,
     date: t.Date,
@@ -77,7 +79,7 @@ export function mapFlinksTransactions(
     debit: t.Debit ?? null,
     credit: t.Credit ?? null,
     balance: t.Balance ?? null,
-    raw_category: null,
+    raw_category: inferTransactionCategory(null, t.Description ?? ''),
     ...(syncedAt && { synced_at: syncedAt }),
   }));
 }

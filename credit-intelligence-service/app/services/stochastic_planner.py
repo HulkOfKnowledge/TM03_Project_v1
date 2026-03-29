@@ -24,34 +24,9 @@ from app.models.schemas import (
     CardChoiceResponse,
     CardActionValue,
     CardChoiceCounterfactual,
+    UpgradeOpportunity,
 )
-
-
-CANONICAL_CATEGORIES = [
-    "groceries",
-    "gas",
-    "dining",
-    "shopping",
-    "travel",
-    "entertainment",
-    "bills",
-    "healthcare",
-    "education",
-    "other",
-]
-
-
-CATEGORY_KEYWORDS = {
-    "groceries": ["grocery", "supermarket", "food basics", "costco", "loblaws", "metro", "sobeys"],
-    "gas": ["gas", "fuel", "shell", "esso", "petro", "ultramar", "chevron"],
-    "dining": ["restaurant", "cafe", "coffee", "tim hortons", "mcdonald", "uber eats", "doordash"],
-    "shopping": ["amazon", "walmart", "best buy", "winners", "mall", "retail"],
-    "travel": ["air", "flight", "hotel", "airbnb", "uber", "lyft", "expedia"],
-    "entertainment": ["netflix", "spotify", "cineplex", "steam", "itunes", "disney"],
-    "bills": ["hydro", "internet", "phone", "insurance", "bill", "utility", "rogers", "bell"],
-    "healthcare": ["pharmacy", "clinic", "dental", "hospital", "vision", "med"],
-    "education": ["tuition", "course", "university", "college", "bookstore", "udemy"],
-}
+from app.services.category_taxonomy import SHARED_CATEGORIES, infer_shared_category
 
 
 @dataclass
@@ -92,6 +67,7 @@ class StochasticPlanner:
         self,
         request: SpendingProbabilityRequest,
     ) -> SpendingProbabilityResponse:
+        category_space = self._derive_category_space(request.transactions)
         transactions = self._filter_and_normalize_transactions(
             transactions=request.transactions,
             lookback_days=request.lookback_days,
@@ -99,29 +75,29 @@ class StochasticPlanner:
 
         if not transactions:
             default_probs = [
-                CategoryProbability(category=cat, probability=round(1 / len(CANONICAL_CATEGORIES), 4))
-                for cat in CANONICAL_CATEGORIES
+                CategoryProbability(category=cat, probability=round(1 / len(category_space), 4))
+                for cat in category_space
             ]
             return SpendingProbabilityResponse(
                 user_id=request.user_id,
                 current_category="other",
                 probabilities=default_probs,
                 top_category="other",
-                transition_counts={cat: {dst: 0 for dst in CANONICAL_CATEGORIES} for cat in CANONICAL_CATEGORIES},
+                transition_counts={cat: {dst: 0 for dst in category_space} for cat in category_space},
                 computed_at=datetime.utcnow().isoformat(),
             )
 
-        transitions = self._build_category_transition_counts(transactions)
+        transitions = self._build_category_transition_counts(transactions, category_space)
         current_category = self._normalize_category(request.current_category) if request.current_category else transactions[-1].category
-        current_category = current_category if current_category in CANONICAL_CATEGORIES else "other"
+        current_category = current_category if current_category in category_space else "other"
 
         alpha = 1.0
         row = transitions[current_category]
         row_total = sum(row.values())
-        denom = row_total + alpha * len(CANONICAL_CATEGORIES)
+        denom = row_total + alpha * len(category_space)
 
         probs = []
-        for cat in CANONICAL_CATEGORIES:
+        for cat in category_space:
             p = (row.get(cat, 0) + alpha) / denom
             probs.append(CategoryProbability(category=cat, probability=round(p, 6)))
 
@@ -134,7 +110,7 @@ class StochasticPlanner:
             probabilities=probs,
             top_category=top_category,
             transition_counts={
-                src: {dst: int(counts.get(dst, 0)) for dst in CANONICAL_CATEGORIES}
+                src: {dst: int(counts.get(dst, 0)) for dst in category_space}
                 for src, counts in transitions.items()
             },
             computed_at=datetime.utcnow().isoformat(),
@@ -147,7 +123,8 @@ class StochasticPlanner:
         if not request.cards:
             raise NoRewardDataError("No benefit to card yet", [])
 
-        resolved_reward_maps, skipped_card_ids = self._resolve_reward_maps(request.cards)
+        offers = self._load_reward_catalog()
+        resolved_reward_maps, skipped_card_ids = self._resolve_reward_maps(request.cards, offers)
         eligible_cards = []
         for card in request.cards:
             reward_map = resolved_reward_maps.get(card.card_id)
@@ -245,8 +222,15 @@ class StochasticPlanner:
         recommended_reward = request.estimated_amount * recommended_rate
         incremental_reward = max(0.0, recommended_reward - baseline_reward)
 
+        upgrade_opportunity = self._build_upgrade_opportunity(
+            txns=txns,
+            cards=eligible_cards,
+            offers=offers,
+            lookback_days=request.lookback_days,
+        )
+
         min_incremental = max(0.0, float(settings.MIN_INCREMENTAL_REWARD_DOLLARS))
-        if incremental_reward < min_incremental:
+        if incremental_reward < min_incremental and upgrade_opportunity is None:
             raise NoRewardDataError(
                 f"No benefit to card yet (below ${min_incremental:.2f} minimum)",
                 [card.card_id for card in eligible_cards],
@@ -291,8 +275,34 @@ class StochasticPlanner:
             policy_reasoning=reason,
             action_values=action_values,
             counterfactual=counterfactual,
+            upgrade_opportunity=upgrade_opportunity,
             computed_at=datetime.utcnow().isoformat(),
         )
+
+    def _derive_category_space(self, transactions) -> List[str]:
+        """
+        Build a stable but flexible category universe for Markov outputs.
+        Starts with shared taxonomy and adds frequent provider categories.
+        """
+        categories = set(SHARED_CATEGORIES)
+        observed_counts: Dict[str, int] = defaultdict(int)
+
+        for txn in transactions or []:
+            category = self._normalize_category(getattr(txn, "category", None))
+            if category:
+                observed_counts[category] += 1
+
+        # Include custom provider categories when they appear repeatedly.
+        for category, count in observed_counts.items():
+            if category not in categories and count >= 2:
+                categories.add(category)
+
+        ordered = sorted(categories)
+        if "other" in ordered:
+            ordered.remove("other")
+            ordered.append("other")
+
+        return ordered
 
     def _infer_baseline_and_monthly_spend(
         self,
@@ -329,8 +339,11 @@ class StochasticPlanner:
             if date is None or date < cutoff:
                 continue
 
-            raw_category = txn.category or txn.merchant_name or txn.description
-            category = self._normalize_category(raw_category)
+            category = infer_shared_category(
+                raw_category=txn.category,
+                description=txn.description,
+                merchant_name=txn.merchant_name,
+            )
 
             parsed.append(
                 _Txn(
@@ -346,15 +359,19 @@ class StochasticPlanner:
         parsed.sort(key=lambda t: t.date)
         return parsed
 
-    def _build_category_transition_counts(self, transactions: List[_Txn]) -> Dict[str, Dict[str, int]]:
-        transitions = {src: {dst: 0 for dst in CANONICAL_CATEGORIES} for src in CANONICAL_CATEGORIES}
+    def _build_category_transition_counts(
+        self,
+        transactions: List[_Txn],
+        category_space: List[str],
+    ) -> Dict[str, Dict[str, int]]:
+        transitions = {src: {dst: 0 for dst in category_space} for src in category_space}
 
         if len(transactions) < 2:
             return transitions
 
         for prev_txn, next_txn in zip(transactions[:-1], transactions[1:]):
-            src = prev_txn.category if prev_txn.category in CANONICAL_CATEGORIES else "other"
-            dst = next_txn.category if next_txn.category in CANONICAL_CATEGORIES else "other"
+            src = prev_txn.category if prev_txn.category in category_space else "other"
+            dst = next_txn.category if next_txn.category in category_space else "other"
             transitions[src][dst] += 1
 
         return transitions
@@ -474,8 +491,12 @@ class StochasticPlanner:
                 return max(0.0, min(float(default), 0.2))
         return 0.0
 
-    def _resolve_reward_maps(self, cards) -> Tuple[Dict[str, Dict[str, float]], List[str]]:
-        offers = self._load_reward_catalog()
+    def _resolve_reward_maps(
+        self,
+        cards,
+        offers: Optional[List[Dict[str, Any]]] = None,
+    ) -> Tuple[Dict[str, Dict[str, float]], List[str]]:
+        offers = offers or self._load_reward_catalog()
         reward_maps: Dict[str, Dict[str, float]] = {}
         skipped_card_ids: List[str] = []
 
@@ -612,6 +633,97 @@ class StochasticPlanner:
 
         return {key: value for key, value in categories.items() if value > 0}
 
+    def _category_to_reward_bucket(self, category: str) -> str:
+        if category == "groceries":
+            return "groceries"
+        if category in {"travel", "transportation", "rideshare"}:
+            return "travel"
+        if category == "dining":
+            return "dining"
+        return "default"
+
+    def _best_offer_for_bucket(
+        self,
+        offers: List[Dict[str, Any]],
+        bucket: str,
+    ) -> Tuple[Optional[Dict[str, Any]], float]:
+        best_offer: Optional[Dict[str, Any]] = None
+        best_rate = 0.0
+
+        for offer in offers:
+            rate_map = self._offer_to_rate_map(offer)
+            rate = rate_map.get(bucket)
+            if rate is None:
+                rate = rate_map.get("default", 0.0)
+
+            if rate > best_rate:
+                best_rate = rate
+                best_offer = offer
+
+        return best_offer, best_rate
+
+    def _build_upgrade_opportunity(
+        self,
+        txns: List[_Txn],
+        cards,
+        offers: List[Dict[str, Any]],
+        lookback_days: int,
+    ) -> Optional[UpgradeOpportunity]:
+        if not txns or not cards or not offers:
+            return None
+
+        excluded_categories = {
+            "payments", "income", "transfers", "cash", "fees", "taxes", "government",
+            "rent", "mortgage",
+        }
+
+        spend_by_category: Dict[str, float] = defaultdict(float)
+        for txn in txns:
+            if txn.amount <= 0:
+                continue
+            if txn.category in excluded_categories:
+                continue
+            spend_by_category[txn.category] += txn.amount
+
+        if not spend_by_category:
+            return None
+
+        top_category, total_spend = max(spend_by_category.items(), key=lambda item: item[1])
+        lookback_days = max(30, lookback_days)
+        estimated_monthly_spend = total_spend * (30.0 / float(lookback_days))
+
+        # Avoid noisy suggestions for very small category spend.
+        if estimated_monthly_spend < 120:
+            return None
+
+        current_best_rate = max(
+            self._estimate_reward_rate(card, top_category)
+            for card in cards
+        )
+
+        reward_bucket = self._category_to_reward_bucket(top_category)
+        best_offer, best_offer_rate = self._best_offer_for_bucket(offers, reward_bucket)
+        if best_offer is None or best_offer_rate <= current_best_rate:
+            return None
+
+        monthly_incremental = estimated_monthly_spend * (best_offer_rate - current_best_rate)
+        min_monthly_incremental = max(1.0, float(settings.MIN_INCREMENTAL_REWARD_DOLLARS))
+        if monthly_incremental < min_monthly_incremental:
+            return None
+
+        annual_incremental = monthly_incremental * 12.0
+
+        return UpgradeOpportunity(
+            top_spend_category=top_category,
+            estimated_monthly_spend=round(estimated_monthly_spend, 2),
+            current_best_reward_rate=round(current_best_rate, 4),
+            suggested_offer_name=best_offer.get("name"),
+            suggested_offer_issuer=best_offer.get("issuer"),
+            suggested_offer_reward_rate=round(best_offer_rate, 4),
+            estimated_monthly_incremental_reward=round(monthly_incremental, 2),
+            estimated_annual_incremental_reward=round(annual_incremental, 2),
+        )
+
     def _normalize_identity(self, value: Optional[str]) -> str:
         if not value:
             return ""
@@ -634,18 +746,7 @@ class StochasticPlanner:
         return "high"
 
     def _normalize_category(self, value: Optional[str]) -> str:
-        if not value:
-            return "other"
-        text = value.strip().lower()
-
-        if text in CANONICAL_CATEGORIES:
-            return text
-
-        for category, keywords in CATEGORY_KEYWORDS.items():
-            if any(keyword in text for keyword in keywords):
-                return category
-
-        return "other"
+        return infer_shared_category(value)
 
     def _safe_parse_date(self, value: str) -> Optional[datetime]:
         if not value:

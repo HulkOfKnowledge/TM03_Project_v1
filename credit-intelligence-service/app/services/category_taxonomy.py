@@ -1,0 +1,115 @@
+"""
+Shared category taxonomy for credit-intelligence services.
+
+This keeps category inference consistent across stochastic planning and
+future analytics features, while reducing fallback into "other".
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Dict, List, Optional
+
+
+DEFAULT_OTHER_CATEGORY = "other"
+DEFAULT_UNKNOWN_LABELS = ["other", "uncategorized", "unknown", "misc", "miscellaneous"]
+
+
+def _taxonomy_path() -> Path:
+    # .../credit-intelligence-service/app/services/category_taxonomy.py -> repo root
+    return Path(__file__).resolve().parents[3] / "shared" / "category-taxonomy.json"
+
+
+def _load_shared_taxonomy() -> Dict[str, object]:
+    path = _taxonomy_path()
+    if not path.exists():
+        return {
+            "otherCategory": DEFAULT_OTHER_CATEGORY,
+            "unknownLabels": DEFAULT_UNKNOWN_LABELS,
+            "keywords": {},
+        }
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {
+            "otherCategory": DEFAULT_OTHER_CATEGORY,
+            "unknownLabels": DEFAULT_UNKNOWN_LABELS,
+            "keywords": {},
+        }
+
+    keywords = payload.get("keywords") if isinstance(payload, dict) else None
+    if not isinstance(keywords, dict):
+        keywords = {}
+
+    sanitized_keywords: Dict[str, List[str]] = {}
+    for category, values in keywords.items():
+        if not isinstance(category, str) or not isinstance(values, list):
+            continue
+        sanitized_keywords[category] = [str(v).lower() for v in values if isinstance(v, str)]
+
+    other_category = payload.get("otherCategory") if isinstance(payload, dict) else None
+    if not isinstance(other_category, str) or not other_category:
+        other_category = DEFAULT_OTHER_CATEGORY
+
+    unknown_labels = payload.get("unknownLabels") if isinstance(payload, dict) else None
+    if not isinstance(unknown_labels, list):
+        unknown_labels = DEFAULT_UNKNOWN_LABELS
+    unknown_labels = [str(v).lower() for v in unknown_labels if isinstance(v, str)]
+
+    return {
+        "otherCategory": other_category,
+        "unknownLabels": unknown_labels,
+        "keywords": sanitized_keywords,
+    }
+
+
+_TAXONOMY = _load_shared_taxonomy()
+OTHER_CATEGORY = str(_TAXONOMY["otherCategory"])
+UNKNOWN_LABELS = set(_TAXONOMY["unknownLabels"])
+SHARED_CATEGORY_KEYWORDS: Dict[str, List[str]] = _TAXONOMY["keywords"]
+SHARED_CATEGORIES = tuple(list(SHARED_CATEGORY_KEYWORDS.keys()) + [OTHER_CATEGORY])
+
+
+def _to_slug(value: str) -> str:
+    slug = value.lower().replace("&", " and ")
+    slug = re.sub(r"[^a-z0-9]+", "_", slug)
+    slug = slug.strip("_")
+    return slug
+
+
+def infer_shared_category(
+    raw_category: Optional[str],
+    description: Optional[str] = None,
+    merchant_name: Optional[str] = None,
+) -> str:
+    raw = (raw_category or "").strip().lower()
+    source = f"{raw} {description or ''} {merchant_name or ''}".strip().lower()
+
+    if not source:
+        return OTHER_CATEGORY
+
+    if raw in SHARED_CATEGORIES:
+        return raw
+
+    for category, keywords in SHARED_CATEGORY_KEYWORDS.items():
+        if raw and any(keyword in raw for keyword in keywords):
+            return category
+
+    for category, keywords in SHARED_CATEGORY_KEYWORDS.items():
+        if any(keyword in source for keyword in keywords):
+            return category
+
+    # Normalize common unknown labels into "other".
+    if raw in UNKNOWN_LABELS:
+        return OTHER_CATEGORY
+
+    # Keep broad, clean labels from providers when present.
+    if raw:
+        slug = _to_slug(raw)
+        if slug and slug not in UNKNOWN_LABELS:
+            return slug
+
+    return OTHER_CATEGORY
