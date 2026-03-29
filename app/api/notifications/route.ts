@@ -54,9 +54,7 @@ function buildMessage(params: {
 function emptySummary(): NotificationsSummary {
   return {
     unreadCount: 0,
-    daily: [],
-    weekly: [],
-    monthly: [],
+    notifications: [],
     byKind: {
       reward_optimization: 0,
       system: 0,
@@ -71,18 +69,14 @@ function mergeNotificationsByTimeframe(notifications: AppNotification[]): Notifi
 
   for (const notification of notifications) {
     summary.byKind[notification.kind] += 1;
-    if (notification.timeframe === 'daily') summary.daily.push(notification);
-    else if (notification.timeframe === 'weekly') summary.weekly.push(notification);
-    else summary.monthly.push(notification);
+    summary.notifications.push(notification);
   }
 
   const sortDesc = (a: AppNotification, b: AppNotification) =>
     new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
 
-  summary.daily.sort(sortDesc);
-  summary.weekly.sort(sortDesc);
-  summary.monthly.sort(sortDesc);
-  summary.unreadCount = summary.daily.length + summary.weekly.length + summary.monthly.length;
+  summary.notifications.sort(sortDesc);
+  summary.unreadCount = summary.notifications.length;
 
   return summary;
 }

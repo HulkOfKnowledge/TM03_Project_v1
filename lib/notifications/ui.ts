@@ -26,7 +26,7 @@ export const notificationPillMeta: Record<NotificationTimeframe, NotificationPil
 export function flattenNotifications(summary: NotificationsSummary | null): AppNotification[] {
   if (!summary) return [];
 
-  return [...summary.daily, ...summary.weekly, ...summary.monthly].sort(
+  return [...summary.notifications].sort(
     (a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime(),
   );
 }

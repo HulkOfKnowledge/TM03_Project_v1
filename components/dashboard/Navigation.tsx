@@ -42,7 +42,6 @@ import { NotificationsCenterModal } from '@/components/notifications/Notificatio
 import { NotificationDropdownSkeleton } from '@/components/notifications/NotificationSkeletons';
 import type { AppNotification, NotificationsSummary } from '@/types/notification.types';
 import {
-  flattenNotifications,
   formatNotificationTimestamp,
 } from '@/lib/notifications/ui';
 
@@ -57,6 +56,12 @@ interface NavItem {
   icon: LucideIcon;
   active: boolean;
   subNav?: SubNavItem[];
+}
+
+interface NotificationsCacheEntry {
+  userId: string;
+  fetchedAt: number;
+  notifications: AppNotification[];
 }
 
 const LEARN_SUB_NAV: SubNavItem[] = [
@@ -74,6 +79,11 @@ const CARD_SUB_NAV: SubNavItem[] = [
 ];
 
 const DANGER_UTILIZATION_THRESHOLD = 30;
+const NOTIFICATIONS_CACHE_TTL_MS = 60 * 1000;
+const DANGER_EVENT_DATE_STORAGE_PREFIX = 'creduman.card-danger-event-date:';
+
+let notificationsCache: NotificationsCacheEntry | null = null;
+let notificationsInFlight: Promise<AppNotification[]> | null = null;
 
 function safeUtilization(value: number | null | undefined): number {
   const parsed = Number(value);
@@ -95,10 +105,9 @@ function getCardsInDangerZone(cards: Array<{ id: string; bank: string; lastFour:
 
 function buildCardDangerNotification(
   cardsInDangerZone: Array<{ id: string; bank: string; lastFour: string; utilization: number }>,
+  eventDateIso: string,
 ): AppNotification | null {
   if (cardsInDangerZone.length === 0) return null;
-
-  const now = new Date().toISOString();
   const idsSignature = cardsInDangerZone.map((card) => card.id).sort().join(',');
   const topCard = cardsInDangerZone[0];
   const singleCard = cardsInDangerZone.length === 1;
@@ -115,8 +124,8 @@ function buildCardDangerNotification(
     id: `card-danger-zone:${idsSignature}`,
     kind: 'system',
     timeframe: 'daily',
-    createdAt: now,
-    eventDate: now,
+    createdAt: eventDateIso,
+    eventDate: eventDateIso,
     title,
     message,
     actionUrl: '/cards/analysis',
@@ -145,6 +154,7 @@ export function Navigation() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<AppNotification | null>(null);
+  const [dangerEventDateIso, setDangerEventDateIso] = useState<string | null>(null);
   const { readNotificationIds, markAsRead, markAllAsRead } = useReadNotificationIds();
   const notificationsContainerRef = useRef<HTMLDivElement | null>(null);
   const isDark = useIsDarkMode();
@@ -152,7 +162,40 @@ export function Navigation() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
   const cardsInDangerZone = useMemo(() => getCardsInDangerZone(connectedCards), [connectedCards]);
-  const cardDangerNotification = useMemo(() => buildCardDangerNotification(cardsInDangerZone), [cardsInDangerZone]);
+  const dangerSignature = useMemo(
+    () => cardsInDangerZone.map((card) => card.id).sort().join(','),
+    [cardsInDangerZone],
+  );
+
+  useEffect(() => {
+    if (cardsInDangerZone.length === 0 || !dangerSignature) {
+      setDangerEventDateIso(null);
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+
+    if (typeof window === 'undefined') {
+      setDangerEventDateIso(nowIso);
+      return;
+    }
+
+    const storageKey = `${DANGER_EVENT_DATE_STORAGE_PREFIX}${dangerSignature}`;
+    const persisted = window.sessionStorage.getItem(storageKey);
+
+    if (persisted) {
+      setDangerEventDateIso(persisted);
+      return;
+    }
+
+    window.sessionStorage.setItem(storageKey, nowIso);
+    setDangerEventDateIso(nowIso);
+  }, [cardsInDangerZone, dangerSignature]);
+
+  const cardDangerNotification = useMemo(
+    () => (dangerEventDateIso ? buildCardDangerNotification(cardsInDangerZone, dangerEventDateIso) : null),
+    [cardsInDangerZone, dangerEventDateIso],
+  );
   const mergedNotifications = useMemo(() => {
     if (!cardDangerNotification) return notifications;
 
@@ -285,28 +328,63 @@ export function Navigation() {
         return;
       }
 
-      try {
-        setNotificationsLoading(true);
-        const response = await fetch('/api/notifications', {
-          method: 'GET',
-          credentials: 'include',
-        });
+      const now = Date.now();
+      if (
+        notificationsCache
+        && notificationsCache.userId === user.id
+        && (now - notificationsCache.fetchedAt) < NOTIFICATIONS_CACHE_TTL_MS
+      ) {
+        setNotifications(notificationsCache.notifications);
+        return;
+      }
 
-        if (!response.ok) {
+      if (notificationsInFlight) {
+        try {
+          setNotificationsLoading(true);
+          const all = await notificationsInFlight;
+          setNotifications(all);
+        } catch {
           setNotifications([]);
           setUnreadNotifications(0);
-          return;
+        } finally {
+          setNotificationsLoading(false);
         }
+        return;
+      }
 
-        const payload = await response.json();
-        const summary = payload.data as NotificationsSummary;
-        const all = flattenNotifications(summary);
+      try {
+        setNotificationsLoading(true);
+        notificationsInFlight = (async () => {
+          const response = await fetch('/api/notifications', {
+            method: 'GET',
+            credentials: 'include',
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to load notifications');
+          }
+
+          const payload = await response.json();
+          const summary = payload.data as NotificationsSummary;
+          const all = [...summary.notifications].sort(
+            (a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime(),
+          );
+          notificationsCache = {
+            userId: user.id,
+            fetchedAt: Date.now(),
+            notifications: all,
+          };
+          return all;
+        })();
+
+        const all = await notificationsInFlight;
 
         setNotifications(all);
       } catch {
         setNotifications([]);
         setUnreadNotifications(0);
       } finally {
+        notificationsInFlight = null;
         setNotificationsLoading(false);
       }
     };

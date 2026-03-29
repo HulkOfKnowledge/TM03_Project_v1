@@ -53,8 +53,6 @@ export type AppNotification =
 
 export interface NotificationsSummary {
   unreadCount: number;
-  daily: AppNotification[];
-  weekly: AppNotification[];
-  monthly: AppNotification[];
+  notifications: AppNotification[];
   byKind: Record<NotificationKind, number>;
 }

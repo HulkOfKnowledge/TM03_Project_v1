@@ -149,9 +149,7 @@ export function buildRewardNotifications(params: {
   const now = params.now ?? new Date();
 
   const cardById = new Map(cards.map((card) => [card.id, card]));
-  const daily: RewardNotification[] = [];
-  const weekly: RewardNotification[] = [];
-  const monthly: RewardNotification[] = [];
+  const notifications: RewardNotification[] = [];
 
   for (const txn of transactions) {
     if (txn.amount <= 0) continue;
@@ -215,25 +213,19 @@ export function buildRewardNotifications(params: {
       viewTransactionUrl: `/transactions/${txn.id}`,
     };
 
-    if (timeframe === 'daily') daily.push(item);
-    else if (timeframe === 'weekly') weekly.push(item);
-    else monthly.push(item);
+    notifications.push(item);
   }
 
   const sortDesc = (a: RewardNotification, b: RewardNotification) =>
     new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
 
-  daily.sort(sortDesc);
-  weekly.sort(sortDesc);
-  monthly.sort(sortDesc);
+  notifications.sort(sortDesc);
 
   return {
-    unreadCount: daily.length + weekly.length + monthly.length,
-    daily,
-    weekly,
-    monthly,
+    unreadCount: notifications.length,
+    notifications,
     byKind: {
-      reward_optimization: daily.length + weekly.length + monthly.length,
+      reward_optimization: notifications.length,
       system: 0,
       profile: 0,
       activity: 0,
