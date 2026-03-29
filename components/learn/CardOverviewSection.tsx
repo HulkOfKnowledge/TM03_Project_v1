@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import {
   Plus,
   BookOpen,
@@ -22,6 +22,12 @@ import type { ConnectedCard } from '@/types/card.types';
 import { getCardGradientIndex } from '@/lib/utils';
 import { CreditCardDisplay } from '@/components/cards/CreditCardDisplay';
 import { useUser } from '@/hooks/useAuth';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from '@/components/ui/tooltip';
 
 // Props
 interface CardOverviewSectionProps {
@@ -73,18 +79,57 @@ function getUtilizationStatus(pct: number): 'safe' | 'caution' | 'danger' {
   return 'danger';
 }
 
-// Trust Banner
+const TOOLTIP_MESSAGES = {
+  dataProtection:
+    'Your data is encrypted and never shared. We use read-only access so, we can\'t move or touch your money.',
+  paymentDue: 'Shows the date your payment is due so you can avoid late fees and protect your credit score.',
+  creditLimit: 'This is the maximum amount you can borrow on this card.',
+  spentThisCycle: 'Tracks your current spending on this card during the active billing cycle.',
+  totalCreditLimit: 'Combined credit limit across all connected cards.',
+  totalSpent: 'Total balance used across all connected cards right now.',
+  nextPaymentDue: 'The earliest upcoming payment due date across your connected cards.',
+  connectedCards: 'Number of cards currently connected to your profile.',
+} as const;
 
-function TrustBanner() {
+interface IconTooltipProps {
+  message: string;
+  ariaLabel: string;
+  icon: ReactNode;
+  align?: 'left' | 'center' | 'right';
+  buttonClassName?: string;
+}
+
+function IconTooltip({
+  message,
+  ariaLabel,
+  icon,
+  align = 'center',
+  buttonClassName,
+}: IconTooltipProps) {
+  const [open, setOpen] = useState(false);
+  const contentAlign = align === 'left' ? 'start' : align === 'right' ? 'end' : 'center';
+
   return (
-    <div className="flex items-center gap-3 px-4 py-3.5 sm:px-5 sm:py-3 rounded-2xl bg-white dark:bg-neutral-900 mb-6 sm:mb-8">
-      <div className="shrink-0 w-8 h-8 rounded-full bg-brand flex items-center justify-center">
-        <ShieldCheck className="h-4 w-4 text-white" strokeWidth={2.5} />
-      </div>
-      <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-snug">
-        Your data is encrypted and never shared. We use read-only access so, we can&apos;t move or touch your money.
-      </p>
-    </div>
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-label={ariaLabel}
+          aria-expanded={open}
+          className={buttonClassName}
+        >
+          {icon}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align={contentAlign}
+        className="w-64 max-w-[80vw] leading-relaxed"
+      >
+        {message}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -93,8 +138,6 @@ function TrustBanner() {
 function EmptyState({ onAddCard }: { onAddCard?: () => void }) {
   return (
     <>
-      <TrustBanner />
-
       <div className="flex flex-col items-center justify-center py-6 px-4">
         {/* Stacked card icon in brand-tinted circle */}
         <div className="w-20 h-20 rounded-full bg-brand/10 dark:bg-brand/20 flex items-center justify-center mb-6 sm:mb-8 relative">
@@ -205,9 +248,13 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue, cardholderNa
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
           <span className="text-xs sm:text-sm text-brand font-medium">Payment Due</span>
-          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
-            <Info className="h-4 w-4" />
-          </button>
+          <IconTooltip
+            message={TOOLTIP_MESSAGES.paymentDue}
+            ariaLabel="Payment due info"
+            align="right"
+            buttonClassName="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5"
+            icon={<Info className="h-4 w-4" />}
+          />
         </div>
         <div>
           <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2">
@@ -224,9 +271,13 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue, cardholderNa
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
           <span className="text-xs sm:text-sm text-brand font-medium">Credit Limit</span>
-          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
-            <Info className="h-4 w-4" />
-          </button>
+          <IconTooltip
+            message={TOOLTIP_MESSAGES.creditLimit}
+            ariaLabel="Credit limit info"
+            align="right"
+            buttonClassName="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5"
+            icon={<Info className="h-4 w-4" />}
+          />
         </div>
         <div>
           <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2 tabular-nums">
@@ -243,9 +294,13 @@ function CardTiles({ card, creditLimit, spentThisCycle, paymentDue, cardholderNa
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
           <span className="text-xs sm:text-sm text-brand font-medium">Spent This Cycle</span>
-          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
-            <Info className="h-4 w-4" />
-          </button>
+          <IconTooltip
+            message={TOOLTIP_MESSAGES.spentThisCycle}
+            ariaLabel="Spent this cycle info"
+            align="right"
+            buttonClassName="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5"
+            icon={<Info className="h-4 w-4" />}
+          />
         </div>
         <div>
           <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2 tabular-nums">
@@ -279,9 +334,13 @@ function ConsolidatedTiles({ cardCount, totalCreditLimit, totalSpent, earliestDu
       <div className="rounded-2xl bg-brand border border-brand p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
           <span className="text-xs sm:text-sm text-white font-medium">Connected Cards</span>
-          <button className="text-white/70 hover:text-white transition-colors mt-0.5">
-            <Info className="h-4 w-4" />
-          </button>
+          <IconTooltip
+            message={TOOLTIP_MESSAGES.connectedCards}
+            ariaLabel="Connected cards info"
+            align="right"
+            buttonClassName="text-white/70 hover:text-white transition-colors mt-0.5"
+            icon={<Info className="h-4 w-4" />}
+          />
         </div>
         <div>
           <p className="text-2xl sm:text-3xl font-bold text-white mt-2 tabular-nums">
@@ -298,9 +357,13 @@ function ConsolidatedTiles({ cardCount, totalCreditLimit, totalSpent, earliestDu
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
           <span className="text-xs sm:text-sm text-brand font-medium">Total Credit Limit</span>
-          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
-            <Info className="h-4 w-4" />
-          </button>
+          <IconTooltip
+            message={TOOLTIP_MESSAGES.totalCreditLimit}
+            ariaLabel="Total credit limit info"
+            align="right"
+            buttonClassName="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5"
+            icon={<Info className="h-4 w-4" />}
+          />
         </div>
         <div>
           <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2 tabular-nums">
@@ -317,9 +380,13 @@ function ConsolidatedTiles({ cardCount, totalCreditLimit, totalSpent, earliestDu
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
           <span className="text-xs sm:text-sm text-brand font-medium">Total Spent</span>
-          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
-            <Info className="h-4 w-4" />
-          </button>
+          <IconTooltip
+            message={TOOLTIP_MESSAGES.totalSpent}
+            ariaLabel="Total spent info"
+            align="right"
+            buttonClassName="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5"
+            icon={<Info className="h-4 w-4" />}
+          />
         </div>
         <div>
           <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2 tabular-nums">
@@ -336,9 +403,13 @@ function ConsolidatedTiles({ cardCount, totalCreditLimit, totalSpent, earliestDu
       <div className="rounded-2xl bg-white dark:bg-neutral-800 border border-gray-100 dark:border-white/10 p-5 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
         <div className="flex items-start justify-between">
           <span className="text-xs sm:text-sm text-brand font-medium">Next Payment Due</span>
-          <button className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5">
-            <Info className="h-4 w-4" />
-          </button>
+          <IconTooltip
+            message={TOOLTIP_MESSAGES.nextPaymentDue}
+            ariaLabel="Next payment due info"
+            align="right"
+            buttonClassName="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors mt-0.5"
+            icon={<Info className="h-4 w-4" />}
+          />
         </div>
         <div>
           <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-2">
@@ -366,7 +437,6 @@ function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCar
     
     return (
       <>
-        <TrustBanner />
         <CardTiles
           card={card}
           creditLimit={card.creditLimit}
@@ -401,7 +471,6 @@ function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCar
 
   return (
     <>
-      <TrustBanner />
       <ConsolidatedTiles
         cardCount={cardList.length}
         totalCreditLimit={totalLimit}
@@ -430,8 +499,6 @@ function IndividualView({ cardList, cardholderName }: { cardList: ConnectedCard[
 
   return (
     <>
-      <TrustBanner />
-
       {/* Dot nav + arrows */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -546,15 +613,25 @@ export function CardOverviewSection({ cards, onAddCard }: CardOverviewSectionPro
     : profile?.first_name || 'Cardholder';
 
   return (
-    <section className="mb-16">
-      <div className="bg-gray-100 dark:bg-neutral-900 border border-gray-200 dark:border-white/10 rounded-3xl p-4 sm:p-6 md:p-8 lg:p-10">
+    <TooltipProvider delayDuration={150}>
+      <section className="mb-16">
+        <div className="bg-gray-100 dark:bg-neutral-900 border border-gray-200 dark:border-white/10 rounded-3xl p-4 sm:p-6 md:p-8 lg:p-10">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5 sm:mb-6">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-brand mb-1">
-              Card Overview
-            </h2>
+            <div className="mb-1 flex items-center gap-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-brand">
+                Card Overview
+              </h2>
+              <IconTooltip
+                message={TOOLTIP_MESSAGES.dataProtection}
+                ariaLabel="Data protection information"
+                align="left"
+                buttonClassName="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-brand/10 hover:text-brand transition-colors bg-brand text-white"
+                icon={<ShieldCheck className="h-5 w-5" strokeWidth={2.5} />}
+              />
+            </div>
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
               See exactly how your credit card is working for you, all in one place.
             </p>
@@ -587,8 +664,9 @@ export function CardOverviewSection({ cards, onAddCard }: CardOverviewSectionPro
         ) : (
           <ConsolidatedView cardList={cards} cardholderName={cardholderName} />
         )}
-      </div>
-    </section>
+        </div>
+      </section>
+    </TooltipProvider>
   );
 }
 
