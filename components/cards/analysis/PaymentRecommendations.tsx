@@ -18,7 +18,7 @@ interface PaymentRecommendationsProps {
 export function PaymentRecommendations({ cards, availableAmount = 1000 }: PaymentRecommendationsProps) {
   const [recommendation, setRecommendation] = useState<PaymentRecommendationResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedGoal, setSelectedGoal] = useState<'minimize_interest' | 'improve_score' | 'balanced'>('balanced');
+  const [selectedGoal, setSelectedGoal] = useState<'minimize_interest' | 'balanced'>('balanced');
   const [customAmount, setCustomAmount] = useState(availableAmount);
 
   useEffect(() => {
@@ -141,7 +141,6 @@ export function PaymentRecommendations({ cards, availableAmount = 1000 }: Paymen
             >
               <option value="balanced">Balanced Approach (ML-Powered)</option>
               <option value="minimize_interest">Minimize Interest (Avalanche)</option>
-              <option value="improve_score">Improve Credit Score</option>
             </select>
           </div>
 
@@ -237,9 +236,6 @@ export function PaymentRecommendations({ cards, availableAmount = 1000 }: Paymen
                     )}
                     {rec.expectedImpact.utilizationImprovement > 0 && (
                       <p>📊 Utilization improvement: {rec.expectedImpact.utilizationImprovement.toFixed(1)}%</p>
-                    )}
-                    {rec.expectedImpact.scoreImpactEstimate > 0 && (
-                      <p>⭐ Score impact: +{rec.expectedImpact.scoreImpactEstimate.toFixed(0)} points (est.)</p>
                     )}
                   </div>
                 )}

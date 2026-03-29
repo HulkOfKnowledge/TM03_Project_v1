@@ -156,11 +156,6 @@ function AllocationRow({
                     −{(impact.utilizationImprovement ?? 0).toFixed(1)}% utilization
                   </span>
                 )}
-                {(impact.scoreImpactEstimate ?? 0) > 0 && (
-                  <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-medium text-violet-700 ring-1 ring-inset ring-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:ring-violet-800/60">
-                    +{(impact.scoreImpactEstimate ?? 0).toFixed(0)} pts est.
-                  </span>
-                )}
               </div>
             )}
             {balance > 0 && (

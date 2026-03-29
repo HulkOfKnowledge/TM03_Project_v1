@@ -122,7 +122,6 @@ export interface CreditAnalysisData {
   spendingChartData: CardChartData[]; // Per-card spending data
   averageSpending: number;
   mlInsights?: {
-    overallScore: number;
     insights: any[];
     recommendations: any[];
   } | null;

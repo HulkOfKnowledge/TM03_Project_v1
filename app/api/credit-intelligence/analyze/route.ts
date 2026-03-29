@@ -97,7 +97,6 @@ export async function POST(_request: NextRequest) {
     // Transform Python response to TypeScript format
     const analysisResult = {
       userId: response.data.user_id,
-      overallScore: response.data.overall_score,
       insights: response.data.insights.map((insight: any) => ({
         type: insight.type,
         priority: insight.priority,
@@ -113,7 +112,6 @@ export async function POST(_request: NextRequest) {
         expectedImpact: {
           interestSaved: rec.expected_impact.interest_saved,
           utilizationImprovement: rec.expected_impact.utilization_improvement,
-          scoreImpactEstimate: rec.expected_impact.score_impact_estimate,
         },
         priority: rec.priority,
       })),

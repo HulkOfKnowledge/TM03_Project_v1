@@ -28,7 +28,7 @@ async def get_payment_recommendations(
     
     Optimization strategies:
     - minimize_interest: Pay highest APR cards first (Avalanche method)
-    - improve_score: Pay highest utilization cards first  
+    - minimize_balance: Pay smallest balances first (Snowball method)
     - balanced: Use ML + rules for optimal allocation
     
     Returns:

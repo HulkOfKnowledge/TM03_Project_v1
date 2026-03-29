@@ -25,7 +25,6 @@ export interface CardDataForAnalysis {
 
 export interface AnalyzeCreditResponse {
   userId: string;
-  overallScore: number; // 0-100
   insights: CreditInsightGenerated[];
   recommendations: PaymentRecommendation[];
   analysisTimestamp: string;
@@ -54,7 +53,7 @@ export interface PaymentRecommendationRequest {
   userId: string;
   cards: CardDataForAnalysis[];
   availableAmount: number; // Amount user can pay this month
-  optimizationGoal: 'minimize_interest' | 'improve_score' | 'balanced' | 'minimize_balance';
+  optimizationGoal: 'minimize_interest' | 'balanced' | 'minimize_balance';
 }
 
 export interface PaymentRecommendation {
@@ -68,7 +67,6 @@ export interface PaymentRecommendation {
   expectedImpact: {
     interestSaved: number;
     utilizationImprovement: number;
-    scoreImpactEstimate: number;
   };
   priority: number; // 1 = highest priority
 }

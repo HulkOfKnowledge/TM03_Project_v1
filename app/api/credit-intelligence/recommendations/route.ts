@@ -91,7 +91,6 @@ export async function POST(request: NextRequest) {
         expectedImpact: {
           interestSaved: rec.expected_impact.interest_saved,
           utilizationImprovement: rec.expected_impact.utilization_improvement,
-          scoreImpactEstimate: rec.expected_impact.score_impact_estimate,
         },
         priority: rec.priority,
       })),

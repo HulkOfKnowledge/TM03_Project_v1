@@ -31,14 +31,10 @@ class CreditAnalyzer:
         Analyze credit data and generate insights
         
         Returns:
-        - Overall credit health score (0-100)
         - Personalized insights and recommendations
         - Alerts for high utilization or payment due dates
         """
         cards = request.cards
-        
-        # Calculate overall score
-        overall_score = self.calculate_overall_score(cards)
         
         # Generate insights
         insights = self.generate_insights(cards)
@@ -48,68 +44,10 @@ class CreditAnalyzer:
         
         return AnalyzeCreditResponse(
             user_id=request.user_id,
-            overall_score=overall_score,
             insights=insights,
             recommendations=recommendations,
             analysis_timestamp=datetime.utcnow().isoformat()
         )
-    
-    def calculate_overall_score(self, cards: List[CardData]) -> float:
-        """
-        Calculate overall credit health score (0-100)
-        
-        Factors:
-        - Average utilization across all cards (40% weight)
-        - Number of high utilization cards (20% weight)
-        - Payment history indicators (20% weight)
-        - Total available credit (10% weight)
-        - Account diversity (10% weight)
-        """
-        if not cards:
-            return 0.0
-        
-        score = 100.0
-        
-        # 1. Overall utilization (lower is better) - uses total balance / total limit
-        total_balance = sum(card.current_balance for card in cards)
-        total_limit = sum(card.credit_limit for card in cards)
-        overall_utilization = (total_balance / total_limit * 100) if total_limit > 0 else 0
-        
-        if overall_utilization > 70:
-            score -= 40
-        elif overall_utilization > 50:
-            score -= 30
-        elif overall_utilization > 30:
-            score -= 15
-        elif overall_utilization > 10:
-            score -= 5
-        
-        # 2. High utilization cards penalty
-        high_util_cards = sum(1 for card in cards if card.utilization_percentage > 70)
-        score -= high_util_cards * 10
-        
-        # 3. Payment history (if available)
-        late_payments = sum(
-            1 for card in cards 
-            if card.payment_due_date and self._is_payment_overdue(card.payment_due_date)
-        )
-        score -= late_payments * 15
-        
-        # 4. Total available credit (having more is good)
-        total_available = sum(
-            card.credit_limit - card.current_balance 
-            for card in cards
-        )
-        if total_available > 10000:
-            score += 5
-        elif total_available > 5000:
-            score += 3
-        
-        # 5. Account diversity (multiple cards is good if managed well)
-        if len(cards) >= 2 and overall_utilization < 30:
-            score += 5
-        
-        return max(0.0, min(100.0, score))
     
     def generate_insights(self, cards: List[CardData]) -> List[CreditInsight]:
         """
@@ -305,8 +243,7 @@ class CreditAnalyzer:
                     ),
                     expected_impact=ExpectedImpact(
                         interest_saved=0.0,  # Calculate later
-                        utilization_improvement=(recommended_amount / card.credit_limit) * 100,
-                        score_impact_estimate=5.0
+                        utilization_improvement=(recommended_amount / card.credit_limit) * 100
                     ),
                     priority=idx
                 ))

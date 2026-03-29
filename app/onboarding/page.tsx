@@ -35,7 +35,7 @@ interface PersonalDetails {
 interface AccountSetup {
   statusInCanada: 'new_immigrant' | 'permanent_resident' | 'canadian_citizen' | '';
   province: string;
-  primaryGoal: 'build_credit' | 'manage_debt' | 'learn_credit' | 'improve_score' | '';
+  primaryGoal: 'build_credit' | 'manage_debt' | 'learn_credit' | '';
   creditProducts: string[]; // Array of: 'no_credit', 'secured_card', 'regular_card', 'phone_plan', 'auto_loan'
   immigrationStatus?: 'new_immigrant' | 'permanent_resident' | 'canadian_citizen' | '';
   creditKnowledge?: 'no_knowledge' | 'beginner' | 'intermediate' | 'advanced' | '';
@@ -536,7 +536,6 @@ export default function OnboardingPage() {
                 { value: 'build_credit', label: 'Build credit from scratch' },
                 { value: 'manage_debt', label: 'Manage existing debt' },
                 { value: 'learn_credit', label: 'Learn about credit' },
-                { value: 'improve_score', label: 'Improve credit score' },
               ]}
               placeholder="Choose one"
               error={errors.primaryGoal}

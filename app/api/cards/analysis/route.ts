@@ -248,7 +248,6 @@ export async function GET(_request: NextRequest) {
       );
 
       mlInsights = {
-        overallScore: mlResponse.data.overall_score,
         insights: mlResponse.data.insights,
         recommendations: mlResponse.data.recommendations,
       };

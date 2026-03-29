@@ -36,8 +36,8 @@ class PaymentRecommender:
         
         Strategies:
         - minimize_interest: Avalanche method (highest APR first)
-        - improve_score: Snowball method (highest utilization first)
         - balanced: Hybrid approach using ML + rules
+        - minimize_balance: Snowball method (smallest balance first)
         """
         cards = request.cards
         available_amount = request.available_amount
@@ -47,15 +47,12 @@ class PaymentRecommender:
         if goal == "minimize_interest":
             recommendations = self.prioritize_by_interest(cards, available_amount)
             strategy = "Avalanche Method: Pay high-interest cards first to minimize interest charges"
-        elif goal == "improve_score":
-            recommendations = self.prioritize_by_utilization(cards, available_amount)
-            strategy = "Credit Score Optimization: Focus on reducing high utilization to improve credit score"
         elif goal == "minimize_balance":
             recommendations = self.prioritize_by_balance(cards, available_amount)
             strategy = "Snowball Method: Pay smallest balances first for quick wins and motivation"
         else:  # balanced
             recommendations = self.balanced_approach(cards, available_amount)
-            strategy = "Balanced Approach: Optimize for both interest savings and credit score improvement"
+            strategy = "Balanced Approach: Optimize interest savings with due-date and utilization awareness"
         
         # Calculate projected savings
         projected_savings = self.calculate_projected_savings(cards, recommendations)
@@ -182,84 +179,6 @@ class PaymentRecommender:
 
         return recommendations
 
-    def prioritize_by_utilization(
-        self, 
-        cards: List[CardData], 
-        available_amount: float
-    ) -> List[PaymentRecommendation]:
-        """
-        Credit Score Optimization: Prioritize highest utilization cards
-        
-        Strategy:
-        1. Target cards above 30% utilization first
-        2. Aim to bring all cards below 30% if possible
-        3. Distribute funds to maximize score impact
-        """
-        recommendations = []
-        remaining_funds = available_amount
-        
-        # Sort cards by utilization (highest first)
-        sorted_cards = sorted(
-            cards,
-            key=lambda c: c.utilization_percentage,
-            reverse=True
-        )
-        
-        # Ensure minimums are covered
-        total_minimums = sum(card.minimum_payment for card in cards)
-        if remaining_funds < total_minimums:
-            return self._emergency_allocation(cards, remaining_funds)
-        
-        # Calculate optimal distribution to reduce high utilization
-        for priority, card in enumerate(sorted_cards, 1):
-            if remaining_funds <= 0:
-                suggested_amount = 0
-            else:
-                # Calculate amount needed to reach 30% utilization
-                target_balance = card.credit_limit * 0.30
-                amount_to_target = max(0, card.current_balance - target_balance)
-                
-                if card.utilization_percentage > 30 and amount_to_target > 0:
-                    # Prioritize bringing this card below 30%
-                    suggested_amount = min(
-                        amount_to_target,
-                        remaining_funds,
-                        card.current_balance
-                    )
-                else:
-                    # Already below 30%, pay minimum or more if funds available
-                    suggested_amount = min(
-                        card.minimum_payment,
-                        remaining_funds,
-                        card.current_balance
-                    )
-                
-                remaining_funds -= suggested_amount
-            
-            if suggested_amount > 0:
-                impact = self.calculate_impact(card, suggested_amount)
-                
-                reasoning = (
-                    f"Pay ${suggested_amount:.2f} on {card.institution_name} "
-                    f"(current utilization: {card.utilization_percentage:.1f}%). "
-                )
-                
-                if card.utilization_percentage > 30:
-                    new_util = ((card.current_balance - suggested_amount) / card.credit_limit) * 100
-                    reasoning += f"This will reduce utilization to {new_util:.1f}%, improving your credit score."
-                else:
-                    reasoning += "Maintain good standing on this low-utilization card."
-                
-                recommendations.append(PaymentRecommendation(
-                    card_id=card.card_id,
-                    suggested_amount=suggested_amount,
-                    reasoning=self._translate(reasoning),
-                    expected_impact=impact,
-                    priority=priority
-                ))
-        
-        return recommendations
-    
     def balanced_approach(
         self,
         cards: List[CardData],
@@ -478,7 +397,6 @@ class PaymentRecommender:
         
         - Interest saved over 12 months
         - Utilization improvement
-        - Estimated credit score impact (simplified)
         """
         # Calculate interest saved
         monthly_rate = (card.interest_rate / 100 / 12) if card.interest_rate else 0.0166
@@ -507,21 +425,9 @@ class PaymentRecommender:
         new_util = (new_balance / card.credit_limit) * 100
         utilization_improvement = current_util - new_util
         
-        # Estimate score impact (simplified)
-        score_impact = 0.0
-        if current_util > 70 and new_util <= 70:
-            score_impact = 20.0  # Significant improvement
-        elif current_util > 50 and new_util <= 50:
-            score_impact = 15.0
-        elif current_util > 30 and new_util <= 30:
-            score_impact = 10.0  # Reaching optimal range
-        elif utilization_improvement > 10:
-            score_impact = 5.0  # Any meaningful reduction
-        
         return ExpectedImpact(
             interest_saved=round(interest_saved, 2),
-            utilization_improvement=round(utilization_improvement, 2),
-            score_impact_estimate=round(score_impact, 1)
+            utilization_improvement=round(utilization_improvement, 2)
         )
     
     def calculate_projected_savings(

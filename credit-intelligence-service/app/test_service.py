@@ -87,7 +87,6 @@ def test_credit_analysis():
     
     # Display results
     print(f"\nUser ID: {result.user_id}")
-    print(f"Overall Credit Score: {result.overall_score:.1f}/100")
     print(f"\nInsights ({len(result.insights)} total):")
     
     for idx, insight in enumerate(result.insights, 1):
@@ -148,8 +147,8 @@ def test_payment_recommendations():
     
     recommender = PaymentRecommender()
     
-    # Test all three strategies
-    strategies = ["minimize_interest", "improve_score", "balanced"]
+    # Test supported allocation strategies
+    strategies = ["minimize_interest", "minimize_balance", "balanced"]
     
     for strategy in strategies:
         print(f"\n{'─' * 70}")
@@ -177,7 +176,6 @@ def test_payment_recommendations():
             print(f"    Expected Impact:")
             print(f"      - Interest saved (12 mo): ${rec.expected_impact.interest_saved:.2f}")
             print(f"      - Utilization improvement: {rec.expected_impact.utilization_improvement:.1f}%")
-            print(f"      - Estimated score impact: +{rec.expected_impact.score_impact_estimate:.1f}")
             total_allocated += rec.suggested_amount
         
         print(f"\n  Total allocated: ${total_allocated:.2f} of ${available:.2f}")

@@ -28,7 +28,6 @@ async def analyze_credit(
     Analyze user's credit data and generate insights
     
     Returns:
-    - Overall credit health score (0-100)
     - Personalized insights (alerts, recommendations, achievements, tips)
     - Payment recommendations
     """

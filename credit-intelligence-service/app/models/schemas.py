@@ -43,7 +43,6 @@ class CreditInsight(BaseModel):
 class AnalyzeCreditResponse(BaseModel):
     """Response with credit analysis results"""
     user_id: str
-    overall_score: float = Field(ge=0, le=100)
     insights: List[CreditInsight]
     recommendations: List["PaymentRecommendation"]
     analysis_timestamp: str
@@ -55,14 +54,13 @@ class PaymentRecommendationRequest(BaseModel):
     user_id: str
     cards: List[CardData]
     available_amount: float = Field(gt=0)
-    optimization_goal: Literal["minimize_interest", "improve_score", "balanced", "minimize_balance"] = "balanced"
+    optimization_goal: Literal["minimize_interest", "balanced", "minimize_balance"] = "balanced"
 
 
 class ExpectedImpact(BaseModel):
     """Expected impact of payment recommendation"""
     interest_saved: float
     utilization_improvement: float
-    score_impact_estimate: float
 
 
 class PaymentRecommendation(BaseModel):
