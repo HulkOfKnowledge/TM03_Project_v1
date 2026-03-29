@@ -196,6 +196,17 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     const allVals = spendingChartData.datasets.flatMap(d => d.data as number[]);
     const maxVal = Math.max(...allVals, 100);
     const yMax = Math.ceil(maxVal * 1.2 / 1000) * 1000;
+    const formatSpendTick = (value: number) => {
+      if (value >= 1000) {
+        const thousands = value / 1000;
+        return Number.isInteger(thousands)
+          ? `$${thousands}k`
+          : `$${thousands.toFixed(1)}k`;
+      }
+
+      return `$${Math.round(value)}`;
+    };
+
     return {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -204,7 +215,18 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: textColor, font: { size: 12 }, maxTicksLimit: 12 }, border: { display: false } },
-        y: { min: 0, max: yMax || 5000, grid: { color: gridColor, lineWidth: 0.5, drawTicks: false }, ticks: { color: textColor, font: { size: 12 }, callback: v => `$${(Number(v) / 1000).toFixed(0)}k` }, border: { display: false } },
+        y: {
+          min: 0,
+          max: yMax || 5000,
+          grid: { color: gridColor, lineWidth: 0.5, drawTicks: false },
+          ticks: {
+            color: textColor,
+            font: { size: 12 },
+            callback: (v) => formatSpendTick(Number(v)),
+            maxTicksLimit: 7,
+          },
+          border: { display: false },
+        },
       },
     };
   }, [textColor, gridColor, spendingChartData]);
