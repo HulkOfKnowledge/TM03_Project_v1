@@ -18,6 +18,7 @@ import {
   getZoneColor,
   zoneOrder,
 } from './transaction-utils';
+import { inferTransactionCategory, formatCategoryLabel } from '@/lib/transactions/category-utils';
 
 interface DailyTransactionTableProps {
   data: Transaction[];
@@ -193,7 +194,7 @@ export function DailyTransactionTable({ data, card }: DailyTransactionTableProps
                         type="checkbox"
                         checked={selectedRows.has(pageStart + index)}
                         onChange={() => toggleRow(pageStart + index)}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="hidden h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <span className={`inline-block rounded px-3 py-1 text-xs font-medium ${getZoneColor(row.zone)}`}>
                         {row.zone || 'N/A'}
@@ -206,7 +207,9 @@ export function DailyTransactionTable({ data, card }: DailyTransactionTableProps
                   <td className="px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">
                     <div className="max-w-xs">
                       <p className="truncate">{row.description}</p>
-                      {row.category && <p className="text-xs text-gray-500 dark:text-gray-400">{row.category}</p>}
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatCategoryLabel(inferTransactionCategory(row.category, row.description, row.merchantName))}
+                      </p>
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-900 dark:text-white sm:px-4 sm:py-4 sm:text-sm">

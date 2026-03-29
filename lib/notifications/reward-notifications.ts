@@ -1,4 +1,5 @@
 import type { RewardNotification, NotificationsSummary, NotificationTimeframe } from '@/types/notification.types';
+import { inferTransactionCategory } from '@/lib/transactions/category-utils';
 
 export interface NotificationCard {
   id: string;
@@ -21,35 +22,6 @@ export interface RewardRateOffer {
   earnRateTravel: number | null;
   earnRateDining: number | null;
   earnRateOther: number | null;
-}
-
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  groceries: ['grocery', 'supermarket', 'food basics', 'costco', 'loblaws', 'metro', 'sobeys'],
-  gas: ['gas', 'fuel', 'shell', 'esso', 'petro', 'ultramar', 'chevron'],
-  dining: ['restaurant', 'cafe', 'coffee', 'tim hortons', 'mcdonald', 'ubereats', 'uber eats', 'doordash'],
-  shopping: ['amazon', 'walmart', 'best buy', 'winners', 'mall', 'retail'],
-  travel: ['air', 'flight', 'hotel', 'airbnb', 'uber', 'lyft', 'expedia', 'air canada'],
-  entertainment: ['netflix', 'spotify', 'cineplex', 'steam', 'itunes', 'disney'],
-  bills: ['hydro', 'internet', 'phone', 'insurance', 'bill', 'utility', 'rogers', 'bell'],
-  healthcare: ['pharmacy', 'clinic', 'dental', 'hospital', 'vision', 'med'],
-  education: ['tuition', 'course', 'university', 'college', 'bookstore', 'udemy'],
-};
-
-function normalizeCategory(raw: string | null | undefined, description: string): string {
-  const source = `${raw || ''} ${description || ''}`.trim().toLowerCase();
-  if (!source) return 'other';
-
-  if (Object.prototype.hasOwnProperty.call(CATEGORY_KEYWORDS, source)) {
-    return source;
-  }
-
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some((keyword) => source.includes(keyword))) {
-      return category;
-    }
-  }
-
-  return 'other';
 }
 
 function offerCategoryRate(offer: RewardRateOffer, category: string): number {
@@ -193,7 +165,7 @@ export function buildRewardNotifications(params: {
     const baselineCard = cardById.get(txn.cardId);
     if (!baselineCard) continue;
 
-    const category = normalizeCategory(txn.rawCategory, txn.description);
+    const category = inferTransactionCategory(txn.rawCategory, txn.description);
     const baselineRate = inferRate(baselineCard, category, offers);
 
     let bestCard = baselineCard;

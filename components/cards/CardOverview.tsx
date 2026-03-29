@@ -19,6 +19,7 @@ import { MetricCard } from './analysis/MetricCard';
 import { PaymentRecommendationModal } from './PaymentRecommendationModal';
 import { useUser } from '@/hooks/useAuth';
 import { getCardGradientIndex } from '@/lib/utils';
+import { inferTransactionCategory, formatCategoryLabel, UNCATEGORIZED_CATEGORY } from '@/lib/transactions/category-utils';
 
 const SWIPE_THRESHOLD = 50;
 
@@ -58,7 +59,8 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
   
   // History table filters
   const [historySearchQuery, setHistorySearchQuery] = useState('');
-  const [historyZoneFilter, setHistoryZoneFilter] = useState<string>('');
+  const [historyTypeFilter, setHistoryTypeFilter] = useState<'all' | 'payments' | 'expenses'>('all');
+  const [historyCategoryFilter, setHistoryCategoryFilter] = useState<string>('');
   
   // Touch/swipe state
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -222,18 +224,57 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     return () => { active = false; };
   }, [currentCard?.id, dateFilter.startDate, dateFilter.endDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Shared DateFilterControls instance reused in sections to avoid duplicated prop wiring.
+  const dateFilterControls = (
+    <DateFilterControls
+      filterType={filterType}
+      onFilterTypeChange={setFilterType}
+      selectedMonth={selectedMonth}
+      onMonthChange={setSelectedMonth}
+      selectedYear={selectedYear}
+      onYearChange={setSelectedYear}
+      startDate={startDate}
+      onStartDateChange={setStartDate}
+      endDate={endDate}
+      onEndDateChange={setEndDate}
+      today={today}
+    />
+  );
+
+  const dateRangeTransactions = useMemo(() => {
+    if (!currentCard || currentTransactions.length === 0) return [];
+    return currentTransactions.filter(
+      (txn) => txn.date >= dateFilter.startDate && txn.date <= dateFilter.endDate,
+    );
+  }, [currentCard, currentTransactions, dateFilter]);
+
+  const searchAndTypeFilteredTransactions = useMemo(() => {
+    const query = historySearchQuery.trim().toLowerCase();
+    return dateRangeTransactions.filter((txn) => {
+      const matchesSearch = !query
+        || txn.description.toLowerCase().includes(query)
+        || txn.date.includes(query)
+        || (txn.category || '').toLowerCase().includes(query)
+        || (txn.merchantName || '').toLowerCase().includes(query);
+
+      const matchesType = historyTypeFilter === 'all'
+        || (historyTypeFilter === 'payments' && txn.amount < 0)
+        || (historyTypeFilter === 'expenses' && txn.amount > 0);
+
+      return matchesSearch && matchesType;
+    });
+  }, [dateRangeTransactions, historySearchQuery, historyTypeFilter]);
+
   // Filtered transactions 
   const filteredTransactions = useMemo(() => {
-    if (!currentCard || currentTransactions.length === 0) return [];
-    return currentTransactions.filter(txn => {
-      const inDateRange = txn.date >= dateFilter.startDate && txn.date <= dateFilter.endDate;
-      const matchesSearch = !historySearchQuery ||
-        txn.description.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
-        txn.date.includes(historySearchQuery);
-      const matchesZone = !historyZoneFilter || txn.zone === historyZoneFilter;
-      return inDateRange && matchesSearch && matchesZone;
+    return searchAndTypeFilteredTransactions.filter((txn) => {
+      const normalizedCategory = inferTransactionCategory(txn.category, txn.description, txn.merchantName);
+      const matchesCategory = !historyCategoryFilter
+        || (historyCategoryFilter === UNCATEGORIZED_CATEGORY && normalizedCategory === UNCATEGORIZED_CATEGORY)
+        || normalizedCategory === historyCategoryFilter;
+      return matchesCategory;
     });
-  }, [currentCard, currentTransactions, dateFilter, historySearchQuery, historyZoneFilter]);
+  }, [searchAndTypeFilteredTransactions, historyCategoryFilter]);
 
   // ── Display metrics
   const displayMetrics = useMemo(() => {
@@ -356,11 +397,18 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
     }
   };
 
-  // ── Available zones for filter dropdown ─────────────────────────────────────
-  const availableZones = useMemo(() => {
-    const zones = new Set(filteredTransactions.map(txn => txn.zone).filter(Boolean));
-    return Array.from(zones).sort();
-  }, [filteredTransactions]);
+  const availableCategories = useMemo(() => {
+    const categoryCounts = new Map<string, number>();
+
+    searchAndTypeFilteredTransactions.forEach((txn) => {
+      const normalizedCategory = inferTransactionCategory(txn.category, txn.description, txn.merchantName);
+      categoryCounts.set(normalizedCategory, (categoryCounts.get(normalizedCategory) || 0) + 1);
+    });
+
+    return Array.from(categoryCounts.entries())
+      .map(([value, count]) => ({ value, label: formatCategoryLabel(value), count }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [searchAndTypeFilteredTransactions]);
 
   // Safety check: if no current card, don't render
   if (!currentCard) {
@@ -616,22 +664,7 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             </p>
           </div>
           
-          {/* Date Filter Controls */}
-          <div className="hidden md:block">
-            <DateFilterControls
-              filterType={filterType}
-              onFilterTypeChange={setFilterType}
-              selectedMonth={selectedMonth}
-              onMonthChange={setSelectedMonth}
-              selectedYear={selectedYear}
-              onYearChange={setSelectedYear}
-              startDate={startDate}
-              onStartDateChange={setStartDate}
-              endDate={endDate}
-              onEndDateChange={setEndDate}
-              today={today}
-            />
-          </div>
+          {/* Date filter is shown in Transaction History header to keep one primary control location */}
         </div>
 
         {/* Date badge */}
@@ -665,53 +698,46 @@ export function CardOverview({ card, onAddCard, onDisconnectCard, allCards = [] 
             </p>
           </div>
           
-          <div className="flex gap-2">
-            <button className="px-4 py-2 text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-              Download Statement
-            </button>
+          <div className="w-full md:w-auto">
+            {dateFilterControls}
           </div>
         </div>
 
-        {/* Mobile Date Filter Controls (same state as desktop controls) */}
-        <div className="mb-4 md:hidden">
-          <DateFilterControls
-            filterType={filterType}
-            onFilterTypeChange={setFilterType}
-            selectedMonth={selectedMonth}
-            onMonthChange={setSelectedMonth}
-            selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
-            startDate={startDate}
-            onStartDateChange={setStartDate}
-            endDate={endDate}
-            onEndDateChange={setEndDate}
-            today={today}
-          />
-        </div>
-
         {/* Search and Filters */}
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={historySearchQuery}
               onChange={(e) => setHistorySearchQuery(e.target.value)}
-              placeholder="Search description, date..."
+              placeholder="Search description, merchant, category"
               className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:placeholder-gray-400"
             />
           </div>
-          <div className="hidden gap-2 sm:flex">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:flex-1">
             <select
-              value={historyZoneFilter}
-              onChange={(e) => setHistoryZoneFilter(e.target.value)}
+              value={historyTypeFilter}
+              onChange={(e) => setHistoryTypeFilter(e.target.value as 'all' | 'payments' | 'expenses')}
               className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900"
             >
-              <option value="">All Zones</option>
-              {availableZones.map(zone => (
-                <option key={zone} value={zone}>{zone}</option>
+              <option value="all">All Types</option>
+              <option value="payments">Credit Card Payments</option>
+              <option value="expenses">Expenses</option>
+            </select>
+            <select
+              value={historyCategoryFilter}
+              onChange={(e) => setHistoryCategoryFilter(e.target.value)}
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900"
+            >
+              <option value="">All Categories ({searchAndTypeFilteredTransactions.length})</option>
+              {availableCategories.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {`${category.label} (${category.count})`}
+                </option>
               ))}
             </select>
+            
           </div>
         </div>
 
