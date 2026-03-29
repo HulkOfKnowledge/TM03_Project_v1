@@ -56,34 +56,17 @@ class CreditAnalyzer:
         """
         insights = []
         
-        # 1. High utilization alerts
+        # 1. Utilization zone insights
         for card in cards:
-            if card.utilization_percentage > 70:
-                insights.append(CreditInsight(
-                    type="alert",
-                    priority="urgent",
-                    title=self.translate_text("Danger Zone - Critical utilization"),
-                    message=self.translate_text(
-                        f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
-                        f"This is severely impacting your credit score. Urgent action required! "
-                        f"Pay down ${card.current_balance - (card.credit_limit * 0.30):.2f} to reach the safe 30% threshold."
-                    ),
-                    action_required=True,
-                    metadata={
-                        "card_id": card.card_id,
-                        "current_utilization": card.utilization_percentage,
-                        "recommended_payment": card.current_balance - (card.credit_limit * 0.30)
-                    }
-                ))
-            elif card.utilization_percentage > 30:
+            if card.utilization_percentage > 30:
                 insights.append(CreditInsight(
                     type="alert",
                     priority="high",
                     title=self.translate_text("Danger Zone - High utilization"),
                     message=self.translate_text(
                         f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
-                        f"Above 30% is not recommended and will negatively impact your credit score. "
-                        f"Pay down ${card.current_balance - (card.credit_limit * 0.30):.2f} to reach the recommended 30% threshold."
+                        f"This is in the danger zone (>30%) and can negatively impact your credit profile. "
+                        f"Pay down ${card.current_balance - (card.credit_limit * 0.30):.2f} to exit the danger zone."
                     ),
                     action_required=True,
                     metadata={
@@ -99,7 +82,7 @@ class CreditAnalyzer:
                     title=self.translate_text("Caution Zone - Moderate utilization"),
                     message=self.translate_text(
                         f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
-                        f"You're in the caution zone (26-30%). Try to keep it below 25% for optimal credit health."
+                        f"You're in the caution zone (26-30%). Stay under 30% to avoid entering the danger zone."
                     ),
                     action_required=False,
                     metadata={
@@ -114,7 +97,7 @@ class CreditAnalyzer:
                     title=self.translate_text("Safe Zone - Excellent utilization"),
                     message=self.translate_text(
                         f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
-                        f"Perfect! You're in the safe zone (0-25%). This is great for your credit score."
+                        f"Perfect! You're in the safe zone (0-25%)."
                     ),
                     action_required=False,
                     metadata={
@@ -174,7 +157,7 @@ class CreditAnalyzer:
                 title=self.translate_text("Credit improvement tip"),
                 message=self.translate_text(
                     f"Your overall utilization is {overall_utilization:.1f}%. "
-                    f"Experts recommend keeping it below 30% for optimal credit health. "
+                    f"Safe utilization is 0-25%, caution is 26-30%, and danger is above 30%. "
                     f"Consider increasing your credit limits or paying down balances."
                 ),
                 action_required=False,
@@ -187,13 +170,13 @@ class CreditAnalyzer:
         # 4. Spending pattern analysis based on utilization
         if cards and len(cards) > 0:
             # Determine spending pattern based on overall utilization
-            if overall_utilization > 50:
+            if overall_utilization > 30:
                 spending_pattern = "aggressive"
-                pattern_message = f"Your spending pattern shows high credit usage ({overall_utilization:.1f}% overall utilization). Consider budgeting strategies to reduce balances and avoid interest charges."
+                pattern_message = f"Your spending pattern shows danger-zone credit usage ({overall_utilization:.1f}% overall utilization). Consider reducing balances and new charges."
                 pattern_priority = "medium"
             elif overall_utilization > 25:
                 spending_pattern = "moderate"
-                pattern_message = f"Your spending pattern is moderate ({overall_utilization:.1f}% overall utilization). Continue monitoring your balances to stay in the safe zone (below 25%)."
+                pattern_message = f"Your spending pattern is in the caution zone ({overall_utilization:.1f}% overall utilization). Keep utilization at or below 30% and aim for 0-25%."
                 pattern_priority = "low"
             else:
                 spending_pattern = "conservative"
