@@ -24,12 +24,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const merchantName = typeof body?.merchantName === 'string' ? body.merchantName.trim() : '';
     const merchantCategory = typeof body?.merchantCategory === 'string' ? body.merchantCategory : null;
-    const estimatedAmount = Number(body?.estimatedAmount ?? 50);
+    const estimatedAmount = Number(body?.estimatedAmount);
     const lookbackDays = Number(body?.lookbackDays ?? 180);
 
     if (!merchantName) {
       return NextResponse.json(
         createErrorResponse('VALIDATION_ERROR', 'merchantName is required'),
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(estimatedAmount) || estimatedAmount <= 0) {
+      return NextResponse.json(
+        createErrorResponse('VALIDATION_ERROR', 'estimatedAmount is required and must be > 0'),
         { status: 400 }
       );
     }
@@ -180,6 +187,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           createErrorResponse(errorCode, errorMessage || 'No benefit to card yet', {
             skippedCards: detail?.skipped_cards,
+          }),
+          { status: 422 }
+        );
+      }
+
+      if (
+        status === 422
+        && (errorCode === 'INSUFFICIENT_TRANSACTION_HISTORY' || errorCode === 'INSUFFICIENT_TRANSITION_HISTORY')
+      ) {
+        return NextResponse.json(
+          createErrorResponse(errorCode, errorMessage || 'Insufficient data to compute card choice', {
+            details: detail?.details,
           }),
           { status: 422 }
         );

@@ -3,7 +3,7 @@ Payment Recommender Service
 Generates optimized payment allocation strategies using hybrid (rules + ML) approach
 """
 
-from typing import List, Dict
+from typing import List, Dict, Optional, Tuple
 from app.models.schemas import (
     PaymentRecommendationRequest,
     PaymentRecommendationResponse,
@@ -149,9 +149,9 @@ class PaymentRecommender:
                     f"({card.utilization_percentage:.0f}% \u2192 {new_util:.0f}% utilization)."
                 )
 
-            if days <= 0:
+            if days is not None and days < 0:
                 parts.append("Your payment is overdue — pay as soon as possible.")
-            elif days <= 7:
+            elif days is not None and days <= 7:
                 parts.append(f"Due in {days} day{'s' if days != 1 else ''} — pay now to avoid a late fee.")
 
             if min_pay > 0 and suggested_amount > min_pay and suggested_amount < card.current_balance:
@@ -205,17 +205,17 @@ class PaymentRecommender:
                 scores[card.card_id] = 0.0
                 continue
             days = self._calculate_days_until_due(card.payment_due_date)
-            if days <= 0:
+            if days is not None and days < 0:
                 urgency = 5.0   # overdue
-            elif days <= 7:
+            elif days is not None and days <= 7:
                 urgency = 3.0
-            elif days <= 14:
+            elif days is not None and days <= 14:
                 urgency = 2.0
-            elif days <= 30:
+            elif days is not None and days <= 30:
                 urgency = 1.5
             else:
                 urgency = 1.0
-            apr = card.interest_rate or 19.99
+            apr = card.interest_rate if card.interest_rate is not None else 0.0
             util = card.utilization_percentage or 0
             scores[card.card_id] = (apr / 100) * urgency * (1 + util / 100)
 
@@ -244,7 +244,7 @@ class PaymentRecommender:
         """
         sorted_cards = sorted(
             cards,
-            key=lambda c: (-(c.interest_rate or 0), self._calculate_days_until_due(c.payment_due_date))
+            key=lambda c: (-(c.interest_rate or 0), self._due_sort_key(c.payment_due_date))
         )
         recommendations = []
         for priority, card in enumerate(sorted_cards, 1):
@@ -283,17 +283,17 @@ class PaymentRecommender:
                 )
 
             # Due-date urgency
-            if days <= 0:
+            if days is not None and days < 0:
                 parts.append(
                     "Your payment is overdue. Pay as soon as possible to avoid "
                     "late fees and protect your credit score."
                 )
-            elif days <= 7:
+            elif days is not None and days <= 7:
                 parts.append(
                     f"This card is due in {days} day{'s' if days != 1 else ''}. "
                     f"Paying now avoids a late fee."
                 )
-            elif days <= 14:
+            elif days is not None and days <= 14:
                 parts.append(
                     f"Your due date is in {days} days  you have a bit of time, but don't wait too long."
                 )
@@ -344,7 +344,7 @@ class PaymentRecommender:
         sorted_cards = sorted(
             cards,
             key=lambda c: (
-                self._calculate_days_until_due(c.payment_due_date),
+                self._due_sort_key(c.payment_due_date),
                 -(c.interest_rate if c.interest_rate else 0)
             )
         )
@@ -359,10 +359,12 @@ class PaymentRecommender:
 
             impact = self.calculate_impact(card, suggested_amount)
 
-            if remaining_days <= 0:
+            if remaining_days is not None and remaining_days < 0:
                 due_note = "This payment is already overdue  pay immediately."
-            elif remaining_days <= 3:
+            elif remaining_days is not None and remaining_days <= 3:
                 due_note = f"Only {remaining_days} day{'s' if remaining_days != 1 else ''} left before the due date."
+            elif remaining_days is None:
+                due_note = "Due date data is unavailable."
             else:
                 due_note = f"Due in {remaining_days} days."
 
@@ -394,7 +396,7 @@ class PaymentRecommender:
         - Utilization improvement
         """
         # Calculate interest saved
-        monthly_rate = (card.interest_rate / 100 / 12) if card.interest_rate else 0.0166
+        monthly_rate = (card.interest_rate / 100 / 12) if card.interest_rate else 0.0
         
         # Interest without extra payment (only minimum)
         balance_with_min = card.current_balance
@@ -444,18 +446,25 @@ class PaymentRecommender:
             annual_interest=round(total_interest_saved, 2)
         )
     
-    def _calculate_days_until_due(self, due_date_str: str) -> int:
-        """Calculate days until payment due"""
+    def _calculate_days_until_due(self, due_date_str: Optional[str]) -> Optional[int]:
+        """Calculate days until payment due. Returns None when due date is unavailable/invalid."""
         if not due_date_str:
-            return 999  # Default to far future
+            return None
         
         try:
             from datetime import datetime
             due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
             delta = due_date - datetime.now()
-            return max(0, delta.days)
+            return delta.days
         except:
-            return 999
+            return None
+
+    def _due_sort_key(self, due_date_str: Optional[str]) -> Tuple[int, int]:
+        """Sort helper: valid due dates first (earlier first), missing due dates last."""
+        days = self._calculate_days_until_due(due_date_str)
+        if days is None:
+            return (1, 0)
+        return (0, days)
     
     def _translate(self, text: str) -> dict:
         """Translate recommendation text"""

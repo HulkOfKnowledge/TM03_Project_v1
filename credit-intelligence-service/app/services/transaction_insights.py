@@ -112,41 +112,24 @@ class TransactionInsightGenerator:
         amount: float,
         card_context: Dict
     ) -> Optional[Dict]:
-        """Generate category-specific insights"""
-        
-        # Example: Large dining transaction
-        if category == 'Dining' and amount > 100:
-            return {
-                'type': 'spending_pattern',
-                'severity': 'info',
-                'message': {
-                    'en': f'Large dining expense: ${amount:.2f}. This is above your typical dining spend.',
-                    'fr': f'Dépense importante en restauration: {amount:.2f}$. C\'est au-dessus de vos dépenses habituelles.',
-                    'ar': f'نفقات طعام كبيرة: {amount:.2f}$. هذا أعلى من إنفاقك المعتاد على الطعام.'
-                },
-                'metadata': {
-                    'category': category,
-                    'amount': amount
-                }
+        """Generate a descriptive, non-heuristic category insight."""
+        normalized_category = (category or '').strip()
+        if not normalized_category:
+            return None
+
+        return {
+            'type': 'transaction_category',
+            'severity': 'info',
+            'message': {
+                'en': f'Transaction categorized as {normalized_category} with amount ${amount:.2f}.',
+                'fr': f'Transaction classée dans la catégorie {normalized_category} pour un montant de {amount:.2f}$.',
+                'ar': f'تم تصنيف المعاملة ضمن فئة {normalized_category} بمبلغ {amount:.2f}$.'
+            },
+            'metadata': {
+                'category': normalized_category,
+                'amount': amount
             }
-        
-        # Example: High shopping spend
-        if category == 'Shopping' and amount > 200:
-            return {
-                'type': 'spending_pattern',
-                'severity': 'info',
-                'message': {
-                    'en': f'Significant shopping purchase: ${amount:.2f}. Monitor your balance to stay within budget.',
-                    'fr': f'Achat important: {amount:.2f}$. Surveillez votre solde pour rester dans votre budget.',
-                    'ar': f'عملية شراء كبيرة: {amount:.2f}$. راقب رصيدك للبقاء ضمن الميزانية.'
-                },
-                'metadata': {
-                    'category': category,
-                    'amount': amount
-                }
-            }
-        
-        return None
+        }
     
     def _get_due_date_insight(self, card_context: Dict) -> Optional[Dict]:
         """Generate payment due date insights"""

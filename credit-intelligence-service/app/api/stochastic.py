@@ -13,7 +13,11 @@ from app.models.schemas import (
     CardChoiceRequest,
     CardChoiceResponse,
 )
-from app.services.stochastic_planner import NoRewardDataError, stochastic_planner
+from app.services.stochastic_planner import (
+    NoRewardDataError,
+    InsufficientDataError,
+    stochastic_planner,
+)
 
 router = APIRouter()
 
@@ -26,6 +30,15 @@ async def get_spending_probability(
     """Predict next spending category probabilities using a Markov Chain."""
     try:
         return stochastic_planner.predict_spending_probability(request)
+    except InsufficientDataError as e:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": e.code,
+                "message": str(e),
+                "details": e.details,
+            },
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to compute spending probabilities: {str(e)}")
 
@@ -38,6 +51,15 @@ async def get_card_choice(
     """Recommend best card at a merchant using an MDP-style policy."""
     try:
         return stochastic_planner.choose_card_for_merchant(request)
+    except InsufficientDataError as e:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": e.code,
+                "message": str(e),
+                "details": e.details,
+            },
+        )
     except NoRewardDataError as e:
         raise HTTPException(
             status_code=422,

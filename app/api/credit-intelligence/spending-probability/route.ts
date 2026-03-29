@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 import { createClient } from '@/lib/supabase/server';
 import { createSuccessResponse, createErrorResponse } from '@/types/api.types';
@@ -114,6 +114,25 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(createSuccessResponse(payload), { status: 200 });
   } catch (error) {
+    if (error instanceof AxiosError) {
+      const status = error.response?.status;
+      const detail = (error.response?.data as any)?.detail;
+      const errorCode = typeof detail?.code === 'string' ? detail.code : null;
+      const errorMessage = typeof detail?.message === 'string' ? detail.message : null;
+
+      if (
+        status === 422
+        && (errorCode === 'INSUFFICIENT_SPENDING_HISTORY' || errorCode === 'INSUFFICIENT_CATEGORY_TRANSITIONS')
+      ) {
+        return NextResponse.json(
+          createErrorResponse(errorCode, errorMessage || 'Insufficient data to compute spending probabilities', {
+            details: detail?.details,
+          }),
+          { status: 422 }
+        );
+      }
+    }
+
     console.error('Error getting spending probabilities:', error);
     return NextResponse.json(
       createErrorResponse('INTERNAL_ERROR', 'Failed to compute spending probabilities'),

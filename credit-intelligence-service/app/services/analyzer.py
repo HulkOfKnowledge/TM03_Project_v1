@@ -1,9 +1,9 @@
 """
 Credit Analyzer Service
-Analyzes credit data and generates insights using hybrid (rules + ML) approach
+Analyzes credit data and generates deterministic rule-based insights.
 """
 
-from typing import List
+from typing import List, Optional
 from app.models.schemas import (
     AnalyzeCreditRequest,
     AnalyzeCreditResponse,
@@ -110,6 +110,8 @@ class CreditAnalyzer:
         for card in cards:
             if card.payment_due_date:
                 days_until_due = self._days_until_due(card.payment_due_date)
+                if days_until_due is None:
+                    continue
                 
                 if 0 <= days_until_due <= 3:
                     insights.append(CreditInsight(
@@ -167,31 +169,44 @@ class CreditAnalyzer:
                 }
             ))
         
-        # 4. Spending pattern analysis based on utilization
+        # 4. Utilization profile summary (purely metric-based, no behavioral labels)
         if cards and len(cards) > 0:
-            # Determine spending pattern based on overall utilization
-            if overall_utilization > 30:
-                spending_pattern = "aggressive"
-                pattern_message = f"Your spending pattern shows danger-zone credit usage ({overall_utilization:.1f}% overall utilization). Consider reducing balances and new charges."
-                pattern_priority = "medium"
-            elif overall_utilization > 25:
-                spending_pattern = "moderate"
-                pattern_message = f"Your spending pattern is in the caution zone ({overall_utilization:.1f}% overall utilization). Keep utilization at or below 30% and aim for 0-25%."
-                pattern_priority = "low"
+            safe_cards = sum(1 for card in cards if card.utilization_percentage <= 25)
+            caution_cards = sum(1 for card in cards if 25 < card.utilization_percentage <= 30)
+            danger_cards = sum(1 for card in cards if card.utilization_percentage > 30)
+
+            if danger_cards > 0:
+                profile_priority = "medium"
+                profile_message = (
+                    f"Portfolio utilization profile: {overall_utilization:.1f}% overall. "
+                    f"Cards by zone -> safe: {safe_cards}, caution: {caution_cards}, danger: {danger_cards}. "
+                    "Reduce balances on danger-zone cards (>30%) to lower risk."
+                )
+            elif caution_cards > 0:
+                profile_priority = "low"
+                profile_message = (
+                    f"Portfolio utilization profile: {overall_utilization:.1f}% overall. "
+                    f"Cards by zone -> safe: {safe_cards}, caution: {caution_cards}, danger: {danger_cards}. "
+                    "Keep caution-zone cards between 26-30% from crossing into danger."
+                )
             else:
-                spending_pattern = "conservative"
-                pattern_message = f"Your spending pattern is conservative ({overall_utilization:.1f}% overall utilization). You're managing credit responsibly - great job!"
-                pattern_priority = "low"
+                profile_priority = "low"
+                profile_message = (
+                    f"Portfolio utilization profile: {overall_utilization:.1f}% overall. "
+                    f"Cards by zone -> safe: {safe_cards}, caution: {caution_cards}, danger: {danger_cards}."
+                )
             
             insights.append(CreditInsight(
                 type="tip",
-                priority=pattern_priority,
-                title=self.translate_text("Spending pattern analysis"),
-                message=self.translate_text(pattern_message),
+                priority=profile_priority,
+                title=self.translate_text("Utilization profile analysis"),
+                message=self.translate_text(profile_message),
                 action_required=False,
                 metadata={
-                    'spending_pattern': spending_pattern,
-                    'overall_utilization': overall_utilization
+                    "overall_utilization": overall_utilization,
+                    "safe_cards": safe_cards,
+                    "caution_cards": caution_cards,
+                    "danger_cards": danger_cards,
                 }
             ))
         
@@ -228,18 +243,21 @@ class CreditAnalyzer:
         
         return recommendations
     
-    def _days_until_due(self, due_date_str: str) -> int:
-        """Calculate days until payment due date"""
+    def _days_until_due(self, due_date_str: str) -> Optional[int]:
+        """Calculate days until payment due date. Returns None when parsing fails."""
         try:
             due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
             delta = due_date - datetime.now()
             return delta.days
         except:
-            return 999  # Default to far future if parsing fails
+            return None
     
     def _is_payment_overdue(self, due_date_str: str) -> bool:
         """Check if payment is overdue"""
-        return self._days_until_due(due_date_str) < 0
+        days_until_due = self._days_until_due(due_date_str)
+        if days_until_due is None:
+            return False
+        return days_until_due < 0
     
     def translate_text(self, text: str) -> dict:
         """

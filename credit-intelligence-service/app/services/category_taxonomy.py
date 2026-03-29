@@ -25,24 +25,16 @@ def _taxonomy_path() -> Path:
 def _load_shared_taxonomy() -> Dict[str, object]:
     path = _taxonomy_path()
     if not path.exists():
-        return {
-            "otherCategory": DEFAULT_OTHER_CATEGORY,
-            "unknownLabels": DEFAULT_UNKNOWN_LABELS,
-            "keywords": {},
-        }
+        raise RuntimeError(f"Shared taxonomy file not found: {path}")
 
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        return {
-            "otherCategory": DEFAULT_OTHER_CATEGORY,
-            "unknownLabels": DEFAULT_UNKNOWN_LABELS,
-            "keywords": {},
-        }
+        raise RuntimeError(f"Shared taxonomy file is not valid JSON: {path}")
 
     keywords = payload.get("keywords") if isinstance(payload, dict) else None
     if not isinstance(keywords, dict):
-        keywords = {}
+        raise RuntimeError("Shared taxonomy missing required 'keywords' object")
 
     sanitized_keywords: Dict[str, List[str]] = {}
     for category, values in keywords.items():
@@ -52,11 +44,11 @@ def _load_shared_taxonomy() -> Dict[str, object]:
 
     other_category = payload.get("otherCategory") if isinstance(payload, dict) else None
     if not isinstance(other_category, str) or not other_category:
-        other_category = DEFAULT_OTHER_CATEGORY
+        raise RuntimeError("Shared taxonomy missing required non-empty 'otherCategory' string")
 
     unknown_labels = payload.get("unknownLabels") if isinstance(payload, dict) else None
     if not isinstance(unknown_labels, list):
-        unknown_labels = DEFAULT_UNKNOWN_LABELS
+        raise RuntimeError("Shared taxonomy missing required 'unknownLabels' list")
     unknown_labels = [str(v).lower() for v in unknown_labels if isinstance(v, str)]
 
     return {

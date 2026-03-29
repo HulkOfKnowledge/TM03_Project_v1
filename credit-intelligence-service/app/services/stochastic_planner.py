@@ -53,6 +53,15 @@ class NoRewardDataError(Exception):
         self.code = code
 
 
+class InsufficientDataError(Exception):
+    """Raised when deterministic computation cannot proceed due to missing empirical data."""
+
+    def __init__(self, message: str, code: str, details: Optional[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.code = code
+        self.details = details or {}
+
+
 class StochasticPlanner:
     """Hybrid stochastic engine for category and card decisions."""
 
@@ -73,32 +82,29 @@ class StochasticPlanner:
             lookback_days=request.lookback_days,
         )
 
-        if not transactions:
-            default_probs = [
-                CategoryProbability(category=cat, probability=round(1 / len(category_space), 4))
-                for cat in category_space
-            ]
-            return SpendingProbabilityResponse(
-                user_id=request.user_id,
-                current_category="other",
-                probabilities=default_probs,
-                top_category="other",
-                transition_counts={cat: {dst: 0 for dst in category_space} for cat in category_space},
-                computed_at=datetime.utcnow().isoformat(),
+        if len(transactions) < 2:
+            raise InsufficientDataError(
+                "At least two in-window transactions are required to compute transition probabilities.",
+                code="INSUFFICIENT_SPENDING_HISTORY",
+                details={"required_transactions": 2, "observed_transactions": len(transactions)},
             )
 
         transitions = self._build_category_transition_counts(transactions, category_space)
         current_category = self._normalize_category(request.current_category) if request.current_category else transactions[-1].category
         current_category = current_category if current_category in category_space else "other"
 
-        alpha = 1.0
         row = transitions[current_category]
         row_total = sum(row.values())
-        denom = row_total + alpha * len(category_space)
+        if row_total <= 0:
+            raise InsufficientDataError(
+                "No observed outgoing transitions for the selected current category.",
+                code="INSUFFICIENT_CATEGORY_TRANSITIONS",
+                details={"current_category": current_category},
+            )
 
         probs = []
         for cat in category_space:
-            p = (row.get(cat, 0) + alpha) / denom
+            p = row.get(cat, 0) / row_total
             probs.append(CategoryProbability(category=cat, probability=round(p, 6)))
 
         probs.sort(key=lambda x: x.probability, reverse=True)
@@ -142,11 +148,16 @@ class StochasticPlanner:
             transactions=request.transactions,
             lookback_days=request.lookback_days,
         )
+        if len(txns) < 2:
+            raise InsufficientDataError(
+                "At least two in-window transactions are required for card-choice transition modeling.",
+                code="INSUFFICIENT_TRANSACTION_HISTORY",
+                details={"required_transactions": 2, "observed_transactions": len(txns)},
+            )
 
         card_limits = {card.card_id: card.credit_limit for card in eligible_cards}
         transition_by_card = self._build_card_bucket_transitions(
             transactions=txns,
-            merchant_category=merchant_category,
             card_limits=card_limits,
         )
 
@@ -154,16 +165,13 @@ class StochasticPlanner:
         action_values: List[CardActionValue] = []
 
         for card in eligible_cards:
-            transitions = transition_by_card.get(card.card_id) or self._default_bucket_transition_matrix()
+            transitions = transition_by_card.get(card.card_id)
+            if not transitions:
+                continue
             state_bucket = self._bucket_for_utilization(card.utilization_percentage)
-
-            value_vector = self._evaluate_action_markov_reward(
-                card=card,
-                merchant_category=merchant_category,
-                estimated_amount=request.estimated_amount,
-                transitions=transitions,
-                gamma=gamma,
-            )
+            state_row = transitions.get(state_bucket)
+            if not state_row:
+                continue
 
             immediate = self._state_reward(
                 card=card,
@@ -172,7 +180,12 @@ class StochasticPlanner:
                 estimated_amount=request.estimated_amount,
             )
             expected_next = sum(
-                transitions[state_bucket][dst] * value_vector[dst]
+                state_row[dst] * self._state_reward(
+                    card=card,
+                    util_bucket=dst,
+                    merchant_category=merchant_category,
+                    estimated_amount=request.estimated_amount,
+                )
                 for dst in ("low", "medium", "high")
             )
 
@@ -196,13 +209,18 @@ class StochasticPlanner:
                 )
             )
 
+        if not action_values:
+            raise InsufficientDataError(
+                "No utilization transition history was available for candidate cards.",
+                code="INSUFFICIENT_TRANSITION_HISTORY",
+            )
+
         action_values.sort(key=lambda a: a.q_value, reverse=True)
         recommended = action_values[0].card_id if action_values else eligible_cards[0].card_id
 
         baseline_card_id, estimated_monthly_spend = self._infer_baseline_and_monthly_spend(
             txns=txns,
             merchant_category=merchant_category,
-            fallback_amount=request.estimated_amount,
             lookback_days=request.lookback_days,
         )
 
@@ -308,15 +326,14 @@ class StochasticPlanner:
         self,
         txns: List[_Txn],
         merchant_category: str,
-        fallback_amount: float,
         lookback_days: int,
     ) -> Tuple[Optional[str], float]:
         if not txns:
-            return None, round(fallback_amount * 2, 2)
+            return None, 0.0
 
         filtered = [t for t in txns if t.category == merchant_category and t.amount > 0]
         if not filtered:
-            return None, round(fallback_amount * 2, 2)
+            return None, 0.0
 
         spend_by_card: Dict[str, float] = defaultdict(float)
         for txn in filtered:
@@ -379,7 +396,6 @@ class StochasticPlanner:
     def _build_card_bucket_transitions(
         self,
         transactions: List[_Txn],
-        merchant_category: str,
         card_limits: Dict[str, float],
     ) -> Dict[str, Dict[str, Dict[str, float]]]:
         grouped: Dict[str, List[_Txn]] = defaultdict(list)
@@ -393,68 +409,35 @@ class StochasticPlanner:
             counts = {s: {d: 0 for d in ("low", "medium", "high")} for s in ("low", "medium", "high")}
             card_limit = card_limits.get(card_id, 0)
             if card_limit <= 0:
-                matrices[card_id] = self._default_bucket_transition_matrix()
                 continue
 
             for current_txn, next_txn in zip(txns[:-1], txns[1:]):
-                if current_txn.category != merchant_category:
-                    continue
                 current_util = self._utilization_from_txn(current_txn, card_limit)
                 next_util = self._utilization_from_txn(next_txn, card_limit)
+                if current_util is None or next_util is None:
+                    continue
                 src = self._bucket_for_utilization(current_util)
                 dst = self._bucket_for_utilization(next_util)
                 counts[src][dst] += 1
 
-            matrices[card_id] = self._normalize_bucket_counts(counts)
+            normalized = self._normalize_bucket_counts(counts)
+            if normalized:
+                matrices[card_id] = normalized
 
         return matrices
 
     def _normalize_bucket_counts(self, counts: Dict[str, Dict[str, int]]) -> Dict[str, Dict[str, float]]:
-        alpha = 1.0
         normalized: Dict[str, Dict[str, float]] = {}
         for src in ("low", "medium", "high"):
             row = counts[src]
             total = sum(row.values())
-            denom = total + alpha * 3
+            if total <= 0:
+                continue
             normalized[src] = {
-                dst: (row.get(dst, 0) + alpha) / denom
+                dst: row.get(dst, 0) / total
                 for dst in ("low", "medium", "high")
             }
         return normalized
-
-    def _default_bucket_transition_matrix(self) -> Dict[str, Dict[str, float]]:
-        return {
-            "low": {"low": 0.7, "medium": 0.25, "high": 0.05},
-            "medium": {"low": 0.2, "medium": 0.6, "high": 0.2},
-            "high": {"low": 0.05, "medium": 0.35, "high": 0.6},
-        }
-
-    def _evaluate_action_markov_reward(
-        self,
-        card,
-        merchant_category: str,
-        estimated_amount: float,
-        transitions: Dict[str, Dict[str, float]],
-        gamma: float,
-        iterations: int = 20,
-    ) -> Dict[str, float]:
-        states = ("low", "medium", "high")
-        values = {s: 0.0 for s in states}
-
-        for _ in range(iterations):
-            updated = {}
-            for state in states:
-                reward = self._state_reward(
-                    card=card,
-                    util_bucket=state,
-                    merchant_category=merchant_category,
-                    estimated_amount=estimated_amount,
-                )
-                continuation = sum(transitions[state][nxt] * values[nxt] for nxt in states)
-                updated[state] = reward + gamma * continuation
-            values = updated
-
-        return values
 
     def _state_reward(self, card, util_bucket: str, merchant_category: str, estimated_amount: float) -> float:
         reward_rate = self._estimate_reward_rate(card, merchant_category)
@@ -463,7 +446,7 @@ class StochasticPlanner:
         util_midpoint = {"low": 20.0, "medium": 50.0, "high": 85.0}[util_bucket]
         post_util = min(100.0, util_midpoint + (estimated_amount / max(card.credit_limit, 1.0)) * 100)
 
-        apr = card.interest_rate or 19.99
+        apr = card.interest_rate if card.interest_rate is not None else 0.0
         interest_penalty = (apr / 100.0) * estimated_amount * 0.08
 
         util_penalty = 0.0
@@ -474,9 +457,9 @@ class StochasticPlanner:
 
         due_penalty = 0.0
         days_to_due = self._days_until_due(card.payment_due_date)
-        if 0 <= days_to_due <= 3:
+        if days_to_due is not None and 0 <= days_to_due <= 3:
             due_penalty = 1.5
-        elif 4 <= days_to_due <= 7:
+        elif days_to_due is not None and 4 <= days_to_due <= 7:
             due_penalty = 0.5
 
         return reward_gain - interest_penalty - util_penalty - due_penalty
@@ -731,12 +714,10 @@ class StochasticPlanner:
         normalized = "".join(ch.lower() if ch.isalnum() else " " for ch in value)
         return " ".join(token for token in normalized.split() if token)
 
-    def _utilization_from_txn(self, txn: _Txn, credit_limit: float) -> float:
+    def _utilization_from_txn(self, txn: _Txn, credit_limit: float) -> Optional[float]:
         if txn.balance is not None:
             return max(0.0, min(100.0, (txn.balance / credit_limit) * 100))
-        # Fallback approximation if running balance is missing
-        estimated_balance = max(0.0, txn.amount)
-        return max(0.0, min(100.0, (estimated_balance / credit_limit) * 100))
+        return None
 
     def _bucket_for_utilization(self, utilization: float) -> str:
         if utilization < 30:
@@ -762,12 +743,12 @@ class StochasticPlanner:
                 continue
         return None
 
-    def _days_until_due(self, due_date_str: Optional[str]) -> int:
+    def _days_until_due(self, due_date_str: Optional[str]) -> Optional[int]:
         if not due_date_str:
-            return 999
+            return None
         due_date = self._safe_parse_date(due_date_str)
         if due_date is None:
-            return 999
+            return None
         return (due_date - datetime.utcnow()).days
 
 

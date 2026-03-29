@@ -140,7 +140,7 @@ export interface SpendingProbabilityResponse {
 export interface CardChoiceRequest {
   merchantName: string;
   merchantCategory?: string | null;
-  estimatedAmount?: number;
+  estimatedAmount: number;
   lookbackDays?: number;
 }
 
