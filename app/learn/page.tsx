@@ -101,7 +101,7 @@ export default function LearnDashboard() {
 
           {/* Beginner's Checklist */}
           {checklistOpen && (
-            <section className="mb-16 sm:hidden">
+            <section className="mb-16 hidden">
               <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-10 pt-12 pr-12 md:pt-8 md:pr-8 relative">
                 <button
                   onClick={() => setChecklistOpen(false)}
