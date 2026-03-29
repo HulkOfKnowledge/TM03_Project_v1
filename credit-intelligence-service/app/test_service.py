@@ -446,9 +446,8 @@ def main():
         print("=" * 70)
         print("\nThe credit intelligence service is working correctly.")
         print("You can now:")
-        print("  1. Train the ML models: python app/ml/train.py")
-        print("  2. Start the service: python main.py")
-        print("  3. Test the API endpoints using Postman or curl")
+        print("  1. Start the service: python main.py")
+        print("  2. Test the API endpoints using Postman or curl")
         
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")

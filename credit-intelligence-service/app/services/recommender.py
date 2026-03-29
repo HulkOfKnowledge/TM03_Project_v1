@@ -12,7 +12,6 @@ from app.models.schemas import (
     ExpectedImpact,
     ProjectedSavings
 )
-from app.ml.models import ml_models
 
 
 class PaymentRecommender:
@@ -22,10 +21,6 @@ class PaymentRecommender:
     
     Handles the scenario: User owes $2000 across 3 cards but has only $1000 to pay
     """
-    
-    def __init__(self):
-        """Initialize recommender"""
-        self.ml_models = ml_models
     
     def recommend(
         self,

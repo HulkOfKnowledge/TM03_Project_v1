@@ -12,19 +12,14 @@ from app.models.schemas import (
     PaymentRecommendation,
     ExpectedImpact
 )
-from app.ml.models import ml_models
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 class CreditAnalyzer:
     """
     Credit analysis engine
-    Uses hybrid approach: rule-based logic + ML predictions
+    Uses deterministic rule-based logic.
     """
-    
-    def __init__(self):
-        """Initialize analyzer"""
-        self.ml_models = ml_models
     
     def analyze(self, request: AnalyzeCreditRequest) -> AnalyzeCreditResponse:
         """

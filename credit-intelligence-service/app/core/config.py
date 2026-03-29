@@ -32,10 +32,6 @@ class Settings(BaseSettings):
     # Database (if needed for caching)
     # DATABASE_URL: str = ""
     
-    # ML Model Configuration
-    MODEL_PATH: str = "./models"
-    USE_ML_MODEL: bool = False  # Set to True when ML model is ready
-    
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,

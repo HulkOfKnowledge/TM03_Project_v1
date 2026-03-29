@@ -88,15 +88,7 @@ pip install -r requirements.txt
 ```
 
 > **Note:** All packages require Python 3.13+.
-### 3. Train ML Models (Optional but Recommended)
-
-```bash
-python app/ml/train.py
-```
-
-This generates synthetic training data and trains all models. Models are saved to `app/ml/trained_models/`.
-
-### 4. Test the Service
+### 3. Test the Service
 
 ```bash
 python app/test_service.py
@@ -104,7 +96,7 @@ python app/test_service.py
 
 This runs comprehensive tests for all components.
 
-### 5. Start the Service
+### 4. Start the Service
 
 ```bash
 python main.py

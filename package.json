@@ -17,7 +17,6 @@
     "db:migrate": "supabase migration up",
     "db:reset": "supabase db reset",
     "db:seed": "tsx scripts/seed.ts",
-    "ml:train": "node scripts/run-python.js app/ml/train.py",
     "ml:test": "node scripts/run-python.js app/test_service.py"
   },
   "dependencies": {

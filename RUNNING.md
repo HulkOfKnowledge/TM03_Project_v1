@@ -16,19 +16,7 @@ This will:
 - Install all dependencies
 - Run tests to verify everything works
 
-### 2. Train ML Models (Optional but Recommended)
-
-```bash
-npm run ml:train
-```
-
-Or manually:
-```bash
-cd credit-intelligence-service
-./venv/bin/python app/ml/train.py
-```
-
-### 3. Run Both Apps Concurrently
+### 2. Run Both Apps Concurrently
 
 **Development Mode:**
 ```bash
@@ -56,7 +44,6 @@ npm run start        # Production mode
 ```bash
 npm run dev:python   # Run Python service
 npm run ml:test      # Run Python service tests
-npm run ml:train     # Train ML models
 ```
 
 ## Available Endpoints
@@ -75,14 +62,14 @@ npm run ml:train     # Train ML models
 The Next.js API routes communicate with the Python service:
 
 ```
-User → Next.js Frontend → Next.js API Routes → Python Service → ML Models
+User → Next.js Frontend → Next.js API Routes → Python Service
 ```
 
 Example flow:
 1. User views credit card analysis page
 2. Frontend calls `/api/credit-intelligence/analyze`
 3. Next.js API route calls Python service at `http://localhost:8000/api/v1/analyze`
-4. Python service analyzes data using ML models and rules
+4. Python service analyzes data using deterministic rules and stochastic planning
 5. Results returned through the chain back to user
 
 ## Environment Variables
@@ -109,11 +96,6 @@ cd credit-intelligence-service
 ./setup.sh  # Re-run setup
 ```
 
-### ML models not loaded
-```bash
-npm run ml:train  # Train the models
-```
-
 ### Port conflicts
 - Next.js default: 3000 (can change with `PORT=3001 npm run dev`)
 - Python default: 8000 (change in `credit-intelligence-service/main.py`)
@@ -126,11 +108,11 @@ npm run ml:train  # Train the models
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  ┌────────────────────┐         ┌─────────────────────────┐ │
-│  │   Next.js App      │         │  Python ML Service      │ │
+│  │   Next.js App      │         │  Python Intelligence    │ │
 │  │   Port: 3000       │────────▶│  Port: 8000            │ │
 │  │                    │  HTTP   │                         │ │
 │  │  - Frontend        │         │  - Credit Analysis      │ │
-│  │  - API Routes      │         │  - ML Models            │ │
+│  │  - API Routes      │         │  - Stochastic Planning  │ │
 │  │  - Auth            │         │  - Recommendations      │ │
 │  └────────────────────┘         │  - Transaction Insights │ │
 │                                  └─────────────────────────┘ │

@@ -221,14 +221,7 @@ To fully enable the ML features, ensure:
    CREDIT_INTELLIGENCE_API_KEY=your_api_key_here
    ```
 
-3. **ML Models Trained**:
-   ```bash
-   npm run ml:train
-   # or
-   cd credit-intelligence-service && source venv/bin/activate && python -m app.ml.train
-   ```
-
-4. **Test Both Services**:
+3. **Test Both Services**:
    ```bash
    npm run dev:all  # Runs Next.js + Python concurrently
    ```
