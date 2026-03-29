@@ -26,7 +26,6 @@ import { useTheme } from '@/components/ThemeProvider';
 import { MetricCard } from './MetricCard';
 import { ChartSection } from './ChartSection';
 import { ChartSettingsModal } from './ChartSettingsModal';
-import { PaymentHistoryTable } from './PaymentHistoryTable';
 import { RecommendedActions } from './RecommendedActions';
 import { CreditAnalysisSkeleton } from './CreditAnalysisSkeleton';
 import { PaymentRecommendationModal } from '../PaymentRecommendationModal';
@@ -62,7 +61,6 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
     spendingChartData,
     spendingChartOptions,
     chartMetrics,
-    filteredPaymentHistory,
   } = useCreditAnalysis(connectedCards);
 
   const handleCompareToggle = (cardId: string) =>
@@ -207,22 +205,6 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
       >
         <Line key={`spend-${resolvedTheme}`} data={spendingChartData} options={spendingChartOptions} />
       </ChartSection>
-
-      {/* Payment History */}
-      <PaymentHistoryTable
-        data={filteredPaymentHistory}
-        filterType={filterType}
-        onFilterTypeChange={setFilterType}
-        selectedMonth={selectedMonth}
-        onMonthChange={setSelectedMonth}
-        selectedYear={selectedYear}
-        onYearChange={setSelectedYear}
-        startDate={startDate}
-        onStartDateChange={setStartDate}
-        endDate={endDate}
-        onEndDateChange={setEndDate}
-        today={today}
-      />
 
       {/* Recommended Actions */}
       <RecommendedActions insights={analysisData?.mlInsights?.insights} />
