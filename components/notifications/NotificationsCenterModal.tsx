@@ -48,6 +48,9 @@ export function NotificationsCenterModal({
   const [selectedNotification, setSelectedNotification] = useState<AppNotification | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const isCardDangerNotification = (item: AppNotification) =>
+    item.kind === 'system' && item.metadata?.source === 'card-utilization';
+
   useEffect(() => {
     if (!isOpen) {
       setSelectedNotification(null);
@@ -255,6 +258,11 @@ export function NotificationsCenterModal({
                             {item.kind === 'reward_optimization' && (
                               <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
                             )}
+                            {isCardDangerNotification(item) && (
+                              <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 sm:text-sm">
+                                Above 30% utilization threshold
+                              </p>
+                            )}
                           </div>
                         ) : (
                           <div className="flex items-start gap-3">
@@ -272,6 +280,11 @@ export function NotificationsCenterModal({
 
                               {item.kind === 'reward_optimization' && (
                                 <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
+                              )}
+                              {isCardDangerNotification(item) && (
+                                <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 sm:text-sm">
+                                  Above 30% utilization threshold
+                                </p>
                               )}
                             </div>
                           </div>

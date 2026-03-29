@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Plus,
   BookOpen,
@@ -17,21 +17,19 @@ import {
   CreditCard,
   ShieldCheck,
   AlertTriangle,
-  X,
 } from 'lucide-react';
 import type { ConnectedCard } from '@/types/card.types';
 import { getCardGradientIndex } from '@/lib/utils';
 import { CreditCardDisplay } from '@/components/cards/CreditCardDisplay';
 import { useUser } from '@/hooks/useAuth';
 
-// Props 
+// Props
 interface CardOverviewSectionProps {
   cards: ConnectedCard[];
   onAddCard?: () => void;
 }
 
 // Helpers
-
 function formatCurrency(amount: number | null | undefined): string {
   const safe = typeof amount === 'number' && isFinite(amount) ? amount : 0;
   return new Intl.NumberFormat('en-CA', {
@@ -44,7 +42,6 @@ function formatCurrency(amount: number | null | undefined): string {
     .replace('CA', '');
 }
 
-/** Formats ISO/date string → "Month DD" e.g. "March 19" */
 function formatPaymentDue(raw: string | null | undefined): string {
   if (!raw) return '';
   const d = new Date(raw);
@@ -74,84 +71,6 @@ function getUtilizationStatus(pct: number): 'safe' | 'caution' | 'danger' {
   if (pct <= 25) return 'safe';
   if (pct <= 30) return 'caution';
   return 'danger';
-}
-
-function getCardsNeedingAttention(cards: ConnectedCard[]) {
-  return cards
-    .filter((c) => safeUtilization(c.utilizationPercentage) > 30)
-    .map((c) => ({
-      id: c.id,
-      bank: c.bank,
-      lastFour: c.lastFour,
-      utilization: safeUtilization(c.utilizationPercentage),
-    }));
-}
-
-// Carousel Dots
-
-interface CarouselDotsProps {
-  count: number;
-  activeIndex: number;
-  onSelect: (index: number) => void;
-  variant?: 'default' | 'danger';
-}
-
-function CarouselDots({ count, activeIndex, onSelect, variant = 'default' }: CarouselDotsProps) {
-  if (count <= 1) return null;
-
-  const activeColor = variant === 'danger' ? 'bg-red-500' : 'bg-brand';
-  const inactiveColor = 'bg-gray-300 dark:bg-gray-600';
-
-  return (
-    <div className="flex items-center justify-center gap-2 mt-3">
-      {Array.from({ length: count }).map((_, idx) => (
-        <button
-          key={idx}
-          onClick={() => onSelect(idx)}
-          className={`h-2 rounded-full transition-all duration-300 ${
-            idx === activeIndex ? `w-6 ${activeColor}` : `w-2 ${inactiveColor}`
-          }`}
-          aria-label={`View item ${idx + 1}`}
-        />
-      ))}
-    </div>
-  );
-}
-
-// Card Needs Attention Alert
-
-interface CardNeedsAttentionAlertProps {
-  bank: string;
-  lastFour: string;
-  utilization: number;
-  onClose?: () => void;
-}
-
-function CardNeedsAttentionAlert({ bank, lastFour, utilization, onClose }: CardNeedsAttentionAlertProps) {
-  return (
-    <div className="rounded-xl bg-white dark:bg-neutral-800 border border-red-500 dark:border-red-500 p-4 sm:p-5 flex items-center gap-4 relative">
-      {onClose && (
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors group"
-          aria-label="Close alert"
-        >
-          <X className="h-4 w-4 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200" />
-        </button>
-      )}
-      <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center">
-        <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-500" strokeWidth={2} />
-      </div>
-      <div className={`flex-1 min-w-0 ${onClose ? 'pr-8 sm:pr-10' : ''}`}>
-        <p className="text-sm sm:text-base text-gray-900 dark:text-white mb-1">
-          Your {bank} card ending with {lastFour} needs urgent attention
-        </p>
-        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-          {utilization}% credit utilization • Make a payment to improve your credit score
-        </p>
-      </div>
-    </div>
-  );
 }
 
 // Trust Banner
@@ -439,7 +358,6 @@ function ConsolidatedTiles({ cardCount, totalCreditLimit, totalSpent, earliestDu
 
 function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCard[]; cardholderName: string }) {
   const isSingle = cardList.length === 1;
-  const [alertIndex, setAlertIndex] = useState(0);
 
   // For single card, show the individual card view
   if (isSingle) {
@@ -481,20 +399,6 @@ function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCar
     .sort()
     .at(0) ?? null;
 
-  // Get cards needing attention (>30% utilization)
-  const cardsNeedingAttention = getCardsNeedingAttention(cardList);
-
-  // Auto-advance carousel every 3 seconds
-  useEffect(() => {
-    if (cardsNeedingAttention.length <= 1) return;
-    
-    const interval = setInterval(() => {
-      setAlertIndex((prev) => (prev + 1) % cardsNeedingAttention.length);
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [cardsNeedingAttention.length]);
-
   return (
     <>
       <TrustBanner />
@@ -504,23 +408,6 @@ function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCar
         totalSpent={totalBalance}
         earliestDue={earliestDue}
       />
-      
-      {/* Cards Needing Attention - Carousel */}
-      {cardsNeedingAttention.length > 0 && (
-        <div className="mb-6 sm:mb-8">
-          <CardNeedsAttentionAlert
-            bank={cardsNeedingAttention[alertIndex].bank}
-            lastFour={cardsNeedingAttention[alertIndex].lastFour}
-            utilization={cardsNeedingAttention[alertIndex].utilization}
-          />
-          <CarouselDots
-            count={cardsNeedingAttention.length}
-            activeIndex={alertIndex}
-            onSelect={setAlertIndex}
-            variant="danger"
-          />
-        </div>
-      )}
       <UtilizationBar percent={util} />
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10 flex items-start gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
         <Info className="h-4 w-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
@@ -534,19 +421,12 @@ function ConsolidatedView({ cardList, cardholderName }: { cardList: ConnectedCar
 
 function IndividualView({ cardList, cardholderName }: { cardList: ConnectedCard[]; cardholderName: string }) {
   const [index, setIndex] = useState(0);
-  const [closedAlerts, setClosedAlerts] = useState<Set<string>>(new Set());
   const prev = useCallback(() => setIndex((i) => (i === 0 ? cardList.length - 1 : i - 1)), [cardList.length]);
   const next = useCallback(() => setIndex((i) => (i === cardList.length - 1 ? 0 : i + 1)), [cardList.length]);
 
   const card = cardList[index];
   const util = safeUtilization(card.utilizationPercentage);
   const status = getUtilizationStatus(util);
-
-  const handleCloseAlert = () => {
-    setClosedAlerts(prev => new Set([...prev, card.id]));
-  };
-
-  const isAlertClosed = closedAlerts.has(card.id);
 
   return (
     <>
@@ -611,19 +491,7 @@ function IndividualView({ cardList, cardholderName }: { cardList: ConnectedCard[
         paymentDue={card.paymentDueDate}
         cardholderName={cardholderName}
       />
-      
-      {/* Urgent Attention Alert for Individual Card */}
-      {status === 'danger' && !isAlertClosed && (
-        <div className="mb-6 sm:mb-8">
-          <CardNeedsAttentionAlert
-            bank={card.bank}
-            lastFour={card.lastFour}
-            utilization={util}
-            onClose={handleCloseAlert}
-          />
-        </div>
-      )}
-      
+
       <UtilizationBar percent={util} />
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10 flex items-start gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
         <Info className="h-4 w-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />

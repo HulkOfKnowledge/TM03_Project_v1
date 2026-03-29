@@ -16,6 +16,7 @@ import {
   CreditCard, 
   User, 
   Bell,
+  AlertTriangle,
   LogOut,
   Settings,
   HelpCircle,
@@ -28,6 +29,7 @@ import { handleLogout } from '@/lib/auth';
 import { useIsDarkMode, useTheme } from '@/hooks/useTheme';
 import { useReadNotificationIds } from '@/hooks/useReadNotificationIds';
 import { useUser } from '@/hooks/useAuth';
+import { useCard } from '@/contexts/CardContext';
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -71,10 +73,68 @@ const CARD_SUB_NAV: SubNavItem[] = [
   { label: 'Card Offers', href: '/cards/offers' },
 ];
 
+const DANGER_UTILIZATION_THRESHOLD = 30;
+
+function safeUtilization(value: number | null | undefined): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(Math.max(parsed, 0), 100);
+}
+
+function getCardsInDangerZone(cards: Array<{ id: string; bank: string; lastFour: string; utilizationPercentage: number | null | undefined }>) {
+  return cards
+    .map((card) => ({
+      id: card.id,
+      bank: card.bank,
+      lastFour: card.lastFour,
+      utilization: Number(safeUtilization(card.utilizationPercentage).toFixed(2)),
+    }))
+    .filter((card) => card.utilization > DANGER_UTILIZATION_THRESHOLD)
+    .sort((a, b) => b.utilization - a.utilization);
+}
+
+function buildCardDangerNotification(
+  cardsInDangerZone: Array<{ id: string; bank: string; lastFour: string; utilization: number }>,
+): AppNotification | null {
+  if (cardsInDangerZone.length === 0) return null;
+
+  const now = new Date().toISOString();
+  const idsSignature = cardsInDangerZone.map((card) => card.id).sort().join(',');
+  const topCard = cardsInDangerZone[0];
+  const singleCard = cardsInDangerZone.length === 1;
+
+  const title = singleCard
+    ? 'Utilization Alert: Danger Zone'
+    : `Utilization Alert: ${cardsInDangerZone.length} Cards in Danger Zone`;
+
+  const message = singleCard
+    ? `${topCard.bank} ••${topCard.lastFour} is at ${topCard.utilization}% utilization. 30% is the recommended maximum. Going above 30% can lower your credit score.`
+    : `${cardsInDangerZone.length} of your cards are above 30% utilization. 30% is the recommended maximum. Going above 30% can lower your credit score. Highest card: ${topCard.bank} ••${topCard.lastFour} at ${topCard.utilization}%.`;
+
+  return {
+    id: `card-danger-zone:${idsSignature}`,
+    kind: 'system',
+    timeframe: 'daily',
+    createdAt: now,
+    eventDate: now,
+    title,
+    message,
+    actionUrl: '/cards/analysis',
+    severity: 'critical',
+    metadata: {
+      source: 'card-utilization',
+      threshold: DANGER_UTILIZATION_THRESHOLD,
+      cardCount: cardsInDangerZone.length,
+      cards: cardsInDangerZone,
+    },
+  };
+}
+
 export function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, profile } = useUser();
+  const { connectedCards } = useCard();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -91,6 +151,22 @@ export function Navigation() {
   const { setTheme } = useTheme();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
+  const cardsInDangerZone = useMemo(() => getCardsInDangerZone(connectedCards), [connectedCards]);
+  const cardDangerNotification = useMemo(() => buildCardDangerNotification(cardsInDangerZone), [cardsInDangerZone]);
+  const mergedNotifications = useMemo(() => {
+    if (!cardDangerNotification) return notifications;
+
+    const filteredApiNotifications = notifications.filter((item) => item.id !== cardDangerNotification.id);
+    return [cardDangerNotification, ...filteredApiNotifications];
+  }, [notifications, cardDangerNotification]);
+  const hasDangerNotification = Boolean(cardDangerNotification);
+  const shouldPulseDanger = Boolean(
+    cardDangerNotification && !readNotificationIds.has(cardDangerNotification.id),
+  );
+  const showMobileDangerIcon = hasDangerNotification && shouldPulseDanger;
+
+  const isCardDangerNotification = (item: AppNotification) =>
+    item.kind === 'system' && item.metadata?.source === 'card-utilization';
 
   const onLogout = async () => {
     setShowUserMenu(false);
@@ -157,6 +233,33 @@ export function Navigation() {
     setShowThemeSubmenu(false);
   };
 
+  const toggleNotifications = () => {
+    setShowNotifications((prev) => !prev);
+    setShowUserMenu(false);
+    setShowThemeSubmenu(false);
+  };
+
+  const openNotificationsCenter = (item: AppNotification | null = null) => {
+    if (item) {
+      markAsRead(item.id);
+    }
+
+    setSelectedNotification(item);
+    setShowNotifications(false);
+    setShowUserMenu(false);
+    setShowThemeSubmenu(false);
+    setShowNotificationsCenter(true);
+  };
+
+  const openDangerNotification = () => {
+    if (!cardDangerNotification) {
+      toggleNotifications();
+      return;
+    }
+
+    openNotificationsCenter(cardDangerNotification);
+  };
+
   // Determine which nav item should show subnav
   const currentSubNavItem = activeDesktopSubNavItem;
   const currentNavItem = navItems.find(item => item.label === currentSubNavItem);
@@ -171,8 +274,8 @@ export function Navigation() {
   }, [navItems]);
 
   useEffect(() => {
-    setUnreadNotifications(notifications.filter((item) => !readNotificationIds.has(item.id)).length);
-  }, [notifications, readNotificationIds]);
+    setUnreadNotifications(mergedNotifications.filter((item) => !readNotificationIds.has(item.id)).length);
+  }, [mergedNotifications, readNotificationIds]);
 
   useEffect(() => {
     const loadNotifications = async () => {
@@ -249,16 +352,10 @@ export function Navigation() {
     };
   }, [showNotifications]);
 
-  const notificationPreview = useMemo(() => notifications.slice(0, 6), [notifications]);
+  const notificationPreview = useMemo(() => mergedNotifications.slice(0, 6), [mergedNotifications]);
 
   const openNotificationDetails = (item: AppNotification) => {
-    markAsRead(item.id);
-
-    setSelectedNotification(item);
-    setShowNotifications(false);
-    setShowUserMenu(false);
-    setShowThemeSubmenu(false);
-    setShowNotificationsCenter(true);
+    openNotificationsCenter(item);
   };
 
   // Check if subnav item is active
@@ -332,16 +429,52 @@ export function Navigation() {
             <div className="flex items-center space-x-1">
               {/* Notifications */}
               <div className="relative" ref={notificationsContainerRef}>
+                <div className="hidden lg:flex items-center gap-2">
+                  {hasDangerNotification && (
+                    <button
+                      onClick={openDangerNotification}
+                      className="relative p-2 rounded-full border-2 border-red-500 text-red-600 dark:text-red-400 hover:border-red-600 dark:hover:border-red-300 transition-colors"
+                      aria-label="Critical card attention notification"
+                    >
+                      {shouldPulseDanger && (
+                        <span className="pointer-events-none absolute inset-[3px] rounded-full border border-red-500/70 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                      )}
+                      <AlertTriangle className="relative h-5 w-5" />
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={toggleNotifications}
+                    className="relative p-2 rounded-full bg-brand hover:bg-brand/90 transition-colors"
+                    aria-label="Open notifications"
+                  >
+                    <Bell className="h-5 w-5 text-white" />
+                    {unreadNotifications > 0 && (
+                      <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
+                    )}
+                  </button>
+                </div>
+
                 <button
-                  onClick={() => {
-                    setShowNotifications(!showNotifications);
-                    setShowUserMenu(false);
-                    setShowThemeSubmenu(false);
-                  }}
-                  className="relative p-2 rounded-full bg-brand hover:bg-brand/90 transition-colors"
+                  onClick={showMobileDangerIcon ? openDangerNotification : toggleNotifications}
+                  className={`relative lg:hidden p-2 rounded-full transition-colors ${
+                    showMobileDangerIcon
+                      ? 'border-2 border-red-500 text-red-600 dark:text-red-400 hover:border-red-600 dark:hover:border-red-300'
+                      : 'bg-brand hover:bg-brand/90'
+                  }`}
+                  aria-label={showMobileDangerIcon ? 'Critical card attention notification' : 'Open notifications'}
                 >
-                  <Bell className="h-5 w-5 text-white" />
-                  {unreadNotifications > 0 && (
+                  {showMobileDangerIcon ? (
+                    <>
+                      {shouldPulseDanger && (
+                        <span className="pointer-events-none absolute inset-[3px] rounded-full border border-red-500/70 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                      )}
+                      <AlertTriangle className="relative h-5 w-5" />
+                    </>
+                  ) : (
+                    <Bell className="h-5 w-5 text-white" />
+                  )}
+                  {!showMobileDangerIcon && unreadNotifications > 0 && (
                     <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
                   )}
                 </button>
@@ -396,6 +529,9 @@ export function Navigation() {
                                 {item.kind === 'reward_optimization' && (
                                   <p className="mt-1 text-xs text-brand">+${item.incrementalReward.toFixed(2)} potential</p>
                                 )}
+                                {isCardDangerNotification(item) && (
+                                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">Above 30% utilization threshold</p>
+                                )}
                               </button>
                             );
                             })}
@@ -406,9 +542,7 @@ export function Navigation() {
                         <button
                           type="button"
                           onClick={() => {
-                            setShowNotifications(false);
-                            setSelectedNotification(null);
-                            setShowNotificationsCenter(true);
+                            openNotificationsCenter(null);
                           }}
                           className="w-full px-3 py-2 rounded-lg border border-brand text-brand font-medium hover:bg-brand hover:text-white transition-colors text-sm md:text-base"
                         >
@@ -692,7 +826,7 @@ export function Navigation() {
           setShowNotificationsCenter(false);
           setSelectedNotification(null);
         }}
-        notifications={notifications}
+        notifications={mergedNotifications}
         notificationsLoading={notificationsLoading}
         readNotificationIds={readNotificationIds}
         onMarkAsRead={markAsRead}
