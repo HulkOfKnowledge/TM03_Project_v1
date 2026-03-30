@@ -169,7 +169,8 @@ function EmptyState({ onAddCard }: { onAddCard?: () => void }) {
 
 function UtilizationBar({ percent }: { percent: number }) {
   const dotColor = utilizationDotColor(percent);
-  const needleLeft = `clamp(0.5%, ${percent}%, 99.5%)`;
+  const clampedPercent = Math.min(Math.max(percent, 0), 100);
+  const fillClipRight = `${100 - clampedPercent}%`;
 
   return (
     <div className="space-y-2">
@@ -186,21 +187,17 @@ function UtilizationBar({ percent }: { percent: number }) {
         </div>
       </div>
 
-      {/* Needle + bar */}
-      <div className="relative pt-4">
-        {/* Needle */}
-        <div
-          className="absolute top-0 z-10 flex flex-col items-center transition-all duration-700"
-          style={{ left: needleLeft }}
-        >
-          <div className="w-[2px] h-12  bg-gray-700 dark:bg-gray-200" />
+      {/* Track fill bar */}
+      <div className="pt-2">
+        <div className="relative h-3 w-full rounded-full bg-gray-200 dark:bg-neutral-700 overflow-hidden">
+          <div
+            className="absolute inset-0 rounded-full transition-all duration-700"
+            style={{
+              background: 'linear-gradient(to right, #22c55e 0%, #84cc16 20%, #eab308 27%, #f97316 30%, #ef4444 40%)',
+              clipPath: `inset(0 ${fillClipRight} 0 0)`,
+            }}
+          />
         </div>
-
-        {/* Gradient bar scaled: 0-25% safe (green), 26-30% caution (yellow), 30%+ danger (orange-red) */}
-        <div
-          className="h-4 sm:h-5 w-full rounded-full"
-          style={{ background: 'linear-gradient(to right, #22c55e 0%, #84cc16 20%, #eab308 27%, #f97316 30%, #ef4444 40%)' }}
-        />
       </div>
 
       {/* Zone labels */}
