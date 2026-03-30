@@ -16,31 +16,15 @@ export function SmartForecastSkeleton() {
         <Skeleton className="h-8 w-72" />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-3">
-        <Skeleton className="h-32 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
-      </div>
-
-      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
-        <Skeleton className="mb-4 h-6 w-56" />
-        <Skeleton className="mb-6 h-4 w-full max-w-2xl" />
-        <Skeleton className="h-64 w-full rounded-lg sm:h-80" />
-      </div>
-
-      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
-        <Skeleton className="mb-4 h-6 w-56" />
-        <Skeleton className="mb-6 h-4 w-full max-w-2xl" />
-        <Skeleton className="h-64 w-full rounded-lg sm:h-80" />
-      </div>
-
       <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6">
         <Skeleton className="mb-4 h-6 w-56" />
+        <Skeleton className="mb-4 h-px w-full" />
         <Skeleton className="mb-6 h-4 w-full max-w-2xl" />
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Skeleton className="h-64 w-full rounded-lg sm:h-80" />
           <Skeleton className="h-64 w-full rounded-lg sm:h-80" />
         </div>
+        <Skeleton className="mt-3 h-3 w-48" />
       </div>
     </div>
   );

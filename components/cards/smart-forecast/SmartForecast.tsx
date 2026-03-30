@@ -379,6 +379,17 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
                         position: 'bottom',
                         labels: { color: isDark ? '#9CA3AF' : '#6B7280' },
                       },
+                      tooltip: {
+                        callbacks: {
+                          label: (context: { label: string; parsed: number; dataset: { data: number[] } }) => {
+                            const value = Number(context.parsed ?? 0);
+                            const values = Array.isArray(context.dataset?.data) ? context.dataset.data : [];
+                            const total = values.reduce((sum, item) => sum + Number(item || 0), 0);
+                            const percentage = total > 0 ? (value / total) * 100 : 0;
+                            return `${context.label}: ${formatCurrency(value)} (${percentage.toFixed(1)}%)`;
+                          },
+                        },
+                      },
                     },
                   }}
                 />
