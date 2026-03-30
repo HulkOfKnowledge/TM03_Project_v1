@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Home, 
@@ -16,7 +16,6 @@ import {
   CreditCard, 
   User, 
   Bell,
-  AlertTriangle,
   LogOut,
   Settings,
   HelpCircle,
@@ -39,11 +38,7 @@ import {
 import { Submenu, SubmenuItem } from '@/components/ui/Submenu';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationsCenterModal } from '@/components/notifications/NotificationsCenterModal';
-import { NotificationDropdownSkeleton } from '@/components/notifications/NotificationSkeletons';
 import type { AppNotification, NotificationsSummary } from '@/types/notification.types';
-import {
-  formatNotificationTimestamp,
-} from '@/lib/notifications/ui';
 
 interface SubNavItem {
   label: string;
@@ -146,7 +141,6 @@ export function Navigation() {
   const { connectedCards } = useCard();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showThemeSubmenu, setShowThemeSubmenu] = useState(false);
   const [showNotificationsCenter, setShowNotificationsCenter] = useState(false);
   const [activeDesktopSubNavItem, setActiveDesktopSubNavItem] = useState<string | null>(null);
@@ -156,7 +150,6 @@ export function Navigation() {
   const [selectedNotification, setSelectedNotification] = useState<AppNotification | null>(null);
   const [dangerEventDateIso, setDangerEventDateIso] = useState<string | null>(null);
   const { readNotificationIds, markAsRead, markAllAsRead } = useReadNotificationIds();
-  const notificationsContainerRef = useRef<HTMLDivElement | null>(null);
   const isDark = useIsDarkMode();
   const { setTheme } = useTheme();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -204,14 +197,6 @@ export function Navigation() {
       (a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime(),
     );
   }, [notifications, cardDangerNotification]);
-  const hasDangerNotification = Boolean(cardDangerNotification);
-  const shouldPulseDanger = Boolean(
-    cardDangerNotification && !readNotificationIds.has(cardDangerNotification.id),
-  );
-  const showMobileDangerIcon = hasDangerNotification && shouldPulseDanger;
-
-  const isCardDangerNotification = (item: AppNotification) =>
-    item.kind === 'system' && item.metadata?.source === 'card-utilization';
 
   const onLogout = async () => {
     setShowUserMenu(false);
@@ -278,31 +263,15 @@ export function Navigation() {
     setShowThemeSubmenu(false);
   };
 
-  const toggleNotifications = () => {
-    setShowNotifications((prev) => !prev);
-    setShowUserMenu(false);
-    setShowThemeSubmenu(false);
-  };
-
-  const openNotificationsCenter = (item: AppNotification | null = null) => {
+  const openNotificationsModal = (item: AppNotification | null = null) => {
     if (item) {
       markAsRead(item.id);
     }
 
     setSelectedNotification(item);
-    setShowNotifications(false);
     setShowUserMenu(false);
     setShowThemeSubmenu(false);
     setShowNotificationsCenter(true);
-  };
-
-  const openDangerNotification = () => {
-    if (!cardDangerNotification) {
-      toggleNotifications();
-      return;
-    }
-
-    openNotificationsCenter(cardDangerNotification);
   };
 
   // Determine which nav item should show subnav
@@ -401,43 +370,6 @@ export function Navigation() {
     router.prefetch('/cards/analysis');
   }, [router, showNavItems]);
 
-  useEffect(() => {
-    if (!showNotifications) return;
-
-    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-
-      if (notificationsContainerRef.current?.contains(target)) {
-        return;
-      }
-
-      setShowNotifications(false);
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowNotifications(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('touchstart', handlePointerDown);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('touchstart', handlePointerDown);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [showNotifications]);
-
-  const notificationPreview = useMemo(() => mergedNotifications.slice(0, 6), [mergedNotifications]);
-
-  const openNotificationDetails = (item: AppNotification) => {
-    openNotificationsCenter(item);
-  };
-
   // Check if subnav item is active
   const isSubNavActive = (href: string) => {
     return pathname === href;
@@ -508,131 +440,29 @@ export function Navigation() {
             {/* Right Side Actions */}
             <div className="flex items-center space-x-1">
               {/* Notifications */}
-              <div className="relative" ref={notificationsContainerRef}>
-                <div className="hidden lg:flex items-center gap-2">
-                  {hasDangerNotification && (
-                    <button
-                      onClick={openDangerNotification}
-                      className="relative p-2 rounded-full border-2 border-red-500 text-red-600 dark:text-red-400 hover:border-red-600 dark:hover:border-red-300 transition-colors"
-                      aria-label="Critical card attention notification"
-                    >
-                      {shouldPulseDanger && (
-                        <span className="pointer-events-none absolute inset-[3px] rounded-full border border-red-500/70 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite]" />
-                      )}
-                      <AlertTriangle className="relative h-5 w-5" />
-                    </button>
-                  )}
-                  
-                  <button
-                    onClick={toggleNotifications}
-                    className="relative p-2 rounded-full bg-brand hover:bg-brand/90 transition-colors"
-                    aria-label="Open notifications"
-                  >
-                    <Bell className="h-5 w-5 text-white" />
-                    {unreadNotifications > 0 && (
-                      <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
-                    )}
-                  </button>
-                </div>
-
+              <div className="hidden lg:block">
                 <button
-                  onClick={showMobileDangerIcon ? openDangerNotification : toggleNotifications}
-                  className={`relative lg:hidden p-2 rounded-full transition-colors ${
-                    showMobileDangerIcon
-                      ? 'border-2 border-red-500 text-red-600 dark:text-red-400 hover:border-red-600 dark:hover:border-red-300'
-                      : 'bg-brand hover:bg-brand/90'
-                  }`}
-                  aria-label={showMobileDangerIcon ? 'Critical card attention notification' : 'Open notifications'}
+                  onClick={() => openNotificationsModal(null)}
+                  className="relative p-2 rounded-full bg-brand hover:bg-brand/90 transition-colors"
+                  aria-label="Open notifications"
                 >
-                  {showMobileDangerIcon ? (
-                    <>
-                      {shouldPulseDanger && (
-                        <span className="pointer-events-none absolute inset-[3px] rounded-full border border-red-500/70 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite]" />
-                      )}
-                      <AlertTriangle className="relative h-5 w-5" />
-                    </>
-                  ) : (
-                    <Bell className="h-5 w-5 text-white" />
-                  )}
-                  {!showMobileDangerIcon && unreadNotifications > 0 && (
+                  <Bell className="h-5 w-5 text-white" />
+                  {unreadNotifications > 0 && (
                     <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
                   )}
                 </button>
-
-                {/* Notifications Dropdown */}
-                {showNotifications && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowNotifications(false)}
-                    />
-                    <div className="fixed left-3 right-3 top-16 mt-2 z-50 overflow-hidden rounded-lg border border-border bg-background shadow-lg sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80">
-                      <div className="border-b border-border p-4">
-                        <h3 className="font-semibold">Notifications</h3>
-                      </div>
-                      <div className="max-h-[min(60vh,24rem)] overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] dark:[scrollbar-color:#374151_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb:hover]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-600">
-                        {notificationsLoading ? (
-                          <NotificationDropdownSkeleton rows={4} />
-                        ) : notificationPreview.length === 0 ? (
-                          <div className="p-8 text-center text-muted-foreground">
-                            <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">No new notifications</p>
-                          </div>
-                        ) : (
-                          <div className="divide-y divide-border">
-                            {notificationPreview.map((item) => {
-                              const isRead = readNotificationIds.has(item.id);
-
-                              return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => {
-                                  openNotificationDetails(item);
-                                }}
-                                className={`block w-full text-left px-4 py-3 transition-colors hover:bg-accent/50 dark:hover:bg-accent/40 ${
-                                  isRead ? 'bg-background' : 'bg-brand/5 dark:bg-brand/10'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <p className={`line-clamp-1 text-sm ${isRead ? ' text-foreground/90' : 'font-medium text-foreground'}`}>
-                                    {item.title}
-                                  </p>
-                                  <div className="shrink-0 flex items-center gap-1.5">
-                                    {!isRead && <span className="inline-flex h-2 w-2 rounded-full bg-brand" />}
-                                    <p className="text-[11px] text-muted-foreground">
-                                      {formatNotificationTimestamp(item.eventDate)}
-                                    </p>
-                                  </div>
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{item.message}</p>
-                                {item.kind === 'reward_optimization' && (
-                                  <p className="mt-1 text-xs text-brand">+${item.incrementalReward.toFixed(2)} potential</p>
-                                )}
-                                {isCardDangerNotification(item) && (
-                                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">Above 30% utilization threshold</p>
-                                )}
-                              </button>
-                            );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                      <div className="border-t border-border p-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            openNotificationsCenter(null);
-                          }}
-                          className="w-full px-3 py-2 rounded-lg border border-brand text-brand font-medium hover:bg-brand hover:text-white transition-colors text-sm md:text-base"
-                        >
-                          View all notifications
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
               </div>
+
+              <button
+                onClick={() => openNotificationsModal(null)}
+                className="relative lg:hidden p-2 rounded-full bg-brand hover:bg-brand/90 transition-colors"
+                aria-label="Open notifications"
+              >
+                <Bell className="h-5 w-5 text-white" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
+                )}
+              </button>
 
               {/* User Profile Menu */}
               {user && (
@@ -647,7 +477,6 @@ export function Navigation() {
                       <button
                         onClick={() => {
                           setShowUserMenu(!showUserMenu);
-                          setShowNotifications(false);
                           if (!showUserMenu) {
                             setShowThemeSubmenu(false);
                           }
@@ -744,11 +573,7 @@ export function Navigation() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
-                        setShowUserMenu(false);
-                        setShowNotifications(false);
-                        setShowThemeSubmenu(false);
-                        setSelectedNotification(null);
-                        setShowNotificationsCenter(true);
+                        openNotificationsModal(null);
                       }}
                       icon={<Bell className="h-4 w-4" />}
                     >
@@ -856,7 +681,6 @@ export function Navigation() {
               <button
                 onClick={() => {
                   setMobileMenuOpen(!mobileMenuOpen);
-                  setShowNotifications(false);
                   setShowUserMenu(false);
                   setShowThemeSubmenu(false);
                 }}
