@@ -70,6 +70,7 @@ const LEARN_SUB_NAV: SubNavItem[] = [
 const CARD_SUB_NAV: SubNavItem[] = [
   { label: 'Card Dashboard', href: '/cards' },
   { label: 'Credit Analysis', href: '/cards/analysis' },
+  { label: 'Smart Forecast', href: '/cards/smart-forecast' },
   { label: 'Card Offers', href: '/cards/offers' },
 ];
 
@@ -368,6 +369,7 @@ export function Navigation() {
 
     router.prefetch('/cards');
     router.prefetch('/cards/analysis');
+    router.prefetch('/cards/smart-forecast');
   }, [router, showNavItems]);
 
   // Check if subnav item is active

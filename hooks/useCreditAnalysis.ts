@@ -338,6 +338,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     loading: loadingMetrics || loadingAnalysis,
     // data
     analysisData,
+    metricsData,
     filteredMetrics,
     // chart
     utilizationChartData,
