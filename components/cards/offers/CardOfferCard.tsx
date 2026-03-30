@@ -32,7 +32,8 @@ function MiniCardVisual({ offer }: { offer: CardOffer }) {
           )}
           loading="lazy"
           referrerPolicy="no-referrer"
-          onLoadingComplete={(img) => {
+          onLoad={(event) => {
+            const img = event.currentTarget;
             const portrait = img.naturalHeight > img.naturalWidth * 1.05;
             setIsPortraitImage(portrait);
           }}
