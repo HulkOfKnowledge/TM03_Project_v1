@@ -48,8 +48,7 @@ async def get_transaction_insight(
     Get insights for a specific transaction
     
     Returns insights such as:
-    - "You have $X left before reaching 30% utilization"
-    - "Large dining expense detected"
+    - "Transaction categorized as Groceries with amount $X"
     - "Payment due in X days"
     """
     try:

@@ -4,7 +4,7 @@ Generates insights for individual transactions
 """
 
 from typing import Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 class TransactionInsightGenerator:
@@ -30,31 +30,8 @@ class TransactionInsightGenerator:
             {insight_type, message, severity, metadata}
         """
         insights = []
-        
-        # Calculate remaining credit before 30% (danger boundary)
-        thirty_percent_threshold = card_context['credit_limit'] * 0.30
-        current_balance = card_context.get('current_balance', 0)
-        remaining_to_30_percent = thirty_percent_threshold - current_balance
-        
-        # Insight 1: Spending room before entering danger zone (>30%)
-        if current_balance < thirty_percent_threshold:
-            if remaining_to_30_percent <= 100:
-                insights.append({
-                    'type': 'utilization_warning',
-                    'severity': 'high',
-                    'message': {
-                        'en': f'You have ${remaining_to_30_percent:.2f} left before crossing 30% utilization (danger zone).',
-                        'fr': f'Il vous reste {remaining_to_30_percent:.2f}$ avant de dépasser 30% d\'utilisation (zone de danger).',
-                        'ar': f'لديك {remaining_to_30_percent:.2f}$ متبقية قبل تجاوز 30% استخدام (منطقة الخطر).'
-                    },
-                    'metadata': {
-                        'remaining_amount': remaining_to_30_percent,
-                        'threshold_percentage': 30,
-                        'current_utilization': card_context.get('utilization', 0)
-                    }
-                })
-        
-        # Insight 2: Category spending patterns
+
+        # Insight 1: Category spending patterns
         if transaction.get('category'):
             category_insight = self._get_category_insight(
                 transaction['category'],
@@ -63,41 +40,8 @@ class TransactionInsightGenerator:
             )
             if category_insight:
                 insights.append(category_insight)
-        
-        # Insight 3: Utilization zone warnings
-        current_utilization = card_context.get('utilization', 0)
-        if current_utilization > 30:
-            insights.append({
-                'type': 'danger_utilization_alert',
-                'severity': 'high',
-                'message': {
-                    'en': f'⚠️ Danger zone utilization ({current_utilization:.1f}%). Safe is 0-25%, caution is 26-30%, and danger is above 30%.',
-                    'fr': f'⚠️ Utilisation en zone de danger ({current_utilization:.1f}%). Zone sûre: 0-25%, prudence: 26-30%, danger: au-dessus de 30%.',
-                    'ar': f'⚠️ الاستخدام في منطقة الخطر ({current_utilization:.1f}%). المنطقة الآمنة 0-25%، الحذر 26-30%، والخطر فوق 30%.'
-                },
-                'metadata': {
-                    'current_utilization': current_utilization,
-                    'safe_max': 25,
-                    'caution_max': 30
-                }
-            })
-        elif current_utilization > 25:
-            insights.append({
-                'type': 'caution_utilization_warning',
-                'severity': 'medium',
-                'message': {
-                    'en': f'Your utilization is {current_utilization:.1f}% (caution zone: 26-30%). Keep it at or below 30% and aim for 0-25%.',
-                    'fr': f'Votre utilisation est de {current_utilization:.1f}% (zone de prudence: 26-30%). Restez à 30% ou moins et visez 0-25%.',
-                    'ar': f'استخدامك {current_utilization:.1f}% (منطقة الحذر: 26-30%). ابقه عند 30% أو أقل واستهدف 0-25%.'
-                },
-                'metadata': {
-                    'current_utilization': current_utilization,
-                    'safe_max': 25,
-                    'caution_max': 30
-                }
-            })
-        
-        # Insight 4: Payment due date proximity
+
+        # Insight 2: Payment due date proximity
         if card_context.get('payment_due_date'):
             due_date_insight = self._get_due_date_insight(card_context)
             if due_date_insight:

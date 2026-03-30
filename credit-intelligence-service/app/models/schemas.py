@@ -141,12 +141,12 @@ class TransactionInsightRequest(BaseModel):
     """Request for transaction-level insights"""
     user_id: str
     transaction: TransactionData
-    card_context: dict  # Contains current_balance, credit_limit, utilization, etc.
+    card_context: dict  # Contains card context fields used for insight generation.
 
 
 class TransactionInsight(BaseModel):
     """Individual transaction insight"""
-    type: str  # utilization_warning, spending_pattern, payment_due, etc.
+    type: str  # transaction_category, payment_due_urgent, payment_due_soon, etc.
     severity: str  # urgent, high, medium, low, info
     message: dict  # {en: str, fr: str, ar: str}
     metadata: Optional[dict] = None

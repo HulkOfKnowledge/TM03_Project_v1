@@ -27,7 +27,7 @@ class CreditAnalyzer:
         
         Returns:
         - Personalized insights and recommendations
-        - Alerts for high utilization or payment due dates
+        - Alerts for payment due dates
         """
         cards = request.cards
         
@@ -55,58 +55,8 @@ class CreditAnalyzer:
         - tip: General credit wisdom
         """
         insights = []
-        
-        # 1. Utilization zone insights
-        for card in cards:
-            if card.utilization_percentage > 30:
-                insights.append(CreditInsight(
-                    type="alert",
-                    priority="high",
-                    title=self.translate_text("Danger Zone - High utilization"),
-                    message=self.translate_text(
-                        f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
-                        f"This is in the danger zone (>30%) and can negatively impact your credit profile. "
-                        f"Pay down ${card.current_balance - (card.credit_limit * 0.30):.2f} to exit the danger zone."
-                    ),
-                    action_required=True,
-                    metadata={
-                        "card_id": card.card_id,
-                        "current_utilization": card.utilization_percentage,
-                        "recommended_payment": card.current_balance - (card.credit_limit * 0.30)
-                    }
-                ))
-            elif card.utilization_percentage > 25:
-                insights.append(CreditInsight(
-                    type="recommendation",
-                    priority="medium",
-                    title=self.translate_text("Caution Zone - Moderate utilization"),
-                    message=self.translate_text(
-                        f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
-                        f"You're in the caution zone (26-30%). Stay under 30% to avoid entering the danger zone."
-                    ),
-                    action_required=False,
-                    metadata={
-                        "card_id": card.card_id,
-                        "current_utilization": card.utilization_percentage
-                    }
-                ))
-            elif card.utilization_percentage <= 25:
-                insights.append(CreditInsight(
-                    type="achievement",
-                    priority="low",
-                    title=self.translate_text("Safe Zone - Excellent utilization"),
-                    message=self.translate_text(
-                        f"{card.institution_name} card is at {card.utilization_percentage:.1f}% utilization. "
-                        f"Perfect! You're in the safe zone (0-25%)."
-                    ),
-                    action_required=False,
-                    metadata={
-                        "card_id": card.card_id,
-                        "current_utilization": card.utilization_percentage
-                    }
-                ))
-        
-        # 2. Payment due date reminders
+
+        # 1. Payment due date reminders
         for card in cards:
             if card.payment_due_date:
                 days_until_due = self._days_until_due(card.payment_due_date)
@@ -145,71 +95,7 @@ class CreditAnalyzer:
                             "minimum_payment": card.minimum_payment
                         }
                     ))
-        
-        # 3. Credit improvement tips
-        # Calculate overall utilization (total balance / total limit)
-        total_balance = sum(card.current_balance for card in cards) if cards else 0
-        total_limit = sum(card.credit_limit for card in cards) if cards else 0
-        overall_utilization = (total_balance / total_limit * 100) if total_limit > 0 else 0
-        
-        if overall_utilization > 30:
-            insights.append(CreditInsight(
-                type="tip",
-                priority="medium",
-                title=self.translate_text("Credit improvement tip"),
-                message=self.translate_text(
-                    f"Your overall utilization is {overall_utilization:.1f}%. "
-                    f"Safe utilization is 0-25%, caution is 26-30%, and danger is above 30%. "
-                    f"Consider increasing your credit limits or paying down balances."
-                ),
-                action_required=False,
-                metadata={
-                    "overall_utilization": overall_utilization,
-                    "recommended_utilization": 30
-                }
-            ))
-        
-        # 4. Utilization profile summary (purely metric-based, no behavioral labels)
-        if cards and len(cards) > 0:
-            safe_cards = sum(1 for card in cards if card.utilization_percentage <= 25)
-            caution_cards = sum(1 for card in cards if 25 < card.utilization_percentage <= 30)
-            danger_cards = sum(1 for card in cards if card.utilization_percentage > 30)
 
-            if danger_cards > 0:
-                profile_priority = "medium"
-                profile_message = (
-                    f"Portfolio utilization profile: {overall_utilization:.1f}% overall. "
-                    f"Cards by zone -> safe: {safe_cards}, caution: {caution_cards}, danger: {danger_cards}. "
-                    "Reduce balances on danger-zone cards (>30%) to lower risk."
-                )
-            elif caution_cards > 0:
-                profile_priority = "low"
-                profile_message = (
-                    f"Portfolio utilization profile: {overall_utilization:.1f}% overall. "
-                    f"Cards by zone -> safe: {safe_cards}, caution: {caution_cards}, danger: {danger_cards}. "
-                    "Keep caution-zone cards between 26-30% from crossing into danger."
-                )
-            else:
-                profile_priority = "low"
-                profile_message = (
-                    f"Portfolio utilization profile: {overall_utilization:.1f}% overall. "
-                    f"Cards by zone -> safe: {safe_cards}, caution: {caution_cards}, danger: {danger_cards}."
-                )
-            
-            insights.append(CreditInsight(
-                type="tip",
-                priority=profile_priority,
-                title=self.translate_text("Utilization profile analysis"),
-                message=self.translate_text(profile_message),
-                action_required=False,
-                metadata={
-                    "overall_utilization": overall_utilization,
-                    "safe_cards": safe_cards,
-                    "caution_cards": caution_cards,
-                    "danger_cards": danger_cards,
-                }
-            ))
-        
         # Sort insights by priority
         priority_order = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
         insights.sort(key=lambda x: priority_order.get(x.priority, 4))
