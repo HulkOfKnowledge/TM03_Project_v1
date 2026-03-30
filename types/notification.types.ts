@@ -15,6 +15,7 @@ export interface BaseNotification {
 
 export interface RewardNotification extends BaseNotification {
   kind: 'reward_optimization';
+  optimizationType?: 'owned_card_switch' | 'new_card_opportunity';
   transactionId: string;
   cardId: string;
   merchant: string;
@@ -23,11 +24,18 @@ export interface RewardNotification extends BaseNotification {
   baselineCardId: string;
   baselineCardLabel: string;
   recommendedCardId: string;
+  recommendedOfferId?: string;
   recommendedCardLabel: string;
   baselineRate: number;
   recommendedRate: number;
   incrementalReward: number;
   viewTransactionUrl: string;
+  estimatedMonthlyIncrementalReward?: number;
+  estimatedAnnualIncrementalReward?: number;
+  spendSharePercentage?: number;
+  estimatedMonthlySpend?: number;
+  suggestedOfferIssuer?: string | null;
+  annualFee?: number | null;
 }
 
 export interface SystemNotification extends BaseNotification {

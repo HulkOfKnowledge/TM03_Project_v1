@@ -111,6 +111,8 @@ export function NotificationsCenterModal({
         item.kind === 'reward_optimization' ? item.category : '',
         item.kind === 'reward_optimization' ? item.recommendedCardLabel : '',
         item.kind === 'reward_optimization' ? item.baselineCardLabel : '',
+        item.kind === 'reward_optimization' ? item.optimizationType || '' : '',
+        item.kind === 'reward_optimization' ? item.suggestedOfferIssuer || '' : '',
       ]
         .join(' ')
         .toLowerCase();
@@ -256,7 +258,10 @@ export function NotificationsCenterModal({
                             <p className="mt-1 line-clamp-1 text-xs text-muted-foreground sm:text-sm">{item.message}</p>
 
                             {item.kind === 'reward_optimization' && (
-                              <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
+                              <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">
+                                +{formatCurrency(item.incrementalReward)}
+                                {item.optimizationType === 'new_card_opportunity' ? '/mo' : ''}
+                              </p>
                             )}
                             {isCardDangerNotification(item) && (
                               <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 sm:text-sm">
@@ -279,7 +284,10 @@ export function NotificationsCenterModal({
                               <p className="mt-1 line-clamp-1 text-xs text-muted-foreground sm:text-sm">{item.message}</p>
 
                               {item.kind === 'reward_optimization' && (
-                                <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">+{formatCurrency(item.incrementalReward)}</p>
+                                <p className="mt-1.5 text-xs font-medium text-brand sm:text-sm">
+                                  +{formatCurrency(item.incrementalReward)}
+                                  {item.optimizationType === 'new_card_opportunity' ? '/mo' : ''}
+                                </p>
                               )}
                               {isCardDangerNotification(item) && (
                                 <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 sm:text-sm">

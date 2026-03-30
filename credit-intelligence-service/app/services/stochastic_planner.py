@@ -22,8 +22,11 @@ from app.models.schemas import (
     CategoryProbability,
     CardChoiceRequest,
     CardChoiceResponse,
+    NewCardOpportunitiesRequest,
+    NewCardOpportunitiesResponse,
     CardActionValue,
     CardChoiceCounterfactual,
+    OwnedCardOpportunity,
     UpgradeOpportunity,
 )
 from app.services.category_taxonomy import SHARED_CATEGORIES, infer_shared_category
@@ -218,11 +221,15 @@ class StochasticPlanner:
         action_values.sort(key=lambda a: a.q_value, reverse=True)
         recommended = action_values[0].card_id if action_values else eligible_cards[0].card_id
 
-        baseline_card_id, estimated_monthly_spend = self._infer_baseline_and_monthly_spend(
+        inferred_baseline_card_id, estimated_monthly_spend = self._infer_baseline_and_monthly_spend(
             txns=txns,
             merchant_category=merchant_category,
             lookback_days=request.lookback_days,
         )
+
+        explicit_used_card = request.used_card_id
+        card_ids = {card.card_id for card in eligible_cards}
+        baseline_card_id = explicit_used_card if explicit_used_card in card_ids else inferred_baseline_card_id
 
         baseline_card = next((card for card in eligible_cards if card.card_id == baseline_card_id), None)
         recommended_card = next((card for card in eligible_cards if card.card_id == recommended), None)
@@ -240,15 +247,16 @@ class StochasticPlanner:
         recommended_reward = request.estimated_amount * recommended_rate
         incremental_reward = max(0.0, recommended_reward - baseline_reward)
 
-        upgrade_opportunity = self._build_upgrade_opportunity(
+        upgrade_opportunities = self._build_upgrade_opportunities(
             txns=txns,
             cards=eligible_cards,
             offers=offers,
             lookback_days=request.lookback_days,
         )
+        upgrade_opportunity = upgrade_opportunities[0] if upgrade_opportunities else None
 
         min_incremental = max(0.0, float(settings.MIN_INCREMENTAL_REWARD_DOLLARS))
-        if incremental_reward < min_incremental and upgrade_opportunity is None:
+        if incremental_reward < min_incremental and not upgrade_opportunities:
             raise NoRewardDataError(
                 f"No benefit to card yet (below ${min_incremental:.2f} minimum)",
                 [card.card_id for card in eligible_cards],
@@ -268,6 +276,30 @@ class StochasticPlanner:
             estimated_annual_incremental_reward=round(annual_incremental, 4),
         )
 
+        owned_card_opportunity = None
+        if baseline_card_id and recommended != baseline_card_id and incremental_reward > 0:
+            owned_card_opportunity = OwnedCardOpportunity(
+                used_card_id=baseline_card_id,
+                recommended_card_id=recommended,
+                estimated_incremental_reward=round(incremental_reward, 4),
+                estimated_monthly_incremental_reward=round(monthly_incremental, 4),
+                estimated_annual_incremental_reward=round(annual_incremental, 4),
+                message={
+                    "en": (
+                        f"For this {request.merchant_name} transaction, use card {recommended} instead of card "
+                        f"{baseline_card_id} to earn about ${incremental_reward:.2f} more in rewards."
+                    ),
+                    "fr": (
+                        f"Pour cette transaction chez {request.merchant_name}, utilisez la carte {recommended} "
+                        f"au lieu de {baseline_card_id} pour gagner environ {incremental_reward:.2f}$ de plus en recompenses."
+                    ),
+                    "ar": (
+                        f"لهذه المعاملة لدى {request.merchant_name}، استخدم البطاقة {recommended} بدلا من "
+                        f"{baseline_card_id} للحصول على مكافآت إضافية تقارب ${incremental_reward:.2f}."
+                    ),
+                },
+            )
+
         reason = {
             "en": (
                 f"Recommended card {recommended} for {request.merchant_name} ({merchant_category}) "
@@ -285,6 +317,18 @@ class StochasticPlanner:
             ),
         }
 
+        if upgrade_opportunity:
+            spend_share = upgrade_opportunity.spend_share_percentage or 0.0
+            top_category = upgrade_opportunity.top_spend_category
+            best_offer_name = upgrade_opportunity.suggested_offer_name or "a better rewards card"
+            monthly_gain = upgrade_opportunity.estimated_monthly_incremental_reward or 0.0
+            annual_gain = upgrade_opportunity.estimated_annual_incremental_reward or 0.0
+            reason["en"] += (
+                f" You currently spend about {spend_share:.1f}% of tracked spend in {top_category}. "
+                f"A card like {best_offer_name} could add about ${monthly_gain:.2f}/month "
+                f"(${annual_gain:.2f}/year) in rewards based on your current spending mix."
+            )
+
         return CardChoiceResponse(
             user_id=request.user_id,
             merchant_name=request.merchant_name,
@@ -293,7 +337,57 @@ class StochasticPlanner:
             policy_reasoning=reason,
             action_values=action_values,
             counterfactual=counterfactual,
+            owned_card_opportunity=owned_card_opportunity,
             upgrade_opportunity=upgrade_opportunity,
+            new_card_opportunities=upgrade_opportunities,
+            upgrade_opportunities=upgrade_opportunities,
+            computed_at=datetime.utcnow().isoformat(),
+        )
+
+    def recommend_new_card_opportunities(
+        self,
+        request: NewCardOpportunitiesRequest,
+    ) -> NewCardOpportunitiesResponse:
+        """Scenario 2 only: suggest external cards based on concentrated category spending."""
+        if not request.cards:
+            return NewCardOpportunitiesResponse(
+                user_id=request.user_id,
+                opportunities=[],
+                computed_at=datetime.utcnow().isoformat(),
+            )
+
+        offers = self._load_reward_catalog()
+        resolved_reward_maps, _ = self._resolve_reward_maps(request.cards, offers)
+        eligible_cards = []
+        for card in request.cards:
+            reward_map = resolved_reward_maps.get(card.card_id)
+            if not reward_map:
+                continue
+            card.estimated_reward_rate_by_category = reward_map
+            eligible_cards.append(card)
+
+        if not eligible_cards:
+            return NewCardOpportunitiesResponse(
+                user_id=request.user_id,
+                opportunities=[],
+                computed_at=datetime.utcnow().isoformat(),
+            )
+
+        txns = self._filter_and_normalize_transactions(
+            transactions=request.transactions,
+            lookback_days=request.lookback_days,
+        )
+
+        opportunities = self._build_upgrade_opportunities(
+            txns=txns,
+            cards=eligible_cards,
+            offers=offers,
+            lookback_days=request.lookback_days,
+        )
+
+        return NewCardOpportunitiesResponse(
+            user_id=request.user_id,
+            opportunities=opportunities,
             computed_at=datetime.utcnow().isoformat(),
         )
 
@@ -515,7 +609,7 @@ class StochasticPlanner:
             "Authorization": f"Bearer {service_role_key}",
         }
         params = {
-            "select": "name,issuer,earn_rate_grocery,earn_rate_travel,earn_rate_dining,earn_rate_other,is_active",
+            "select": "id,name,issuer,earn_rate_grocery,earn_rate_travel,earn_rate_dining,earn_rate_other,annual_fee,is_active",
             "is_active": "eq.true",
             "limit": "1000",
         }
@@ -645,15 +739,15 @@ class StochasticPlanner:
 
         return best_offer, best_rate
 
-    def _build_upgrade_opportunity(
+    def _build_upgrade_opportunities(
         self,
         txns: List[_Txn],
         cards,
         offers: List[Dict[str, Any]],
         lookback_days: int,
-    ) -> Optional[UpgradeOpportunity]:
+    ) -> List[UpgradeOpportunity]:
         if not txns or not cards or not offers:
-            return None
+            return []
 
         excluded_categories = {
             "payments", "income", "transfers", "cash", "fees", "taxes", "government",
@@ -669,43 +763,154 @@ class StochasticPlanner:
             spend_by_category[txn.category] += txn.amount
 
         if not spend_by_category:
-            return None
+            return []
 
-        top_category, total_spend = max(spend_by_category.items(), key=lambda item: item[1])
+        total_spend = sum(spend_by_category.values())
+        if total_spend <= 0:
+            return []
+
         lookback_days = max(30, lookback_days)
-        estimated_monthly_spend = total_spend * (30.0 / float(lookback_days))
-
-        # Avoid noisy suggestions for very small category spend.
-        if estimated_monthly_spend < 120:
-            return None
-
-        current_best_rate = max(
-            self._estimate_reward_rate(card, top_category)
-            for card in cards
-        )
-
-        reward_bucket = self._category_to_reward_bucket(top_category)
-        best_offer, best_offer_rate = self._best_offer_for_bucket(offers, reward_bucket)
-        if best_offer is None or best_offer_rate <= current_best_rate:
-            return None
-
-        monthly_incremental = estimated_monthly_spend * (best_offer_rate - current_best_rate)
         min_monthly_incremental = max(1.0, float(settings.MIN_INCREMENTAL_REWARD_DOLLARS))
-        if monthly_incremental < min_monthly_incremental:
-            return None
+        opportunities: List[UpgradeOpportunity] = []
+        sorted_categories = sorted(spend_by_category.items(), key=lambda item: item[1], reverse=True)
 
-        annual_incremental = monthly_incremental * 12.0
+        for category, category_spend in sorted_categories[:3]:
+            estimated_monthly_spend = category_spend * (30.0 / float(lookback_days))
 
-        return UpgradeOpportunity(
-            top_spend_category=top_category,
-            estimated_monthly_spend=round(estimated_monthly_spend, 2),
-            current_best_reward_rate=round(current_best_rate, 4),
-            suggested_offer_name=best_offer.get("name"),
-            suggested_offer_issuer=best_offer.get("issuer"),
-            suggested_offer_reward_rate=round(best_offer_rate, 4),
-            estimated_monthly_incremental_reward=round(monthly_incremental, 2),
-            estimated_annual_incremental_reward=round(annual_incremental, 2),
+            # Avoid noisy suggestions for very small category spend.
+            if estimated_monthly_spend < 120:
+                continue
+
+            spend_share_pct = (category_spend / total_spend) * 100
+            current_best_rate = max(self._estimate_reward_rate(card, category) for card in cards)
+            reward_bucket = self._category_to_reward_bucket(category)
+
+            offer_candidates = self._top_offers_for_bucket(
+                offers=offers,
+                bucket=reward_bucket,
+                current_best_rate=current_best_rate,
+                estimated_monthly_spend=estimated_monthly_spend,
+                limit=3,
+            )
+            if not offer_candidates:
+                continue
+
+            best = offer_candidates[0]
+            monthly_incremental = best.get("estimated_monthly_incremental_reward", 0.0) or 0.0
+            annual_incremental = best.get("estimated_annual_incremental_reward", 0.0) or 0.0
+            if monthly_incremental < min_monthly_incremental:
+                continue
+
+            offer_name = best.get("name") or "a better rewards card"
+            insight_message = {
+                "en": (
+                    f"You spend about {spend_share_pct:.1f}% of tracked spend on {category}. "
+                    f"Using {offer_name} for this category could add about ${monthly_incremental:.2f}/month "
+                    f"(${annual_incremental:.2f}/year) in rewards."
+                ),
+                "fr": (
+                    f"Vous depensez environ {spend_share_pct:.1f}% de vos depenses suivies en {category}. "
+                    f"Utiliser {offer_name} pour cette categorie pourrait ajouter environ "
+                    f"{monthly_incremental:.2f}$ par mois ({annual_incremental:.2f}$ par an) en recompenses."
+                ),
+                "ar": (
+                    f"تنفق حوالي {spend_share_pct:.1f}% من الإنفاق المتتبع على فئة {category}. "
+                    f"استخدام بطاقة {offer_name} لهذه الفئة قد يضيف حوالي ${monthly_incremental:.2f} شهريا "
+                    f"(${annual_incremental:.2f} سنويا) من المكافآت."
+                ),
+            }
+
+            opportunities.append(
+                UpgradeOpportunity(
+                    top_spend_category=category,
+                    estimated_monthly_spend=round(estimated_monthly_spend, 2),
+                    spend_share_percentage=round(spend_share_pct, 2),
+                    current_best_reward_rate=round(current_best_rate, 4),
+                    suggested_offer_name=best.get("name"),
+                    suggested_offer_issuer=best.get("issuer"),
+                    suggested_offer_id=best.get("offer_id"),
+                    suggested_offer_reward_rate=best.get("reward_rate"),
+                    estimated_monthly_incremental_reward=round(monthly_incremental, 2),
+                    estimated_annual_incremental_reward=round(annual_incremental, 2),
+                    annual_fee=best.get("annual_fee"),
+                    suggested_offers=offer_candidates,
+                    insight_message=insight_message,
+                )
+            )
+
+        opportunities.sort(
+            key=lambda item: (
+                item.estimated_monthly_incremental_reward or 0.0,
+                item.spend_share_percentage or 0.0,
+            ),
+            reverse=True,
         )
+        return opportunities
+
+    def _top_offers_for_bucket(
+        self,
+        offers: List[Dict[str, Any]],
+        bucket: str,
+        current_best_rate: float,
+        estimated_monthly_spend: float,
+        limit: int = 3,
+    ) -> List[Dict[str, Any]]:
+        candidates: List[Dict[str, Any]] = []
+
+        for offer in offers:
+            rate_map = self._offer_to_rate_map(offer)
+            rate = rate_map.get(bucket)
+            if rate is None:
+                rate = rate_map.get("default", 0.0)
+            if rate <= current_best_rate:
+                continue
+
+            annual_fee = self._safe_float(offer.get("annual_fee"))
+            monthly_incremental = estimated_monthly_spend * (rate - current_best_rate)
+            annual_incremental = monthly_incremental * 12.0
+
+            candidates.append(
+                {
+                    "offer_id": offer.get("id"),
+                    "name": offer.get("name"),
+                    "issuer": offer.get("issuer"),
+                    "reward_rate": round(rate, 4),
+                    "annual_fee": annual_fee,
+                    "estimated_monthly_incremental_reward": round(monthly_incremental, 2),
+                    "estimated_annual_incremental_reward": round(annual_incremental, 2),
+                }
+            )
+
+        if not candidates:
+            return []
+
+        deduped: Dict[str, Dict[str, Any]] = {}
+        for candidate in candidates:
+            key = self._normalize_identity(f"{candidate.get('issuer', '')} {candidate.get('name', '')}")
+            existing = deduped.get(key)
+            if existing is None or (
+                candidate.get("estimated_monthly_incremental_reward", 0.0)
+                > existing.get("estimated_monthly_incremental_reward", 0.0)
+            ):
+                deduped[key] = candidate
+
+        ordered = sorted(
+            deduped.values(),
+            key=lambda c: (
+                0 if (c.get("annual_fee") is None or c.get("annual_fee") <= 0) else 1,
+                -c.get("estimated_monthly_incremental_reward", 0.0),
+                -c.get("reward_rate", 0.0),
+            ),
+        )
+        return ordered[:max(1, limit)]
+
+    def _safe_float(self, value: Any) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except Exception:
+            return None
 
     def _normalize_identity(self, value: Optional[str]) -> str:
         if not value:

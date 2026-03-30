@@ -3,7 +3,7 @@ Pydantic Models - Request/Response Schemas
 """
 
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Literal, Dict
+from typing import Any, List, Optional, Literal, Dict
 from datetime import datetime
 
 
@@ -201,6 +201,7 @@ class CardChoiceRequest(BaseModel):
     user_id: str
     merchant_name: str
     merchant_category: Optional[str] = None
+    used_card_id: Optional[str] = None
     estimated_amount: float = Field(default=50.0, ge=1)
     lookback_days: int = Field(default=180, ge=30, le=730)
     cards: List[CardDecisionCandidate]
@@ -227,16 +228,31 @@ class CardChoiceCounterfactual(BaseModel):
     estimated_annual_incremental_reward: float
 
 
+class OwnedCardOpportunity(BaseModel):
+    """Scenario 1: Better card exists among cards user already owns."""
+    used_card_id: str
+    recommended_card_id: str
+    estimated_incremental_reward: float
+    estimated_monthly_incremental_reward: float
+    estimated_annual_incremental_reward: float
+    message: Dict[str, str]
+
+
 class UpgradeOpportunity(BaseModel):
     """Phase-2 opportunity to suggest a better external card for top spend category"""
     top_spend_category: str
     estimated_monthly_spend: float
+    spend_share_percentage: Optional[float] = None
     current_best_reward_rate: float
     suggested_offer_name: Optional[str] = None
     suggested_offer_issuer: Optional[str] = None
+    suggested_offer_id: Optional[str] = None
     suggested_offer_reward_rate: Optional[float] = None
     estimated_monthly_incremental_reward: Optional[float] = None
     estimated_annual_incremental_reward: Optional[float] = None
+    annual_fee: Optional[float] = None
+    suggested_offers: Optional[List[Dict[str, Any]]] = None
+    insight_message: Optional[Dict[str, str]] = None
 
 
 class CardChoiceResponse(BaseModel):
@@ -248,7 +264,25 @@ class CardChoiceResponse(BaseModel):
     policy_reasoning: Dict[str, str]
     action_values: List[CardActionValue]
     counterfactual: CardChoiceCounterfactual
+    owned_card_opportunity: Optional[OwnedCardOpportunity] = None
     upgrade_opportunity: Optional[UpgradeOpportunity] = None
+    new_card_opportunities: Optional[List[UpgradeOpportunity]] = None
+    upgrade_opportunities: Optional[List[UpgradeOpportunity]] = None
+    computed_at: str
+
+
+class NewCardOpportunitiesRequest(BaseModel):
+    """Request for scenario 2: suggest external cards user does not currently own."""
+    user_id: str
+    lookback_days: int = Field(default=180, ge=30, le=730)
+    cards: List[CardDecisionCandidate]
+    transactions: List[StochasticTransactionData]
+
+
+class NewCardOpportunitiesResponse(BaseModel):
+    """Response containing ranked new-card opportunities."""
+    user_id: str
+    opportunities: List[UpgradeOpportunity]
     computed_at: str
 
 

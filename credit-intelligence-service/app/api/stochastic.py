@@ -12,6 +12,8 @@ from app.models.schemas import (
     SpendingProbabilityResponse,
     CardChoiceRequest,
     CardChoiceResponse,
+    NewCardOpportunitiesRequest,
+    NewCardOpportunitiesResponse,
 )
 from app.services.stochastic_planner import (
     NoRewardDataError,
@@ -71,6 +73,18 @@ async def get_card_choice(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to compute card choice policy: {str(e)}")
+
+
+@router.post("/new-card-opportunities", response_model=NewCardOpportunitiesResponse)
+async def get_new_card_opportunities(
+    request: NewCardOpportunitiesRequest,
+    api_key: str = Depends(verify_api_key),
+):
+    """Scenario 2 endpoint: recommend external cards user does not own for top spend categories."""
+    try:
+        return stochastic_planner.recommend_new_card_opportunities(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to compute new-card opportunities: {str(e)}")
 
 
 @router.post("/reward-catalog/invalidate")

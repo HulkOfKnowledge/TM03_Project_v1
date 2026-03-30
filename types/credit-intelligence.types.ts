@@ -140,6 +140,7 @@ export interface SpendingProbabilityResponse {
 export interface CardChoiceRequest {
   merchantName: string;
   merchantCategory?: string | null;
+  usedCardId?: string | null;
   estimatedAmount: number;
   lookbackDays?: number;
 }
@@ -165,12 +166,34 @@ export interface CardChoiceCounterfactual {
 export interface UpgradeOpportunity {
   topSpendCategory: string;
   estimatedMonthlySpend: number;
+  spendSharePercentage?: number | null;
   currentBestRewardRate: number;
+  suggestedOfferId?: string | null;
   suggestedOfferName?: string | null;
   suggestedOfferIssuer?: string | null;
   suggestedOfferRewardRate?: number | null;
   estimatedMonthlyIncrementalReward?: number | null;
   estimatedAnnualIncrementalReward?: number | null;
+  annualFee?: number | null;
+  suggestedOffers?: Array<Record<string, unknown>>;
+  insightMessage?: {
+    en: string;
+    fr: string;
+    ar: string;
+  } | null;
+}
+
+export interface OwnedCardOpportunity {
+  usedCardId: string;
+  recommendedCardId: string;
+  estimatedIncrementalReward: number;
+  estimatedMonthlyIncrementalReward: number;
+  estimatedAnnualIncrementalReward: number;
+  message: {
+    en: string;
+    fr: string;
+    ar: string;
+  };
 }
 
 export interface CardChoiceResponse {
@@ -185,7 +208,16 @@ export interface CardChoiceResponse {
   };
   actionValues: CardActionValue[];
   counterfactual: CardChoiceCounterfactual;
+  ownedCardOpportunity?: OwnedCardOpportunity | null;
   upgradeOpportunity?: UpgradeOpportunity | null;
+  newCardOpportunities?: UpgradeOpportunity[] | null;
+  upgradeOpportunities?: UpgradeOpportunity[] | null;
+  computedAt: string;
+}
+
+export interface NewCardOpportunitiesResponse {
+  userId: string;
+  opportunities: UpgradeOpportunity[];
   computedAt: string;
 }
 

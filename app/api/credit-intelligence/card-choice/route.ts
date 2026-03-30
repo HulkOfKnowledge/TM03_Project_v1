@@ -171,7 +171,10 @@ export async function POST(request: NextRequest) {
         estimatedMonthlyIncrementalReward: response.data.counterfactual?.estimated_monthly_incremental_reward,
         estimatedAnnualIncrementalReward: response.data.counterfactual?.estimated_annual_incremental_reward,
       },
+      ownedCardOpportunity: response.data.owned_card_opportunity ?? null,
+      newCardOpportunities: response.data.new_card_opportunities ?? response.data.upgrade_opportunities ?? [],
       upgradeOpportunity: response.data.upgrade_opportunity ?? null,
+      upgradeOpportunities: response.data.upgrade_opportunities ?? null,
       computedAt: response.data.computed_at,
     };
 

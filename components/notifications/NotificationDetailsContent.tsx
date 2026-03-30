@@ -85,6 +85,11 @@ function getCardDangerMeta(notification: AppNotification): CardDangerMeta | null
 
 export function NotificationDetailsContent({ notification, isActive }: NotificationDetailsContentProps) {
   const isRewardNotification = notification.kind === 'reward_optimization';
+  const rewardOptimizationType = isRewardNotification
+    ? (notification.optimizationType ?? 'owned_card_switch')
+    : null;
+  const isOwnedCardRewardNotification = rewardOptimizationType === 'owned_card_switch';
+  const isNewCardOpportunityNotification = rewardOptimizationType === 'new_card_opportunity';
   const cardDangerMeta = getCardDangerMeta(notification);
   const isCardDangerNotification = Boolean(cardDangerMeta);
   const [transaction, setTransaction] = useState<TransactionDetail | null>(null);
@@ -93,7 +98,7 @@ export function NotificationDetailsContent({ notification, isActive }: Notificat
 
   useEffect(() => {
     const loadTransaction = async () => {
-      if (!notification || !isActive || !isRewardNotification) return;
+      if (!notification || !isActive || !isRewardNotification || !isOwnedCardRewardNotification) return;
 
       try {
         setIsLoading(true);
@@ -119,7 +124,7 @@ export function NotificationDetailsContent({ notification, isActive }: Notificat
     };
 
     loadTransaction();
-  }, [isRewardNotification, notification, isActive]);
+  }, [isRewardNotification, isOwnedCardRewardNotification, notification, isActive]);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pb-3 pr-0.5 overscroll-contain sm:gap-5 [scrollbar-width:thin] [scrollbar-color:#e5e7eb_transparent] dark:[scrollbar-color:#374151_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700">
@@ -135,6 +140,11 @@ export function NotificationDetailsContent({ notification, isActive }: Notificat
             <span className="inline-flex rounded-lg bg-muted/70 px-2 py-1 text-[11px] text-muted-foreground">
               {notification.category.toUpperCase()}
             </span>
+            {isNewCardOpportunityNotification && Number.isFinite(notification.spendSharePercentage) && (
+              <span className="inline-flex rounded-lg bg-brand/10 px-2 py-1 text-[11px] text-brand">
+                Spend share {Number(notification.spendSharePercentage).toFixed(1)}%
+              </span>
+            )}
           </div>
         )}
         {isCardDangerNotification && (
@@ -154,15 +164,23 @@ export function NotificationDetailsContent({ notification, isActive }: Notificat
           {/* Estimated reward hero */}
           <div className="flex items-center justify-between gap-3 rounded-2xl py-1">
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Estimated reward if used</p>
+              <p className="text-xs text-muted-foreground">
+                {isNewCardOpportunityNotification ? 'Estimated extra rewards / month' : 'Estimated reward if used'}
+              </p>
               <p className="mt-0.5 text-2xl font-bold tracking-tight text-brand">
                 ~{formatCurrency(notification.incrementalReward)}
               </p>
             </div>
             <div className="shrink-0 text-right">
-              <p className="text-xs text-muted-foreground">Amount Spent</p>
+              <p className="text-xs text-muted-foreground">
+                {isNewCardOpportunityNotification ? 'Estimated spend / month' : 'Amount Spent'}
+              </p>
               <p className="mt-0.5 text-lg font-semibold text-foreground">
-                {formatCurrency(notification.amount)}
+                {formatCurrency(
+                  isNewCardOpportunityNotification
+                    ? (notification.estimatedMonthlySpend ?? notification.amount)
+                    : notification.amount,
+                )}
               </p>
             </div>
           </div>
@@ -174,21 +192,49 @@ export function NotificationDetailsContent({ notification, isActive }: Notificat
               <div className="flex flex-col gap-2 rounded-xl border border-brand/30 bg-brand/5 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-brand/20 dark:bg-brand/8">
                 <div>
                   <p className="text-[11px] font-medium text-brand">Might earn more rewards</p>
-                  <p className="mt-0.5 text-sm font-semibold text-foreground">{notification.recommendedCardLabel}</p>
+                  {notification.actionUrl ? (
+                    <a
+                      href={notification.actionUrl}
+                      className="mt-0.5 inline-block text-sm font-semibold text-foreground underline decoration-brand/40 underline-offset-2 hover:text-brand"
+                    >
+                      {notification.recommendedCardLabel}
+                    </a>
+                  ) : (
+                    <p className="mt-0.5 text-sm font-semibold text-foreground">{notification.recommendedCardLabel}</p>
+                  )}
+                  {isNewCardOpportunityNotification && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {notification.suggestedOfferIssuer ? `Issuer: ${notification.suggestedOfferIssuer}` : 'Suggested external card'}
+                      {notification.annualFee != null ? ` • Annual fee: ${formatCurrency(notification.annualFee)}` : ''}
+                    </p>
+                  )}
                 </div>
                 <span className="w-fit rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand">
                   Suggested
                 </span>
               </div>
 
-              <div className="flex flex-col gap-2 rounded-xl border border-border bg-muted/30 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:bg-muted/10">
-                <div>
-                  <p className="text-[11px] font-medium text-muted-foreground">Used for this transaction</p>
-                  <p className="mt-0.5 text-sm font-medium text-foreground">{notification.baselineCardLabel}</p>
+              {!isNewCardOpportunityNotification && (
+                <div className="flex flex-col gap-2 rounded-xl border border-border bg-muted/30 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:bg-muted/10">
+                  <div>
+                    <p className="text-[11px] font-medium text-muted-foreground">
+                      Used for this transaction
+                    </p>
+                    <p className="mt-0.5 text-sm font-medium text-foreground">{notification.baselineCardLabel}</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
+
+          {isNewCardOpportunityNotification && Number.isFinite(notification.estimatedAnnualIncrementalReward) && (
+            <div className="px-4 py-3">
+              <p className="text-xs font-semibold text-muted-foreground">Projected annual rewards upside</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">
+                +{formatCurrency(notification.estimatedAnnualIncrementalReward || 0)} / year
+              </p>
+            </div>
+          )}
         </>
       ) : isCardDangerNotification ? (
         <>
@@ -234,7 +280,7 @@ export function NotificationDetailsContent({ notification, isActive }: Notificat
       )}
 
       {/* Transaction details */}
-      {isRewardNotification && (
+      {isRewardNotification && isOwnedCardRewardNotification && (
         <div>
           <p className="mb-3 text-xs font-semibold text-muted-foreground">Transaction</p>
 

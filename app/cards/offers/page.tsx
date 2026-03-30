@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
 import { CardOfferCard } from '@/components/cards/offers/CardOfferCard';
@@ -22,6 +23,9 @@ const OFFERS_PER_PAGE_DESKTOP = 12;
 const OFFERS_PER_PAGE_MOBILE = 10;
 
 export default function CardOffersPage() {
+  const searchParams = useSearchParams();
+  const focusedOfferId = searchParams.get('focus')?.trim() || '';
+  const queryFromUrl = searchParams.get('q')?.trim() || '';
   const [offers, setOffers] = useState<CardOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +79,11 @@ export default function CardOffersPage() {
   }, [fetchOffers]);
 
   useEffect(() => {
+    if (!queryFromUrl) return;
+    setSearchQuery(queryFromUrl);
+  }, [queryFromUrl]);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [category, incomeRange, occupation, searchQuery]);
 
@@ -88,6 +97,16 @@ export default function CardOffersPage() {
       return cardName.includes(query) || bankName.includes(query);
     });
   }, [offers, searchQuery]);
+
+  useEffect(() => {
+    if (!focusedOfferId || filteredOffers.length === 0) return;
+    const index = filteredOffers.findIndex((offer) => offer.id === focusedOfferId);
+    if (index < 0) return;
+    const targetPage = Math.floor(index / pageSize) + 1;
+    if (targetPage !== currentPage) {
+      setCurrentPage(targetPage);
+    }
+  }, [focusedOfferId, filteredOffers, pageSize, currentPage]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 639px)');
@@ -123,6 +142,16 @@ export default function CardOffersPage() {
     const start = (safePage - 1) * pageSize;
     return filteredOffers.slice(start, start + pageSize);
   }, [filteredOffers, safePage, pageSize]);
+
+  useEffect(() => {
+    if (!focusedOfferId || paginatedOffers.length === 0) return;
+    const node = document.getElementById(`offer-card-${focusedOfferId}`);
+    if (!node) return;
+
+    window.requestAnimationFrame(() => {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [focusedOfferId, paginatedOffers]);
 
   const handleToggleCompare = (offer: CardOffer) => {
     setCompareIds((prev) => {
@@ -246,6 +275,7 @@ export default function CardOffersPage() {
                     isCompareSelected={compareIds.has(offer.id)}
                     onToggleCompare={handleToggleCompare}
                     compareDisabled={compareIds.size >= maxCompare && !compareIds.has(offer.id)}
+                    isFocused={focusedOfferId === offer.id}
                   />
                 ))}
               </div>

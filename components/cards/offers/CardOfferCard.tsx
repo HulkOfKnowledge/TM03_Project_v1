@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Check, ChevronDown, ChevronUp, ExternalLink, Shield, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -88,6 +88,7 @@ interface CardOfferCardProps {
   isCompareSelected: boolean;
   onToggleCompare: (offer: CardOffer) => void;
   compareDisabled: boolean;
+  isFocused?: boolean;
 }
 
 export function CardOfferCard({
@@ -95,8 +96,16 @@ export function CardOfferCard({
   isCompareSelected,
   onToggleCompare,
   compareDisabled,
+  isFocused = false,
 }: CardOfferCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(isFocused);
+
+  useEffect(() => {
+    if (isFocused) {
+      setExpanded(true);
+    }
+  }, [isFocused]);
+
   const visiblePerks = expanded ? offer.perks : offer.perks.slice(0, 3);
 
   const topEarnRate = Math.max(
@@ -108,9 +117,12 @@ export function CardOfferCard({
 
   return (
     <div
+      id={`offer-card-${offer.id}`}
       className={cn(
         'relative flex flex-col rounded-xl border bg-white dark:bg-gray-950 transition-all duration-200',
-        isCompareSelected
+        isFocused
+          ? 'border-brand shadow-md shadow-brand/10 ring-2 ring-brand/20'
+          : isCompareSelected
           ? 'border-indigo-500 dark:border-indigo-500 shadow-md shadow-indigo-500/10 ring-2 ring-indigo-500/20'
           : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm',
       )}
