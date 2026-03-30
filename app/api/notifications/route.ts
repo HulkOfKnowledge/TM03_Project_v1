@@ -10,6 +10,8 @@ import type {
   RewardNotification,
 } from '@/types/notification.types';
 
+export const dynamic = 'force-dynamic';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOTIFICATION_EVAL_LIMIT = 120;
 const NEW_CARD_OPPORTUNITIES_LOOKBACK_DAYS = 180;

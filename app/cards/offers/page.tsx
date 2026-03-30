@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Navigation } from '@/components/dashboard/Navigation';
 import { Footer } from '@/components/landing/Footer';
@@ -22,7 +22,7 @@ const MOBILE_MAX_COMPARE = 2;
 const OFFERS_PER_PAGE_DESKTOP = 12;
 const OFFERS_PER_PAGE_MOBILE = 10;
 
-export default function CardOffersPage() {
+function CardOffersPageContent() {
   const searchParams = useSearchParams();
   const focusedOfferId = searchParams.get('focus')?.trim() || '';
   const queryFromUrl = searchParams.get('q')?.trim() || '';
@@ -354,5 +354,27 @@ export default function CardOffersPage() {
 
       <Footer />
     </div>
+  );
+}
+
+function CardOffersPageFallback() {
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="pt-28 lg:pt-40 pb-24">
+        <div className="container mx-auto px-4 md:px-6">
+          <CardOffersSkeleton />
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+export default function CardOffersPage() {
+  return (
+    <Suspense fallback={<CardOffersPageFallback />}>
+      <CardOffersPageContent />
+    </Suspense>
   );
 }
