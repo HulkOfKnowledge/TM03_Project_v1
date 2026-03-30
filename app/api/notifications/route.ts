@@ -100,6 +100,34 @@ function buildNewCardOpportunityMessage(params: {
   return `You spend about ${spendSharePct.toFixed(1)}% in ${category}. ${suggestedOfferName} could add about $${monthlyGain.toFixed(2)}/month in rewards with your current pattern.`;
 }
 
+function resolveOpportunityEventDateIso(params: {
+  category: string;
+  transactions: any[];
+  fallbackIso: string;
+}): string {
+  const normalizedCategory = params.category.trim().toLowerCase();
+  if (!normalizedCategory || !Array.isArray(params.transactions) || params.transactions.length === 0) {
+    return params.fallbackIso;
+  }
+
+  let bestTs = Number.NaN;
+  for (const txn of params.transactions) {
+    const rawCategory = String(txn?.raw_category || '').trim().toLowerCase();
+    if (rawCategory !== normalizedCategory) continue;
+
+    const ts = new Date(String(txn?.date || '')).getTime();
+    if (!Number.isFinite(ts)) continue;
+    if (!Number.isFinite(bestTs) || ts > bestTs) {
+      bestTs = ts;
+    }
+  }
+
+  if (!Number.isFinite(bestTs)) {
+    return params.fallbackIso;
+  }
+  return new Date(bestTs).toISOString();
+}
+
 function buildOwnedCardNotification(params: {
   txn: any;
   timeframe: NotificationTimeframe;
@@ -531,7 +559,11 @@ async function getRewardOptimizationNotifications(ctx: NotificationProviderConte
         id: `new-card-opportunity:${uniqueKey}`,
         timeframe: 'monthly',
         nowIso: ctx.now.toISOString(),
-        eventDateIso: ctx.now.toISOString(),
+        eventDateIso: resolveOpportunityEventDateIso({
+          category: opportunityCategory,
+          transactions,
+          fallbackIso: ctx.now.toISOString(),
+        }),
         amount: estimatedMonthlySpend,
         merchant: 'Multiple merchants',
         category: opportunityCategory,

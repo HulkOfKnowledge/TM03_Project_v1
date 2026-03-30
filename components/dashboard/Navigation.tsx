@@ -200,7 +200,9 @@ export function Navigation() {
     if (!cardDangerNotification) return notifications;
 
     const filteredApiNotifications = notifications.filter((item) => item.id !== cardDangerNotification.id);
-    return [cardDangerNotification, ...filteredApiNotifications];
+    return [cardDangerNotification, ...filteredApiNotifications].sort(
+      (a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime(),
+    );
   }, [notifications, cardDangerNotification]);
   const hasDangerNotification = Boolean(cardDangerNotification);
   const shouldPulseDanger = Boolean(
