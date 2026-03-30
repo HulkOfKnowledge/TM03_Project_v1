@@ -8,6 +8,7 @@ future analytics features, while reducing fallback into "other".
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -18,14 +19,41 @@ DEFAULT_UNKNOWN_LABELS = ["other", "uncategorized", "unknown", "misc", "miscella
 
 
 def _taxonomy_path() -> Path:
-    # .../credit-intelligence-service/app/services/category_taxonomy.py -> repo root
-    return Path(__file__).resolve().parents[3] / "shared" / "category-taxonomy.json"
+    current_file = Path(__file__).resolve()
+
+    # Optional explicit override for container/host-specific layouts.
+    env_path = os.getenv("SHARED_TAXONOMY_PATH")
+    if env_path:
+        return Path(env_path).expanduser().resolve()
+
+    # 1) Monorepo layout: <repo>/credit-intelligence-service/app/services/... -> <repo>/shared/...
+    monorepo_shared = current_file.parents[3] / "shared" / "category-taxonomy.json"
+    if monorepo_shared.exists():
+        return monorepo_shared
+
+    # 2) Service-local layout (Docker image): /app/app/services/... -> /app/shared/...
+    service_shared = current_file.parents[2] / "shared" / "category-taxonomy.json"
+    if service_shared.exists():
+        return service_shared
+
+    # Fall back to the service-local path for clearer startup errors.
+    return service_shared
 
 
 def _load_shared_taxonomy() -> Dict[str, object]:
     path = _taxonomy_path()
     if not path.exists():
-        raise RuntimeError(f"Shared taxonomy file not found: {path}")
+        current_file = Path(__file__).resolve()
+        expected = [
+            path,
+            current_file.parents[3] / "shared" / "category-taxonomy.json",
+            current_file.parents[2] / "shared" / "category-taxonomy.json",
+        ]
+        tried = "\n - ".join(str(p) for p in dict.fromkeys(expected))
+        raise RuntimeError(
+            "Shared taxonomy file not found. Set SHARED_TAXONOMY_PATH or ensure one of these files exists:\n"
+            f" - {tried}"
+        )
 
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
