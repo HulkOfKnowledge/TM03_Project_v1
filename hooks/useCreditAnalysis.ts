@@ -271,7 +271,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
 
   // Chart-level metrics derived from the API response
   const chartMetrics = useMemo(() => {
-    const defaults = { lastUtil: 0, utilDiff: 0, totalSpend: 0, spendTrendPct: 0, prevLabel };
+    const defaults = { lastUtil: 0, utilDiff: 0, totalSpend: 0, spendChangeAmount: 0, prevLabel };
     if (!metricsData) return defaults;
 
     let lastUtil: number;
@@ -299,28 +299,24 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     }
 
     const utilDiff      = lastUtil - prevLastUtil;
-    const spendTrendPct = prevSpend > 0 ? +((totalSpend - prevSpend) / prevSpend * 100).toFixed(2) : 0;
-    return { lastUtil, utilDiff, totalSpend, spendTrendPct, prevLabel };
+    const spendChangeAmount = +(totalSpend - prevSpend).toFixed(2);
+    return { lastUtil, utilDiff, totalSpend, spendChangeAmount, prevLabel };
   }, [metricsData, viewMode, displayCards, prevLabel]);
 
   // Metrics scoped to the current date filter  derived from the API response
   const filteredMetrics = useMemo(() => {
-    if (!metricsData) return { totalOwed: 0, totalAvailable: 0, cardBalances: [], owedChangePct: 0, availableChangePct: 0 };
+    if (!metricsData) return { totalOwed: 0, totalAvailable: 0, cardBalances: [], owedChangeAmount: 0, availableChangeAmount: 0 };
 
     const { totals, prevPeriod, cards } = metricsData;
-    const owedChangePct = prevPeriod.totals.totalEndingBalance > 0
-      ? +((totals.totalEndingBalance - prevPeriod.totals.totalEndingBalance) / prevPeriod.totals.totalEndingBalance * 100).toFixed(2)
-      : 0;
-    const availableChangePct = prevPeriod.totals.totalAvailable > 0
-      ? +((totals.totalAvailable - prevPeriod.totals.totalAvailable) / prevPeriod.totals.totalAvailable * 100).toFixed(2)
-      : 0;
+    const owedChangeAmount = +(totals.totalEndingBalance - prevPeriod.totals.totalEndingBalance).toFixed(2);
+    const availableChangeAmount = +(totals.totalAvailable - prevPeriod.totals.totalAvailable).toFixed(2);
 
     return {
       totalOwed: totals.totalEndingBalance,
       totalAvailable: totals.totalAvailable,
       cardBalances: cards.map(c => ({ name: `${c.bank} ****${c.lastFour}`, balance: c.endingBalance })),
-      owedChangePct,
-      availableChangePct,
+      owedChangeAmount,
+      availableChangeAmount,
     };
   }, [metricsData]);
 

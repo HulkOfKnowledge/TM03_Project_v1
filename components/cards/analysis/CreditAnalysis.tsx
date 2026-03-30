@@ -81,6 +81,15 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
     </button>
   );
 
+  const formatSignedCurrencyDelta = (amount: number) => {
+    const abs = Math.abs(amount).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const sign = amount >= 0 ? '+' : '-';
+    return `${sign} $${abs}`;
+  };
+
   //  Loading skeleton
   if (loading) {
     return <CreditAnalysisSkeleton />;
@@ -133,8 +142,8 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
           label="Total Credit Available"
           value={`$${filteredMetrics.totalAvailable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           trend={{
-            value: `${filteredMetrics.availableChangePct >= 0 ? '+' : ''}${filteredMetrics.availableChangePct.toFixed(2)}% vs ${chartMetrics.prevLabel}`,
-            isPositive: filteredMetrics.availableChangePct >= 0,
+            value: `${formatSignedCurrencyDelta(filteredMetrics.availableChangeAmount)} vs ${chartMetrics.prevLabel}`,
+            isPositive: filteredMetrics.availableChangeAmount >= 0,
           }}
           showInfo
         />
@@ -142,8 +151,8 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
           label="Total Amount Owed"
           value={`$${filteredMetrics.totalOwed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           trend={{
-            value: `${filteredMetrics.owedChangePct >= 0 ? '+' : ''}${filteredMetrics.owedChangePct.toFixed(2)}% vs ${chartMetrics.prevLabel}`,
-            isPositive: filteredMetrics.owedChangePct <= 0,
+            value: `${formatSignedCurrencyDelta(filteredMetrics.owedChangeAmount)} vs ${chartMetrics.prevLabel}`,
+            isPositive: filteredMetrics.owedChangeAmount <= 0,
           }}
           showInfo
         />
@@ -198,8 +207,8 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
         primaryValue={`$${chartMetrics.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         primaryLabel="Total spending"
         trend={{
-          value: `${chartMetrics.spendTrendPct >= 0 ? '+' : ''}${chartMetrics.spendTrendPct.toFixed(1)}% vs ${chartMetrics.prevLabel}`,
-          isPositive: chartMetrics.spendTrendPct <= 0,
+          value: `${formatSignedCurrencyDelta(chartMetrics.spendChangeAmount)} vs ${chartMetrics.prevLabel}`,
+          isPositive: chartMetrics.spendChangeAmount <= 0,
         }}
         headerControls={chartSettingsButton}
       >
