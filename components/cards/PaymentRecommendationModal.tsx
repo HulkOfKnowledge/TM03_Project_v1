@@ -146,11 +146,11 @@ function AllocationRow({
             )}
             {impact && (
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {(impact.interestSaved ?? 0) > 0 && (
+                {/* {(impact.interestSaved ?? 0) > 0 && (
                   <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:ring-emerald-800/60">
                     {fmt(impact.interestSaved)} saved/yr
                   </span>
-                )}
+                )} */}
                 {(impact.utilizationImprovement ?? 0) > 0 && (
                   <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700 ring-1 ring-inset ring-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:ring-sky-800/60">
                     −{(impact.utilizationImprovement ?? 0).toFixed(1)}% utilization
@@ -270,7 +270,6 @@ export function PaymentRecommendationModal({
   const recs: PaymentRecommendation[] = result?.recommendations ?? [];
   const totalPaid =
     result?.totalAmount ?? recs.reduce((s, r) => s + (r.suggestedAmount ?? 0), 0);
-  const savings = result?.projectedSavings;
   const cardById = (id: string) => cards.find(c => c.id === id);
 
   // Cards with due date ≤ 7 days (used for urgency notice in input step)
@@ -372,9 +371,9 @@ export function PaymentRecommendationModal({
                     onChange={e => setOptimizationGoal(e.target.value as typeof optimizationGoal)}
                     className="h-11 w-full appearance-none rounded-2xl border border-gray-200 bg-white pl-4 pr-10 text-sm font-medium text-gray-900 transition-shadow focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   >
-                    <option value="balanced">Balanced: smart mix of APR &amp; urgency</option>
-                    <option value="minimize_interest">Highest interest first: Avalanche, save the most</option>
-                    <option value="minimize_balance">Lowest balance first: Snowball, quick wins</option>
+                    <option value="balanced">Recommended: Balanced (APR + Urgency)</option>
+                    <option value="minimize_interest">Focus On Interest</option>
+                    <option value="minimize_balance">Focus On Smaller Balances </option>
                   </select>
                   <svg className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -450,12 +449,6 @@ export function PaymentRecommendationModal({
                         : ' · fully paid off 🎉'}
                     </p>
                   </div>
-                  {savings && (savings.annualInterest ?? 0) > 0 && (
-                    <div className="flex-shrink-0 rounded-xl bg-white/10 px-3 py-2 text-right">
-                      <p className="text-[10px] uppercase tracking-wide opacity-70">Est. savings</p>
-                      <p className="text-sm font-bold">{fmt(savings.annualInterest)}/yr</p>
-                    </div>
-                  )}
                 </div>
               </div>
 
