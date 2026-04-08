@@ -30,13 +30,10 @@ export async function GET(
 
     const cardId = params.id;
 
-    // Fetch card with credit data
+    // Fetch card
     const { data: card, error } = await supabase
       .from('connected_credit_cards')
-      .select(`
-        *,
-        credit_data:credit_data_cache(*)
-      `)
+      .select('*')
       .eq('id', cardId)
       .eq('user_id', user.id)
       .eq('is_active', true)
@@ -49,9 +46,16 @@ export async function GET(
       );
     }
 
-    // Get the most recent credit data
-    const creditData = Array.isArray(card.credit_data) && card.credit_data.length > 0 
-      ? card.credit_data[0] 
+    // Get the most recent credit data deterministically by synced_at.
+    const { data: creditDataArray } = await supabase
+      .from('credit_data_cache')
+      .select('*')
+      .eq('card_id', card.id)
+      .order('synced_at', { ascending: false })
+      .limit(1);
+
+    const creditData = creditDataArray && creditDataArray.length > 0
+      ? creditDataArray[0]
       : null;
 
     const connectedCard: ConnectedCard = {

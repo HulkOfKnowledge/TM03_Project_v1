@@ -120,13 +120,44 @@ function toDateStr(d: Date): string {
 }
 
 /**
- * Canadian due-date rule: statement closes on billingDay of the month;
- * payment is due 21 days later (minimum required by Canadian law).
+ * Demo due-date rule: keep the next due date within a strict 28-day cycle window.
  */
-function calcDueDate(statementCloseDate: Date): Date {
-  const d = new Date(statementCloseDate);
-  d.setDate(d.getDate() + 21);
-  return d;
+function calcDueDate(referenceDate: Date, billingDay: number): Date {
+  const cycleDay = Math.min(28, Math.max(1, billingDay));
+  const due = new Date(referenceDate);
+  due.setHours(0, 0, 0, 0);
+  due.setDate(cycleDay);
+
+  if (due < referenceDate) {
+    due.setMonth(due.getMonth() + 1);
+    due.setDate(cycleDay);
+  }
+
+  const maxWindow = new Date(referenceDate);
+  maxWindow.setDate(maxWindow.getDate() + 28);
+  if (due > maxWindow) return maxWindow;
+
+  return due;
+}
+
+function parseDemoCardIndex(flinksAccountId: string | null): number | null {
+  if (!flinksAccountId) return null;
+  const match = /^demo_acct_(\d+)_\d+$/.exec(flinksAccountId);
+  if (!match) return null;
+  const parsed = Number.parseInt(match[1], 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function inferBillingDayFromDueDate(paymentDueDate: string | null | undefined, fallback: number): number {
+  if (!paymentDueDate) return fallback;
+
+  const dueDate = new Date(paymentDueDate);
+  if (Number.isNaN(dueDate.getTime())) return fallback;
+
+  const statementClose = new Date(dueDate);
+  statementClose.setDate(statementClose.getDate() - 21);
+  const statementDay = statementClose.getDate();
+  return Math.min(28, Math.max(1, statementDay || fallback));
 }
 
 /**
@@ -135,7 +166,7 @@ function calcDueDate(statementCloseDate: Date): Date {
  */
 function generateMonthTransactions(params: {
   cardIndex: number;
-  monthIndex: number;   // 0 = current month, 11 = 11 months ago
+  monthSeed: number;    // stable seed based on YYYYMM
   userSeed: number;
   year: number;
   month: number;        // 1-based
@@ -145,12 +176,12 @@ function generateMonthTransactions(params: {
   isCurrentMonth: boolean;  // NEW: flag for current month
   currentDay: number;       // NEW: current day of month
 }): { transactions: FlinksTransactionDetail[]; endBalance: number } {
-  const { cardIndex, monthIndex, userSeed, year, month, startBalance, creditLimit, billingDay, isCurrentMonth, currentDay } = params;
-  const baseSeed = userSeed + cardIndex * 100_000 + monthIndex * 1_000;
+  const { cardIndex, monthSeed, userSeed, year, month, startBalance, creditLimit, billingDay, isCurrentMonth, currentDay } = params;
+  const baseSeed = userSeed + cardIndex * 100_000 + monthSeed * 13;
 
   const daysInMonth = new Date(year, month, 0).getDate();
   // For current month, only generate transactions up to currentDay
-  const maxDay = isCurrentMonth ? currentDay : daysInMonth;
+  const maxDay = Math.max(1, isCurrentMonth ? currentDay : daysInMonth);
   
   const txnCount = seededInt(baseSeed, 15, 28);
   const rawTxns: FlinksTransactionDetail[] = [];
@@ -173,7 +204,7 @@ function generateMonthTransactions(params: {
     runningBalance = parseFloat((runningBalance + clamped).toFixed(2));
 
     rawTxns.push({
-      Id: `demo_txn_c${cardIndex}_m${monthIndex}_t${t}`,
+      Id: `demo_txn_c${cardIndex}_y${year}m${month}_t${t}`,
       Date: toDateStr(new Date(year, month - 1, dayOfMonth)),
       Description: merchant.descriptionFn(nonce),
       Debit: clamped,
@@ -195,7 +226,7 @@ function generateMonthTransactions(params: {
     runningBalance = parseFloat(Math.max(0, runningBalance - paymentAmount).toFixed(2));
 
     rawTxns.push({
-      Id: `demo_txn_c${cardIndex}_m${monthIndex}_pmt`,
+      Id: `demo_txn_c${cardIndex}_y${year}m${month}_pmt`,
       Date: toDateStr(new Date(year, month - 1, paymentDay)),
       Description: 'PAYMENT - THANK YOU',
       Debit: null,
@@ -203,6 +234,105 @@ function generateMonthTransactions(params: {
       Balance: runningBalance,
       Code: null,
     });
+  }
+
+  // Guarantee at least one transaction per week bucket (1-7, 8-14, ...).
+  // For the current month, buckets are limited to currentDay.
+  const weekCount = Math.ceil(maxDay / 7);
+  for (let weekIndex = 0; weekIndex < weekCount; weekIndex++) {
+    const weekStart = weekIndex * 7 + 1;
+    const weekEnd = Math.min(maxDay, weekStart + 6);
+
+    const hasTxnInWeek = rawTxns.some((txn) => {
+      const txnDate = new Date(txn.Date);
+      const day = txnDate.getDate();
+      return day >= weekStart && day <= weekEnd;
+    });
+
+    if (hasTxnInWeek) continue;
+
+    const weekSeed = baseSeed + 2_000 + weekIndex * 37;
+    const dayInWeek = seededInt(weekSeed, weekStart, weekEnd);
+
+    // If near/at limit, create a payment; otherwise create a small purchase.
+    const availableHeadroom = Math.max(0, creditLimit - runningBalance);
+    const shouldCreatePayment = availableHeadroom < 10 && runningBalance > 0;
+
+    if (shouldCreatePayment) {
+      const payment = Math.min(
+        runningBalance,
+        Math.max(10, parseFloat((runningBalance * 0.15).toFixed(2)))
+      );
+
+      runningBalance = parseFloat(Math.max(0, runningBalance - payment).toFixed(2));
+      rawTxns.push({
+        Id: `demo_txn_c${cardIndex}_y${year}m${month}_w${weekIndex + 1}_pmt`,
+        Date: toDateStr(new Date(year, month - 1, dayInWeek)),
+        Description: 'WEEKLY PAYMENT - THANK YOU',
+        Debit: null,
+        Credit: payment,
+        Balance: runningBalance,
+        Code: null,
+      });
+      continue;
+    }
+
+    const weeklyDebit = Math.min(
+      Math.max(0, availableHeadroom),
+      seededAmount(weekSeed + 1, 5, 35)
+    );
+
+    if (weeklyDebit > 0) {
+      runningBalance = parseFloat(Math.min(creditLimit, runningBalance + weeklyDebit).toFixed(2));
+      rawTxns.push({
+        Id: `demo_txn_c${cardIndex}_y${year}m${month}_w${weekIndex + 1}_debit`,
+        Date: toDateStr(new Date(year, month - 1, dayInWeek)),
+        Description: 'WEEKLY COFFEE SHOP TORONTO ON',
+        Debit: weeklyDebit,
+        Credit: null,
+        Balance: runningBalance,
+        Code: null,
+      });
+    }
+  }
+
+  // Guarantee at least one transaction per month to avoid empty-month gaps.
+  if (rawTxns.length === 0) {
+    const fallbackDay = seededInt(baseSeed + 997, 1, maxDay);
+
+    if (runningBalance > 0) {
+      const fallbackPayment = Math.min(
+        runningBalance,
+        Math.max(10, parseFloat((runningBalance * 0.2).toFixed(2)))
+      );
+
+      runningBalance = parseFloat(Math.max(0, runningBalance - fallbackPayment).toFixed(2));
+      rawTxns.push({
+        Id: `demo_txn_c${cardIndex}_y${year}m${month}_fallback_pmt`,
+        Date: toDateStr(new Date(year, month - 1, fallbackDay)),
+        Description: 'AUTOPAYMENT - THANK YOU',
+        Debit: null,
+        Credit: fallbackPayment,
+        Balance: runningBalance,
+        Code: null,
+      });
+    } else {
+      const fallbackDebit = Math.min(
+        creditLimit,
+        seededAmount(baseSeed + 998, 5, 25)
+      );
+
+      runningBalance = parseFloat(Math.min(creditLimit, runningBalance + fallbackDebit).toFixed(2));
+      rawTxns.push({
+        Id: `demo_txn_c${cardIndex}_y${year}m${month}_fallback_debit`,
+        Date: toDateStr(new Date(year, month - 1, fallbackDay)),
+        Description: 'TIM HORTONS #10001',
+        Debit: fallbackDebit,
+        Credit: null,
+        Balance: runningBalance,
+        Code: null,
+      });
+    }
   }
 
   // Sort ascending by date (Flinks contract)
@@ -283,7 +413,7 @@ export async function POST(_request: NextRequest) {
       );
     }
 
-    // Idempotency check
+    // Existing demo cards should be backfilled to current month (not no-op)
     const { count } = await supabase
       .from('connected_credit_cards')
       .select('id', { count: 'exact', head: true })
@@ -291,8 +421,184 @@ export async function POST(_request: NextRequest) {
       .like('flinks_account_id', 'demo_acct_%');
 
     if ((count ?? 0) > 0) {
+      const now = new Date();
+      const userSeed = hashUserId(user.id);
+
+      const { data: existingDemoCards, error: existingDemoCardsError } = await supabase
+        .from('connected_credit_cards')
+        .select('id, flinks_account_id, institution_name, card_last_four')
+        .eq('user_id', user.id)
+        .like('flinks_account_id', 'demo_acct_%');
+
+      if (existingDemoCardsError) {
+        console.error('Error loading existing demo cards:', existingDemoCardsError);
+        return NextResponse.json(
+          createErrorResponse('DATABASE_ERROR', 'Failed to load existing demo cards'),
+          { status: 500 }
+        );
+      }
+
+      let generatedMonths = 0;
+      let generatedTransactions = 0;
+
+      for (const card of existingDemoCards || []) {
+        const cardIndex = parseDemoCardIndex(card.flinks_account_id);
+        if (cardIndex == null || !DEMO_CARDS[cardIndex]) continue;
+
+        const template = DEMO_CARDS[cardIndex];
+        const cardSeed = userSeed + cardIndex * 7_919;
+        const billingDay = seededInt(cardSeed + 4, 1, 28);
+        const fallbackCreditLimit =
+          Math.round(seededInt(cardSeed + 3, template.limitRange[0], template.limitRange[1]) / 500) * 500;
+
+        const [{ data: latestTxn }, { data: latestCache }] = await Promise.all([
+          supabase
+            .from('card_transactions')
+            .select('date, balance')
+            .eq('card_id', card.id)
+            .order('date', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from('credit_data_cache')
+            .select('current_balance, credit_limit, payment_due_date')
+            .eq('card_id', card.id)
+            .order('synced_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+
+        const creditLimit = Number(latestCache?.credit_limit ?? fallbackCreditLimit);
+        const inferredBillingDay = inferBillingDayFromDueDate(
+          latestCache?.payment_due_date,
+          billingDay
+        );
+        let runningBalance = Number(latestTxn?.balance ?? latestCache?.current_balance ?? 0);
+
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const latestTxnDate = latestTxn?.date ? new Date(latestTxn.date) : null;
+
+        let cursor = latestTxnDate
+          ? new Date(latestTxnDate.getFullYear(), latestTxnDate.getMonth() + 1, 1)
+          : new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const newTransactions: FlinksTransactionDetail[] = [];
+        const creditDataEntries: ReturnType<typeof mapFlinksAccountToCreditData>[] = [];
+
+        while (cursor <= currentMonthStart) {
+          const year = cursor.getFullYear();
+          const month = cursor.getMonth() + 1;
+          const monthSeed = year * 100 + month;
+          const isCurrentMonth =
+            year === now.getFullYear() && cursor.getMonth() === now.getMonth();
+
+          const { transactions, endBalance } = generateMonthTransactions({
+            cardIndex,
+            monthSeed,
+            userSeed,
+            year,
+            month,
+            startBalance: runningBalance,
+            creditLimit,
+            billingDay: inferredBillingDay,
+            isCurrentMonth,
+            currentDay: isCurrentMonth ? now.getDate() : 31,
+          });
+
+          newTransactions.push(...transactions);
+          runningBalance = endBalance;
+          generatedMonths += 1;
+
+          const monthEndDate = new Date(year, month, 0);
+          const isBackfillCurrentMonth =
+            year === now.getFullYear() && month === now.getMonth() + 1;
+          const syncDate = isBackfillCurrentMonth ? new Date(now) : monthEndDate;
+          const dueDate = calcDueDate(syncDate, inferredBillingDay);
+
+          const lastFour = card.card_last_four ?? String(seededInt(cardSeed, 1000, 9999));
+          const transitNumber = String(seededInt(cardSeed + 1, 10000, 99999));
+          const institutionNum = String(template.institutionId).padStart(3, '0');
+          const accountNumber = String(seededInt(cardSeed + 2, 1_000_000, 9_999_999));
+          const holderName = (user.email ?? 'demo')
+            .split('@')[0]
+            .replace(/[^a-zA-Z ]/g, ' ')
+            .toUpperCase();
+
+          const snapshot = buildFlinksAccountSnapshot({
+            cardIndex,
+            template,
+            lastFour,
+            transitNumber,
+            institutionNumber: institutionNum,
+            accountNumber,
+            holderName,
+            transactions,
+            currentBalance: endBalance,
+            creditLimit,
+          });
+
+          creditDataEntries.push(
+            mapFlinksAccountToCreditData(card.id, snapshot, {
+              dueDate: dueDate.toISOString(),
+              interestRate: template.interestRate,
+              syncedAt: syncDate.toISOString(),
+            })
+          );
+
+          cursor = new Date(year, month, 1);
+        }
+
+        if (newTransactions.length > 0) {
+          generatedTransactions += newTransactions.length;
+          const txnRows = mapFlinksTransactions(card.id, newTransactions, now.toISOString());
+          const CHUNK = 200;
+
+          for (let i = 0; i < txnRows.length; i += CHUNK) {
+            const { error: txnError } = await supabase
+              .from('card_transactions')
+              .upsert(txnRows.slice(i, i + CHUNK), {
+                onConflict: 'card_id,flinks_transaction_id',
+                ignoreDuplicates: true,
+              });
+
+            if (txnError) {
+              console.error(`card_transactions backfill error card ${card.id} chunk ${i}:`, txnError);
+            }
+          }
+        }
+
+        if (creditDataEntries.length > 0) {
+          const { error: cacheError } = await supabase
+            .from('credit_data_cache')
+            .insert(creditDataEntries);
+
+          if (cacheError) {
+            console.error(`credit_data_cache backfill error card ${card.id}:`, cacheError);
+          }
+        }
+
+        if (newTransactions.length > 0 || creditDataEntries.length > 0) {
+          const { error: updateCardError } = await supabase
+            .from('connected_credit_cards')
+            .update({ last_synced_at: now.toISOString() })
+            .eq('id', card.id)
+            .eq('user_id', user.id);
+
+          if (updateCardError) {
+            console.error(`connected_credit_cards sync timestamp update error card ${card.id}:`, updateCardError);
+          }
+        }
+      }
+
       return NextResponse.json(
-        createSuccessResponse({ message: 'Demo cards already seeded for this user', cards: [] }),
+        createSuccessResponse({
+          message: 'Demo cards already existed and were synchronized to the current month',
+          cards: [],
+          backfill: {
+            monthsGenerated: generatedMonths,
+            transactionsGenerated: generatedTransactions,
+          },
+        }),
         { status: 200 }
       );
     }
@@ -350,7 +656,7 @@ export async function POST(_request: NextRequest) {
 
         const { transactions, endBalance } = generateMonthTransactions({
           cardIndex,
-          monthIndex: m,
+          monthSeed: year * 100 + month,
           userSeed,
           year,
           month,
@@ -364,12 +670,10 @@ export async function POST(_request: NextRequest) {
         allTransactions.push(...transactions);
         runningBalance = endBalance;
 
-        // Statement closes on billingDay; due 21 days later (Canadian law)
-        const daysInMonth = new Date(year, month, 0).getDate();
-        const statementClose = new Date(year, month - 1, Math.min(billingDay, daysInMonth));
-        const dueDate = calcDueDate(statementClose);
-        // synced_at = last day of this month (simulates a monthly sync)
-        const syncDate = new Date(year, month, 0);
+        // Use month-end for historical snapshots, but never future-date current month.
+        const monthEndDate = new Date(year, month, 0);
+        const syncDate = isCurrentMonth ? new Date(now) : monthEndDate;
+        const dueDate = calcDueDate(syncDate, billingDay);
 
         const snapshot = buildFlinksAccountSnapshot({
           cardIndex,
