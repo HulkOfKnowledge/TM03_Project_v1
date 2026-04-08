@@ -17,6 +17,8 @@ from app.models.schemas import (
     CardChoiceBatchItem,
     NewCardOpportunitiesRequest,
     NewCardOpportunitiesResponse,
+    ForecastInsightsRequest,
+    ForecastInsightsResponse,
 )
 from app.services.stochastic_planner import (
     NoRewardDataError,
@@ -117,6 +119,18 @@ async def get_new_card_opportunities(
         return stochastic_planner.recommend_new_card_opportunities(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to compute new-card opportunities: {str(e)}")
+
+
+@router.post("/forecast-insights", response_model=ForecastInsightsResponse)
+async def get_forecast_insights(
+    request: ForecastInsightsRequest,
+    api_key: str = Depends(verify_api_key),
+):
+    """Compute Smart Forecast insights server-side for UI consumption."""
+    try:
+        return stochastic_planner.build_forecast_insights(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to compute forecast insights: {str(e)}")
 
 
 @router.post("/reward-catalog/invalidate")

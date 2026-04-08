@@ -314,5 +314,65 @@ class NewCardOpportunitiesResponse(BaseModel):
     computed_at: str
 
 
+class ForecastCategoryTotal(BaseModel):
+    category: str
+    amount: float
+
+
+class ForecastAnomaly(BaseModel):
+    category: str
+    average_monthly: float
+    month_to_date: float
+    day_of_month: int
+    baseline_months: List[str]
+
+
+class ForecastMonthlyPoint(BaseModel):
+    month: str
+    total: float
+
+
+class ForecastSnapshot(BaseModel):
+    mtd_spend: float
+    projected_month_end: float
+    projected_low: float
+    projected_high: float
+    confidence: Literal["High", "Medium", "Low"]
+    status: Literal["On Track", "Watch", "Risk"]
+    day_of_month: int
+    month_days: int
+
+
+class ForecastNextSpendProbability(BaseModel):
+    category: str
+    probability: float
+
+
+class ForecastNextSpendPrediction(BaseModel):
+    current_category: str
+    top_category: str
+    probabilities: List[ForecastNextSpendProbability]
+
+
+class ForecastInsightsRequest(BaseModel):
+    user_id: str
+    transactions: List[StochasticTransactionData]
+    start_date: str
+    end_date: str
+    current_date: Optional[str] = None
+
+
+class ForecastInsightsResponse(BaseModel):
+    user_id: str
+    start_date: str
+    end_date: str
+    top_categories: List[ForecastCategoryTotal]
+    anomaly: Optional[ForecastAnomaly] = None
+    monthly_trend: List[ForecastMonthlyPoint]
+    forecast_snapshot: Optional[ForecastSnapshot] = None
+    next_spend_prediction: Optional[ForecastNextSpendPrediction] = None
+    computed_at: str
+
+
 # Update forward references
 AnalyzeCreditResponse.model_rebuild()

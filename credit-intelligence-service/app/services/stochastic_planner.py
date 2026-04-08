@@ -28,6 +28,14 @@ from app.models.schemas import (
     CardChoiceCounterfactual,
     OwnedCardOpportunity,
     UpgradeOpportunity,
+    ForecastInsightsRequest,
+    ForecastInsightsResponse,
+    ForecastCategoryTotal,
+    ForecastAnomaly,
+    ForecastMonthlyPoint,
+    ForecastSnapshot,
+    ForecastNextSpendPrediction,
+    ForecastNextSpendProbability,
 )
 from app.services.category_taxonomy import SHARED_CATEGORIES, infer_shared_category
 
@@ -390,6 +398,175 @@ class StochasticPlanner:
             opportunities=opportunities,
             computed_at=datetime.utcnow().isoformat(),
         )
+
+    def build_forecast_insights(
+        self,
+        request: ForecastInsightsRequest,
+    ) -> ForecastInsightsResponse:
+        txns = self._filter_and_normalize_transactions(
+            transactions=request.transactions,
+            lookback_days=730,
+        )
+
+        start_date = request.start_date[:10]
+        end_date = request.end_date[:10]
+        today_iso = (request.current_date or datetime.utcnow().strftime("%Y-%m-%d"))[:10]
+
+        filtered = [t for t in txns if start_date <= t.date.strftime("%Y-%m-%d") <= end_date and t.amount > 0]
+
+        range_totals: Dict[str, float] = defaultdict(float)
+        for txn in filtered:
+            range_totals[txn.category] += txn.amount
+
+        top_categories = sorted(
+            [ForecastCategoryTotal(category=cat, amount=round(amount, 2)) for cat, amount in range_totals.items()],
+            key=lambda item: item.amount,
+            reverse=True,
+        )[:5]
+
+        monthly_totals: Dict[str, float] = defaultdict(float)
+        for txn in filtered:
+            ym = txn.date.strftime("%Y-%m")
+            monthly_totals[ym] += txn.amount
+
+        monthly_trend = [
+            ForecastMonthlyPoint(month=ym, total=round(total, 2))
+            for ym, total in sorted(monthly_totals.items(), key=lambda item: item[0])[-8:]
+        ]
+
+        anomaly = None
+        forecast_snapshot = None
+        next_spend_prediction = None
+
+        try:
+            now = datetime.strptime(today_iso, "%Y-%m-%d")
+            month_iso = now.strftime("%Y-%m")
+            month_start_iso = f"{month_iso}-01"
+            month_days = self._days_in_month(now.year, now.month)
+            day_of_month = now.day
+            is_mtd = start_date == month_start_iso and end_date == today_iso
+
+            if is_mtd:
+                this_month_totals: Dict[str, float] = defaultdict(float)
+                per_month_category_totals: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+                per_month_spend_totals: Dict[str, float] = defaultdict(float)
+
+                for txn in txns:
+                    if txn.amount <= 0:
+                        continue
+                    d = txn.date.strftime("%Y-%m-%d")
+                    ym = txn.date.strftime("%Y-%m")
+                    per_month_category_totals[ym][txn.category] += txn.amount
+                    per_month_spend_totals[ym] += txn.amount
+                    if month_start_iso <= d <= today_iso:
+                        this_month_totals[txn.category] += txn.amount
+
+                full_past_months = sorted([ym for ym in per_month_category_totals.keys() if ym < month_iso])[-6:]
+
+                best_anomaly = None
+                if len(full_past_months) >= 2:
+                    for category, month_to_date in this_month_totals.items():
+                        past_values = [per_month_category_totals[ym].get(category, 0.0) for ym in full_past_months]
+                        average_monthly = sum(past_values) / len(full_past_months)
+                        if average_monthly <= 0:
+                            continue
+
+                        pct_of_month = day_of_month / max(month_days, 1)
+                        pace_projection = month_to_date / max(pct_of_month, 0.1)
+                        is_over = month_to_date > average_monthly or pace_projection > average_monthly * 1.1
+                        if not is_over:
+                            continue
+
+                        delta = month_to_date - average_monthly
+                        if not best_anomaly or delta > (best_anomaly["month_to_date"] - best_anomaly["average_monthly"]):
+                            best_anomaly = {
+                                "category": category,
+                                "average_monthly": round(average_monthly, 2),
+                                "month_to_date": round(month_to_date, 2),
+                                "day_of_month": day_of_month,
+                                "baseline_months": full_past_months,
+                            }
+
+                if best_anomaly:
+                    anomaly = ForecastAnomaly(**best_anomaly)
+
+                mtd_spend = sum(this_month_totals.values())
+                if mtd_spend > 0:
+                    elapsed_pct = day_of_month / max(month_days, 1)
+                    projected_month_end = mtd_spend / max(elapsed_pct, 0.1)
+
+                    txn_count = len([t for t in txns if month_start_iso <= t.date.strftime("%Y-%m-%d") <= today_iso and t.amount > 0])
+                    confidence = "High" if txn_count >= 25 else "Medium" if txn_count >= 12 else "Low"
+                    volatility = 0.08 if confidence == "High" else 0.13 if confidence == "Medium" else 0.2
+                    projected_low = projected_month_end * (1 - volatility)
+                    projected_high = projected_month_end * (1 + volatility)
+
+                    prior_months = sorted([ym for ym in per_month_spend_totals.keys() if ym < month_iso])[-3:]
+                    prior_avg = sum(per_month_spend_totals[ym] for ym in prior_months) / len(prior_months) if prior_months else 0
+                    status = "On Track"
+                    if prior_avg > 0 and projected_month_end > prior_avg * 1.35:
+                        status = "Risk"
+                    elif prior_avg > 0 and projected_month_end > prior_avg * 1.15:
+                        status = "Watch"
+
+                    forecast_snapshot = ForecastSnapshot(
+                        mtd_spend=round(mtd_spend, 2),
+                        projected_month_end=round(projected_month_end, 2),
+                        projected_low=round(projected_low, 2),
+                        projected_high=round(projected_high, 2),
+                        confidence=confidence,
+                        status=status,
+                        day_of_month=day_of_month,
+                        month_days=month_days,
+                    )
+        except Exception:
+            # Keep endpoint resilient; return partial insights if date parsing fails.
+            pass
+
+        try:
+            if end_date >= today_iso and len(filtered) >= 2:
+                current_category = top_categories[0].category if top_categories else None
+                spend_prob = self.predict_spending_probability(
+                    SpendingProbabilityRequest(
+                        user_id=request.user_id,
+                        transactions=request.transactions,
+                        current_category=current_category,
+                        lookback_days=180,
+                    )
+                )
+
+                next_spend_prediction = ForecastNextSpendPrediction(
+                    current_category=spend_prob.current_category,
+                    top_category=spend_prob.top_category,
+                    probabilities=[
+                        ForecastNextSpendProbability(category=item.category, probability=item.probability)
+                        for item in spend_prob.probabilities[:6]
+                    ],
+                )
+        except InsufficientDataError:
+            next_spend_prediction = None
+        except Exception:
+            next_spend_prediction = None
+
+        return ForecastInsightsResponse(
+            user_id=request.user_id,
+            start_date=start_date,
+            end_date=end_date,
+            top_categories=top_categories,
+            anomaly=anomaly,
+            monthly_trend=monthly_trend,
+            forecast_snapshot=forecast_snapshot,
+            next_spend_prediction=next_spend_prediction,
+            computed_at=datetime.utcnow().isoformat(),
+        )
+
+    def _days_in_month(self, year: int, month: int) -> int:
+        if month == 12:
+            next_month = datetime(year + 1, 1, 1)
+        else:
+            next_month = datetime(year, month + 1, 1)
+        current_month = datetime(year, month, 1)
+        return (next_month - current_month).days
 
     def _derive_category_space(self, transactions) -> List[str]:
         """

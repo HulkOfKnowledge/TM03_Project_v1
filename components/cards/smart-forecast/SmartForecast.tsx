@@ -13,10 +13,10 @@ import {
 import { useMemo, useState, useEffect } from 'react';
 import { Bar, Pie } from 'react-chartjs-2';
 import { Info, ChevronDown, Sparkles, History, AlertTriangle } from 'lucide-react';
-import type { ConnectedCard, Transaction } from '@/types/card.types';
+import type { ConnectedCard } from '@/types/card.types';
 import { useCreditAnalysis } from '@/hooks/useCreditAnalysis';
 import { useTheme } from '@/components/ThemeProvider';
-import { inferTransactionCategory, formatCategoryLabel } from '@/lib/transactions/category-utils';
+import { formatCategoryLabel } from '@/lib/transactions/category-utils';
 import { ChartSettingsModal } from '@/components/cards/analysis/ChartSettingsModal';
 import { SmartForecastSkeleton } from './SmartForecastSkeleton';
 
@@ -31,13 +31,19 @@ interface ApiEnvelope<T> {
   data?: T;
 }
 
-interface SpendingProbabilityPayload {
-  probabilities: Array<{ category: string; probability: number }>;
-  topCategory: string;
+interface ForecastSnapshot {
+  mtdSpend: number;
+  projectedMonthEnd: number;
+  projectedLow: number;
+  projectedHigh: number;
+  confidence: 'High' | 'Medium' | 'Low';
+  status: 'On Track' | 'Watch' | 'Risk';
+  dayOfMonth: number;
+  monthDays: number;
 }
 
-interface CategoryInsights {
-  topFiveInFilter: Array<{ category: string; amount: number }>;
+interface ForecastInsightsPayload {
+  topCategories: Array<{ category: string; amount: number }>;
   anomaly: null | {
     category: string;
     averageMonthly: number;
@@ -45,35 +51,23 @@ interface CategoryInsights {
     dayOfMonth: number;
     baselineMonths: string[];
   };
-}
-
-function toIsoDate(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
-function isWithin(isoDate: string, startIso: string, endIso: string): boolean {
-  return isoDate >= startIso && isoDate <= endIso;
-}
-
-function daysInMonth(year: number, monthOneIndexed: number): number {
-  return new Date(year, monthOneIndexed, 0).getDate();
+  monthlyTrend: Array<{ month: string; total: number }>;
+  forecastSnapshot: ForecastSnapshot | null;
+  nextSpendPrediction: {
+    currentCategory: string;
+    topCategory: string;
+    probabilities: Array<{ category: string; probability: number }>;
+  } | null;
 }
 
 function formatCurrency(amount: number): string {
   return `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function parseIsoDate(isoDate: string): Date {
-  const [year, month, day] = isoDate.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
-
 export function SmartForecast({ connectedCards }: SmartForecastProps) {
   const [showChartSettings, setShowChartSettings] = useState(false);
-  const [transactionsByCard, setTransactionsByCard] = useState<Record<string, Transaction[]>>({});
-  const [transactionsLoading, setTransactionsLoading] = useState(false);
-  const [spendingProbability, setSpendingProbability] = useState<SpendingProbabilityPayload | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [forecastInsights, setForecastInsights] = useState<ForecastInsightsPayload | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
@@ -121,214 +115,20 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
     });
   };
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadTransactions() {
-      if (!connectedCards.length) {
-        setTransactionsByCard({});
-        return;
-      }
-
-      setTransactionsLoading(true);
-      try {
-        const entries = await Promise.all(
-          connectedCards.map(async (card) => {
-            const pageSize = 200;
-            const maxRows = 2000;
-            let offset = 0;
-            let done = false;
-            const transactions: Transaction[] = [];
-
-            while (!done && offset < maxRows) {
-              const response = await fetch(`/api/cards/${card.id}/transactions?limit=${pageSize}&offset=${offset}`, {
-                method: 'GET',
-                credentials: 'include',
-              });
-
-              if (!response.ok) {
-                done = true;
-                break;
-              }
-
-              const payload = await response.json();
-              const page = (payload?.data?.transactions ?? []) as Transaction[];
-              transactions.push(...page);
-
-              if (page.length < pageSize) {
-                done = true;
-              } else {
-                offset += pageSize;
-              }
-            }
-
-            return [card.id, transactions] as const;
-          }),
-        );
-
-        if (!active) return;
-
-        const map: Record<string, Transaction[]> = {};
-        for (const [cardId, transactions] of entries) {
-          map[cardId] = transactions;
-        }
-
-        setTransactionsByCard(map);
-      } catch {
-        if (!active) return;
-        setTransactionsByCard({});
-      } finally {
-        if (!active) return;
-        setTransactionsLoading(false);
-      }
-    }
-
-    loadTransactions();
-
-    return () => {
-      active = false;
-    };
-  }, [connectedCards]);
-
-  const scopedCardIds = useMemo(() => {
-    if (viewMode === 'individual') return selectedCardId ? [selectedCardId] : [];
-    if (viewMode === 'compare') return Array.from(compareCardIds);
-    return connectedCards.map((card) => card.id);
-  }, [viewMode, selectedCardId, compareCardIds, connectedCards]);
-
-  const scopedTransactions = useMemo(() => {
-    return scopedCardIds.flatMap((cardId) => transactionsByCard[cardId] ?? []);
-  }, [scopedCardIds, transactionsByCard]);
-
   const isHistoricalRange = useMemo(() => {
     return dateFilter.endDate < today;
   }, [dateFilter.endDate, today]);
 
-  const filteredScopedTransactions = useMemo(() => {
-    return scopedTransactions.filter((txn) => {
-      if (!txn.date || txn.amount <= 0) return false;
-      const date = txn.date.slice(0, 10);
-      return isWithin(date, dateFilter.startDate, dateFilter.endDate);
-    });
-  }, [scopedTransactions, dateFilter.startDate, dateFilter.endDate]);
-
-  const categoryInsights = useMemo<CategoryInsights>(() => {
-    if (!filteredScopedTransactions.length) {
-      return {
-        topFiveInFilter: [],
-        anomaly: null,
-      };
-    }
-
-    const rangeTotals = new Map<string, number>();
-    for (const txn of filteredScopedTransactions) {
-      const category = inferTransactionCategory(txn.category, txn.description, txn.merchantName);
-      rangeTotals.set(category, (rangeTotals.get(category) || 0) + txn.amount);
-    }
-
-    const topFiveInFilter = Array.from(rangeTotals.entries())
-      .map(([category, amount]) => ({ category, amount: Number(amount.toFixed(2)) }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const monthIso = `${year}-${String(month).padStart(2, '0')}`;
-    const monthStartIso = `${monthIso}-01`;
-    const todayIso = toIsoDate(now);
-    const dayOfMonth = now.getDate();
-    const monthDays = daysInMonth(year, month);
-
-    const endDate = parseIsoDate(dateFilter.endDate);
-    const isCurrentMonthToDateFilter =
-      dateFilter.startDate === monthStartIso
-      && dateFilter.endDate === todayIso
-      && endDate.getFullYear() === year
-      && endDate.getMonth() + 1 === month;
-
-    if (!isCurrentMonthToDateFilter) {
-      return {
-        topFiveInFilter,
-        anomaly: null,
-      };
-    }
-
-    const thisMonthTotals = new Map<string, number>();
-    const perMonthCategoryTotals = new Map<string, Map<string, number>>();
-
-    for (const txn of scopedTransactions) {
-      if (!txn.date || txn.amount <= 0) continue;
-      const date = txn.date.slice(0, 10);
-      const ym = date.slice(0, 7);
-      const category = inferTransactionCategory(txn.category, txn.description, txn.merchantName);
-
-      if (isWithin(date, monthStartIso, todayIso)) {
-        thisMonthTotals.set(category, (thisMonthTotals.get(category) || 0) + txn.amount);
-      }
-
-      if (!perMonthCategoryTotals.has(ym)) {
-        perMonthCategoryTotals.set(ym, new Map<string, number>());
-      }
-      const monthMap = perMonthCategoryTotals.get(ym)!;
-      monthMap.set(category, (monthMap.get(category) || 0) + txn.amount);
-    }
-
-    const fullPastMonths = Array.from(perMonthCategoryTotals.keys())
-      .filter((ym) => ym < monthIso)
-      .sort()
-      .slice(-6);
-
-    let anomaly: CategoryInsights['anomaly'] = null;
-
-    if (fullPastMonths.length >= 2) {
-      for (const [category, monthToDate] of thisMonthTotals.entries()) {
-        const pastValues = fullPastMonths.map((ym) => perMonthCategoryTotals.get(ym)?.get(category) || 0);
-        const averageMonthly = pastValues.reduce((sum, value) => sum + value, 0) / fullPastMonths.length;
-
-        if (averageMonthly <= 0) continue;
-
-        const alreadyOverUsual = monthToDate > averageMonthly;
-        const pctOfMonth = dayOfMonth / monthDays;
-        const paceProjection = monthToDate / Math.max(pctOfMonth, 0.1);
-        const projectedOvershoot = paceProjection > averageMonthly * 1.1;
-
-        if (alreadyOverUsual || projectedOvershoot) {
-          if (!anomaly || (monthToDate - averageMonthly) > (anomaly.monthToDate - anomaly.averageMonthly)) {
-            anomaly = {
-              category,
-              averageMonthly: Number(averageMonthly.toFixed(2)),
-              monthToDate: Number(monthToDate.toFixed(2)),
-              dayOfMonth,
-              baselineMonths: fullPastMonths,
-            };
-          }
-        }
-      }
-    }
-
-    return { topFiveInFilter, anomaly };
-  }, [filteredScopedTransactions, scopedTransactions, dateFilter.startDate, dateFilter.endDate]);
-
   useEffect(() => {
     let active = true;
 
-    const runAiSignals = async () => {
-      if (isHistoricalRange) {
-        setSpendingProbability(null);
-        setAiLoading(false);
+    const loadForecastInsights = async () => {
+      if (!connectedCards.length) {
+        setForecastInsights(null);
         return;
       }
 
-      if (!categoryInsights.topFiveInFilter.length) {
-        setSpendingProbability(null);
-        return;
-      }
-
-      const topCategory = categoryInsights.topFiveInFilter[0];
-      if (!topCategory) return;
-
-      setAiLoading(true);
+      setInsightsLoading(true);
 
       const cardScope =
         viewMode === 'individual'
@@ -337,45 +137,35 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
             ? Array.from(compareCardIds)
             : [];
 
-      const probabilityResult = await apiPost<SpendingProbabilityPayload>('/api/credit-intelligence/spending-probability', {
-        lookbackDays: 180,
-        currentCategory: topCategory.category,
-        cardId: viewMode === 'individual' ? selectedCardId : undefined,
-        cardIds: viewMode === 'compare' ? cardScope : undefined,
+      const result = await apiPost<ForecastInsightsPayload>('/api/credit-intelligence/forecast-insights', {
         startDate: dateFilter.startDate,
         endDate: dateFilter.endDate,
+        cardId: viewMode === 'individual' ? selectedCardId : undefined,
+        cardIds: viewMode === 'compare' ? cardScope : undefined,
       });
 
       if (!active) return;
-      setSpendingProbability(probabilityResult);
-      setAiLoading(false);
+      setForecastInsights(result);
+      setInsightsLoading(false);
     };
 
-    runAiSignals();
+    loadForecastInsights();
 
     return () => {
       active = false;
     };
-  }, [categoryInsights.topFiveInFilter, selectedCardId, compareCardIds, viewMode, dateFilter.startDate, dateFilter.endDate, isHistoricalRange]);
+  }, [connectedCards, viewMode, selectedCardId, compareCardIds, dateFilter.startDate, dateFilter.endDate]);
 
   const historicalMonthlyBarData = useMemo(() => {
-    const monthlyTotals = new Map<string, number>();
+    const entries = (forecastInsights?.monthlyTrend ?? []).slice(-8);
 
-    for (const txn of filteredScopedTransactions) {
-      const ym = txn.date.slice(0, 7);
-      monthlyTotals.set(ym, (monthlyTotals.get(ym) || 0) + txn.amount);
-    }
-
-    const entries = Array.from(monthlyTotals.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-8);
-
-    const labels = entries.map(([ym]) => {
+    const labels = entries.map(({ month }) => {
+      const ym = month.slice(0, 7);
       const [y, m] = ym.split('-').map(Number);
       return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
     });
 
-    const data = entries.map(([, total]) => Number(total.toFixed(2)));
+    const data = entries.map(({ total }) => Number(total.toFixed(2)));
 
     return {
       labels,
@@ -388,37 +178,42 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
         },
       ],
     };
-  }, [filteredScopedTransactions, isDark]);
+  }, [forecastInsights, isDark]);
+
+  const showPredictionView = !isHistoricalRange;
+  const forecastSnapshot: ForecastSnapshot | null = forecastInsights?.forecastSnapshot ?? null;
 
   if (loading) {
     return <SmartForecastSkeleton />;
   }
 
-  const topSpendingCategory = categoryInsights.topFiveInFilter[0];
-  const totalFilteredSpend = categoryInsights.topFiveInFilter.reduce((sum, item) => sum + item.amount, 0);
-  const showPredictionView = !isHistoricalRange;
-  const probabilityLabel = spendingProbability?.topCategory
-    ? formatCategoryLabel(spendingProbability.topCategory)
+  const topCategories = forecastInsights?.topCategories ?? [];
+  const anomaly = forecastInsights?.anomaly ?? null;
+  const nextSpendPrediction = forecastInsights?.nextSpendPrediction ?? null;
+  const topSpendingCategory = topCategories[0];
+  const totalFilteredSpend = topCategories.reduce((sum, item) => sum + item.amount, 0);
+  const probabilityLabel = nextSpendPrediction?.topCategory
+    ? formatCategoryLabel(nextSpendPrediction.topCategory)
     : topSpendingCategory
       ? formatCategoryLabel(topSpendingCategory.category)
       : 'N/A';
 
-  const overspendSummary = categoryInsights.anomaly
-    ? `${formatCategoryLabel(categoryInsights.anomaly.category)} spending is running higher than usual this month.`
+  const overspendSummary = anomaly
+    ? `${formatCategoryLabel(anomaly.category)} spending is running higher than usual this month.`
     : 'Your spending pace looks normal.';
 
-  const baselineSummary = categoryInsights.anomaly
-    ? `Usual monthly spend: ${formatCurrency(categoryInsights.anomaly.averageMonthly)}. Current month so far: ${formatCurrency(categoryInsights.anomaly.monthToDate)}.`
+  const baselineSummary = anomaly
+    ? `Usual monthly spend: ${formatCurrency(anomaly.averageMonthly)}. Current month so far: ${formatCurrency(anomaly.monthToDate)}.`
     : showPredictionView
       ? 'Pace alerts compare this month against your recent monthly average.'
       : 'Pace alerts are shown only for current month-to-date views.';
 
   const spendingPieData = {
-    labels: categoryInsights.topFiveInFilter.map((item) => formatCategoryLabel(item.category)),
+    labels: topCategories.map((item) => formatCategoryLabel(item.category)),
     datasets: [
       {
-        data: categoryInsights.topFiveInFilter.map((item) => item.amount),
-        backgroundColor: palette.slice(0, Math.max(categoryInsights.topFiveInFilter.length, 1)),
+        data: topCategories.map((item) => item.amount),
+        backgroundColor: palette.slice(0, Math.max(topCategories.length, 1)),
         borderWidth: 1,
         borderColor: isDark ? '#111827' : '#ffffff',
       },
@@ -426,11 +221,11 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
   };
 
   const spendingProbabilityBarData = {
-    labels: (spendingProbability?.probabilities ?? []).slice(0, 6).map((item) => formatCategoryLabel(item.category)),
+    labels: (nextSpendPrediction?.probabilities ?? []).slice(0, 6).map((item) => formatCategoryLabel(item.category)),
     datasets: [
       {
         label: 'Likelihood of next spend',
-        data: (spendingProbability?.probabilities ?? []).slice(0, 6).map((item) => Number((item.probability * 100).toFixed(1))),
+        data: (nextSpendPrediction?.probabilities ?? []).slice(0, 6).map((item) => Number((item.probability * 100).toFixed(1))),
         backgroundColor: isDark ? 'rgba(99, 102, 241, 0.85)' : 'rgba(79, 70, 229, 0.85)',
         borderRadius: 8,
       },
@@ -469,7 +264,46 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
         </div>
         <div className="mb-4 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
 
-        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+                <Sparkles className="h-4 w-4" />
+                <p className="text-xs font-semibold uppercase tracking-wide">Forecast Timeline</p>
+              </div>
+              {forecastSnapshot && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    forecastSnapshot.status === 'Risk'
+                      ? 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400'
+                      : forecastSnapshot.status === 'Watch'
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                        : 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400'
+                  }`}
+                >
+                  {forecastSnapshot.status}
+                </span>
+              )}
+            </div>
+            {forecastSnapshot ? (
+              <>
+                <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                  Day {forecastSnapshot.dayOfMonth}/{forecastSnapshot.monthDays}: <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(forecastSnapshot.mtdSpend)}</span> spent.
+                </p>
+                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+                  Projected month-end: <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(forecastSnapshot.projectedMonthEnd)}</span>.
+                </p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Range: {formatCurrency(forecastSnapshot.projectedLow)} to {formatCurrency(forecastSnapshot.projectedHigh)} • Confidence: {forecastSnapshot.confidence}
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                Projection appears when viewing current month-to-date.
+              </p>
+            )}
+          </div>
+
           <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
             <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
               <Sparkles className="h-4 w-4" />
@@ -505,7 +339,7 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
           </div>
         </div>
 
-        {transactionsLoading ? (
+        {insightsLoading ? (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="h-64 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-900 sm:h-80" />
             <div className="h-64 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-900 sm:h-80" />
@@ -604,7 +438,7 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
           </div>
         )}
 
-        {showPredictionView && aiLoading && (
+        {showPredictionView && insightsLoading && (
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Refreshing intelligence signals...</p>
         )}
       </div>
