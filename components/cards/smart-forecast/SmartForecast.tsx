@@ -463,11 +463,47 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
         </button>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-cyan-100 bg-gradient-to-br from-white via-cyan-50/40 to-sky-100/30 p-4 shadow-sm dark:border-cyan-900/40 dark:from-gray-950 dark:via-gray-950 dark:to-cyan-950/20 sm:mb-8 sm:p-6">
+      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="text-base text-gray-700 dark:text-gray-300 sm:text-lg">Spending Intelligence</h2>
         </div>
         <div className="mb-4 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+            <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+              <Sparkles className="h-4 w-4" />
+              <p className="text-xs font-semibold uppercase tracking-wide">Spend Snapshot</p>
+            </div>
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              Total spend in this view: <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(totalFilteredSpend)}</span>.
+            </p>
+            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+              Top category: <span className="font-semibold text-gray-900 dark:text-white">{topSpendingCategory ? formatCategoryLabel(topSpendingCategory.category) : 'N/A'}</span>.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+            <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+              <History className="h-4 w-4" />
+              <p className="text-xs font-semibold uppercase tracking-wide">Smart Read</p>
+            </div>
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              {showPredictionView
+                ? `Most likely next spend: ${probabilityLabel}.`
+                : 'Viewing past data: this section shows historical monthly trend instead of prediction.'}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+            <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+              <AlertTriangle className="h-4 w-4" />
+              <p className="text-xs font-semibold uppercase tracking-wide">Pace Check</p>
+            </div>
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{overspendSummary}</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{baselineSummary}</p>
+          </div>
+        </div>
 
         {transactionsLoading ? (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -567,42 +603,6 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
             </div>
           </div>
         )}
-
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-cyan-100 bg-white/80 p-4 dark:border-cyan-900/40 dark:bg-gray-900/70">
-            <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-400">
-              <Sparkles className="h-4 w-4" />
-              <p className="text-xs font-semibold uppercase tracking-wide">Spend Snapshot</p>
-            </div>
-            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-              Total spend in this view: <span className="font-semibold">{formatCurrency(totalFilteredSpend)}</span>.
-            </p>
-            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-              Top category: <span className="font-semibold">{topSpendingCategory ? formatCategoryLabel(topSpendingCategory.category) : 'N/A'}</span>.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-sky-100 bg-white/80 p-4 dark:border-sky-900/40 dark:bg-gray-900/70">
-            <div className="flex items-center gap-2 text-sky-700 dark:text-sky-400">
-              <History className="h-4 w-4" />
-              <p className="text-xs font-semibold uppercase tracking-wide">Smart Read</p>
-            </div>
-            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-              {showPredictionView
-                ? `Most likely next spend: ${probabilityLabel}.`
-                : 'You are viewing historical data, so this panel shows monthly spend trend instead of prediction.'}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-amber-100 bg-white/80 p-4 dark:border-amber-900/40 dark:bg-gray-900/70">
-            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="h-4 w-4" />
-              <p className="text-xs font-semibold uppercase tracking-wide">Pace Check</p>
-            </div>
-            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{overspendSummary}</p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{baselineSummary}</p>
-          </div>
-        </div>
 
         {showPredictionView && aiLoading && (
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Refreshing intelligence signals...</p>
