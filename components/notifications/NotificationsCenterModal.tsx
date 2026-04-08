@@ -11,15 +11,23 @@ import { formatNotificationTimestamp } from '@/lib/notifications/ui';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { AppNotification } from '@/types/notification.types';
 
-type NotificationFilter = 'all' | 'unread' | 'today' | 'last7days' | 'thisMonth';
+type NotificationViewFilter = 'all' | 'unread' | 'today' | 'last7days' | 'monthly';
+type NotificationTypeFilter = 'all' | 'warnings' | 'missedRewards' | 'newCards';
 const PAGE_SIZE = 8;
 
-const FILTER_ITEMS: Array<{ key: NotificationFilter; label: string }> = [
+const VIEW_FILTER_ITEMS: Array<{ key: NotificationViewFilter; label: string }> = [
   { key: 'all', label: 'All' },
   { key: 'unread', label: 'Unread' },
   { key: 'today', label: 'Today' },
   { key: 'last7days', label: 'Last 7 days' },
-  { key: 'thisMonth', label: 'This month' },
+  { key: 'monthly', label: 'Monthly' },
+];
+
+const TYPE_FILTER_ITEMS: Array<{ key: NotificationTypeFilter; label: string }> = [
+  { key: 'all', label: 'All types' },
+  { key: 'warnings', label: 'Warnings' },
+  { key: 'missedRewards', label: 'Missed rewards' },
+  { key: 'newCards', label: 'New cards' },
 ];
 
 interface NotificationsCenterModalProps {
@@ -43,13 +51,23 @@ export function NotificationsCenterModal({
   onMarkAllAsRead,
   initialNotification,
 }: NotificationsCenterModalProps) {
-  const [activeTab, setActiveTab] = useState<NotificationFilter>('all');
+  const [viewFilter, setViewFilter] = useState<NotificationViewFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<NotificationTypeFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNotification, setSelectedNotification] = useState<AppNotification | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const isCardDangerNotification = (item: AppNotification) =>
     item.kind === 'system' && item.metadata?.source === 'card-utilization';
+
+  const isWarningNotification = (item: AppNotification) =>
+    item.kind === 'system' && (item.severity === 'warning' || item.severity === 'critical' || isCardDangerNotification(item));
+
+  const isMissedRewardNotification = (item: AppNotification) =>
+    item.kind === 'reward_optimization' && (item.optimizationType ?? 'owned_card_switch') === 'owned_card_switch';
+
+  const isNewCardNotification = (item: AppNotification) =>
+    item.kind === 'reward_optimization' && item.optimizationType === 'new_card_opportunity';
 
   useEffect(() => {
     if (!isOpen) {
@@ -66,43 +84,55 @@ export function NotificationsCenterModal({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, searchQuery]);
-
-  const unreadCount = useMemo(
-    () => notifications.filter((item) => !readNotificationIds.has(item.id)).length,
-    [notifications, readNotificationIds],
-  );
+  }, [viewFilter, typeFilter, searchQuery]);
 
   const filteredNotifications = useMemo(() => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    let next = notifications;
+    const matchesViewFilter = (item: AppNotification) => {
+      const itemDate = new Date(item.eventDate);
 
-    if (activeTab === 'unread') {
-      next = next.filter((item) => !readNotificationIds.has(item.id));
-    }
+      if (viewFilter === 'unread') {
+        return !readNotificationIds.has(item.id);
+      }
 
-    if (activeTab === 'today') {
-      next = next.filter((item) => new Date(item.eventDate) >= startOfToday);
-    }
+      if (viewFilter === 'today') {
+        return itemDate >= startOfToday;
+      }
 
-    if (activeTab === 'last7days') {
-      next = next.filter((item) => new Date(item.eventDate) >= sevenDaysAgo);
-    }
+      if (viewFilter === 'last7days') {
+        return itemDate >= sevenDaysAgo;
+      }
 
-    if (activeTab === 'thisMonth') {
-      next = next.filter((item) => {
-        const itemDate = new Date(item.eventDate);
+      if (viewFilter === 'monthly') {
         return itemDate.getFullYear() === now.getFullYear() && itemDate.getMonth() === now.getMonth();
-      });
-    }
+      }
+
+      return true;
+    };
+
+    const matchesTypeFilter = (item: AppNotification) => {
+      if (typeFilter === 'warnings') {
+        return isWarningNotification(item);
+      }
+
+      if (typeFilter === 'missedRewards') {
+        return isMissedRewardNotification(item);
+      }
+
+      if (typeFilter === 'newCards') {
+        return isNewCardNotification(item);
+      }
+
+      return true;
+    };
 
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    if (!normalizedQuery) return next;
+    const matchesSearchQuery = (item: AppNotification) => {
+      if (!normalizedQuery) return true;
 
-    return next.filter((item) => {
       const haystack = [
         item.title,
         item.message,
@@ -118,8 +148,20 @@ export function NotificationsCenterModal({
         .toLowerCase();
 
       return haystack.includes(normalizedQuery);
-    });
-  }, [activeTab, notifications, readNotificationIds, searchQuery]);
+    };
+
+    return notifications.filter((item) =>
+      matchesViewFilter(item) &&
+      matchesTypeFilter(item) &&
+      matchesSearchQuery(item),
+    );
+  }, [notifications, readNotificationIds, searchQuery, typeFilter, viewFilter]);
+
+  const typeFilterCounts = useMemo(() => ({
+    warnings: notifications.filter(isWarningNotification).length,
+    missedRewards: notifications.filter(isMissedRewardNotification).length,
+    newCards: notifications.filter(isNewCardNotification).length,
+  }), [notifications]);
 
   const totalPages = Math.max(1, Math.ceil(filteredNotifications.length / PAGE_SIZE));
 
@@ -184,15 +226,39 @@ export function NotificationsCenterModal({
               />
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="-mx-0.5 flex items-center gap-1.5 overflow-x-auto px-0.5 pb-3 pt-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-                {FILTER_ITEMS.map((filter) => {
-                  const isActive = activeTab === filter.key;
+            <div className="-mx-0.5 flex items-center gap-1.5 overflow-x-auto px-0.5 pb-3 pt-1 sm:mx-0 sm:px-0 sm:pb-0">
+              <label className="flex shrink-0 items-center">
+                <select
+                  value={viewFilter}
+                  onChange={(event) => setViewFilter(event.target.value as NotificationViewFilter)}
+                  className="h-10 rounded-lg border border-border bg-background px-2 text-sm text-foreground outline-none transition-colors focus:border-brand"
+                  aria-label="Filter notifications by timeframe"
+                >
+                  {VIEW_FILTER_ITEMS.map((item) => (
+                    <option key={item.key} value={item.key}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="flex items-center gap-1.5">
+                {TYPE_FILTER_ITEMS.map((filter) => {
+                  const isActive = typeFilter === filter.key;
+                  const count =
+                    filter.key === 'warnings'
+                      ? typeFilterCounts.warnings
+                      : filter.key === 'missedRewards'
+                        ? typeFilterCounts.missedRewards
+                        : filter.key === 'newCards'
+                          ? typeFilterCounts.newCards
+                          : notifications.length;
+
                   return (
                     <button
                       key={filter.key}
                       type="button"
-                      onClick={() => setActiveTab(filter.key)}
+                      onClick={() => setTypeFilter(filter.key)}
                       className={cn(
                         'shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
                         isActive
@@ -201,21 +267,23 @@ export function NotificationsCenterModal({
                       )}
                     >
                       {filter.label}
+                      <span className={cn('ml-1.5 text-[11px]', isActive ? 'text-white/90' : 'text-muted-foreground')}>
+                        {count}
+                      </span>
                     </button>
                   );
                 })}
               </div>
 
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onMarkAllAsRead(notifications.map((item) => item.id))}
-                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent sm:w-auto sm:text-sm"
-                >
-                  <CheckCheck className="h-4 w-4" />
-                  Mark all as read
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => onMarkAllAsRead(notifications.map((item) => item.id))}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                aria-label="Mark all as read"
+                title="Mark all as read"
+              >
+                <CheckCheck className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
