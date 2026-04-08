@@ -86,7 +86,7 @@ export function NotificationsCenterModal({
     setCurrentPage(1);
   }, [viewFilter, typeFilter, searchQuery]);
 
-  const filteredNotifications = useMemo(() => {
+  const notificationsMatchingViewAndSearch = useMemo(() => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -113,22 +113,6 @@ export function NotificationsCenterModal({
       return true;
     };
 
-    const matchesTypeFilter = (item: AppNotification) => {
-      if (typeFilter === 'warnings') {
-        return isWarningNotification(item);
-      }
-
-      if (typeFilter === 'missedRewards') {
-        return isMissedRewardNotification(item);
-      }
-
-      if (typeFilter === 'newCards') {
-        return isNewCardNotification(item);
-      }
-
-      return true;
-    };
-
     const normalizedQuery = searchQuery.trim().toLowerCase();
     const matchesSearchQuery = (item: AppNotification) => {
       if (!normalizedQuery) return true;
@@ -150,18 +134,35 @@ export function NotificationsCenterModal({
       return haystack.includes(normalizedQuery);
     };
 
-    return notifications.filter((item) =>
-      matchesViewFilter(item) &&
-      matchesTypeFilter(item) &&
-      matchesSearchQuery(item),
-    );
-  }, [notifications, readNotificationIds, searchQuery, typeFilter, viewFilter]);
+    return notifications.filter((item) => matchesViewFilter(item) && matchesSearchQuery(item));
+  }, [notifications, readNotificationIds, searchQuery, viewFilter]);
+
+  const filteredNotifications = useMemo(() => {
+    const matchesTypeFilter = (item: AppNotification) => {
+      if (typeFilter === 'warnings') {
+        return isWarningNotification(item);
+      }
+
+      if (typeFilter === 'missedRewards') {
+        return isMissedRewardNotification(item);
+      }
+
+      if (typeFilter === 'newCards') {
+        return isNewCardNotification(item);
+      }
+
+      return true;
+    };
+
+    return notificationsMatchingViewAndSearch.filter(matchesTypeFilter);
+  }, [notificationsMatchingViewAndSearch, typeFilter]);
 
   const typeFilterCounts = useMemo(() => ({
-    warnings: notifications.filter(isWarningNotification).length,
-    missedRewards: notifications.filter(isMissedRewardNotification).length,
-    newCards: notifications.filter(isNewCardNotification).length,
-  }), [notifications]);
+    all: notificationsMatchingViewAndSearch.length,
+    warnings: notificationsMatchingViewAndSearch.filter(isWarningNotification).length,
+    missedRewards: notificationsMatchingViewAndSearch.filter(isMissedRewardNotification).length,
+    newCards: notificationsMatchingViewAndSearch.filter(isNewCardNotification).length,
+  }), [notificationsMatchingViewAndSearch]);
 
   const totalPages = Math.max(1, Math.ceil(filteredNotifications.length / PAGE_SIZE));
 
@@ -252,7 +253,7 @@ export function NotificationsCenterModal({
                         ? typeFilterCounts.missedRewards
                         : filter.key === 'newCards'
                           ? typeFilterCounts.newCards
-                          : notifications.length;
+                          : typeFilterCounts.all;
 
                   return (
                     <button
