@@ -18,7 +18,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { Info, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Info, SlidersHorizontal, ChevronDown, Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { ConnectedCard } from '@/types/card.types';
 import { useCreditAnalysis } from '@/hooks/useCreditAnalysis';
@@ -34,9 +34,10 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 interface CreditAnalysisProps {
   connectedCards: ConnectedCard[];
+  onAddCard: () => void;
 }
 
-export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
+export function CreditAnalysis({ connectedCards, onAddCard }: CreditAnalysisProps) {
   const [showPaymentRec, setShowPaymentRec] = useState(false);
   const [showChartSettings, setShowChartSettings] = useState(false);
   const { resolvedTheme } = useTheme();
@@ -117,6 +118,13 @@ export function CreditAnalysis({ connectedCards }: CreditAnalysisProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
               Payment Recommendation
+            </button>
+            <button
+              onClick={onAddCard}
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg border-2 border-indigo-600 px-4 py-2 font-medium text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-500 dark:text-indigo-500 dark:hover:bg-indigo-950/30"
+            >
+              <Plus className="h-4 w-4" />
+              Add Card
             </button>
           </div>
         </div>
