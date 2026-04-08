@@ -15,7 +15,7 @@ export const signupSchema = z.object({
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
   first_name: z.string().min(2, 'First name must be at least 2 characters'),
-  surname: z.string().min(2, 'Surname must be at least 2 characters'),
+  surname: z.string().min(2, 'Last name must be at least 2 characters'),
   mobile_number: z.string().regex(/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/, 'Invalid mobile number'),
 });
 

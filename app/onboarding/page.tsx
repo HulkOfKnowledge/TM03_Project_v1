@@ -170,7 +170,7 @@ export default function OnboardingPage() {
     const newErrors: Record<string, string> = {};
 
     if (!personalDetails.surname.trim()) {
-      newErrors.surname = 'Surname is required';
+      newErrors.surname = 'Last name is required';
     }
     if (!personalDetails.firstName.trim()) {
       newErrors.firstName = 'First name is required';
@@ -371,17 +371,6 @@ export default function OnboardingPage() {
             {/* Name Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="Surname"
-                type="text"
-                value={personalDetails.surname}
-                onChange={(e) =>
-                  setPersonalDetails({ ...personalDetails, surname: e.target.value })
-                }
-                placeholder="e.g Doe"
-                error={errors.surname}
-              />
-
-              <Input
                 label="First Name"
                 type="text"
                 value={personalDetails.firstName}
@@ -390,6 +379,17 @@ export default function OnboardingPage() {
                 }
                 placeholder="e.g John"
                 error={errors.firstName}
+              />
+              
+              <Input
+                label="Last Name"
+                type="text"
+                value={personalDetails.surname}
+                onChange={(e) =>
+                  setPersonalDetails({ ...personalDetails, surname: e.target.value })
+                }
+                placeholder="e.g Doe"
+                error={errors.surname}
               />
             </div>
 
