@@ -113,6 +113,7 @@ export default function CreditAnalysisPage() {
           ) : (
             <CreditAnalysis 
               connectedCards={connectedCards}
+              onAddCard={handleAddCard}
             />
           )}
         </div>

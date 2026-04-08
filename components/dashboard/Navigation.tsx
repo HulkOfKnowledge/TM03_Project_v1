@@ -55,6 +55,7 @@ interface NavItem {
 
 interface NotificationsCacheEntry {
   userId: string;
+  portfolioSignature: string;
   fetchedAt: number;
   notifications: AppNotification[];
 }
@@ -75,11 +76,11 @@ const CARD_SUB_NAV: SubNavItem[] = [
 ];
 
 const DANGER_UTILIZATION_THRESHOLD = 30;
-const NOTIFICATIONS_CACHE_TTL_MS = 60 * 1000;
 const DANGER_EVENT_DATE_STORAGE_PREFIX = 'creduman.card-danger-event-date:';
 
 let notificationsCache: NotificationsCacheEntry | null = null;
 let notificationsInFlight: Promise<AppNotification[]> | null = null;
+const notificationsFetchedKeys = new Set<string>();
 
 function safeUtilization(value: number | null | undefined): number {
   const parsed = Number(value);
@@ -156,6 +157,10 @@ export function Navigation() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
   const cardsInDangerZone = useMemo(() => getCardsInDangerZone(connectedCards), [connectedCards]);
+  const activeCardsSignature = useMemo(
+    () => connectedCards.map((card) => card.id).sort().join(',') || 'no-cards',
+    [connectedCards],
+  );
   const dangerSignature = useMemo(
     () => cardsInDangerZone.map((card) => card.id).sort().join(','),
     [cardsInDangerZone],
@@ -300,13 +305,18 @@ export function Navigation() {
         return;
       }
 
-      const now = Date.now();
+      const fetchKey = `${user.id}:${activeCardsSignature}`;
+
       if (
         notificationsCache
         && notificationsCache.userId === user.id
-        && (now - notificationsCache.fetchedAt) < NOTIFICATIONS_CACHE_TTL_MS
+        && notificationsCache.portfolioSignature === activeCardsSignature
       ) {
         setNotifications(notificationsCache.notifications);
+        return;
+      }
+
+      if (notificationsFetchedKeys.has(fetchKey)) {
         return;
       }
 
@@ -343,6 +353,7 @@ export function Navigation() {
           );
           notificationsCache = {
             userId: user.id,
+            portfolioSignature: activeCardsSignature,
             fetchedAt: Date.now(),
             notifications: all,
           };
@@ -356,13 +367,14 @@ export function Navigation() {
         setNotifications([]);
         setUnreadNotifications(0);
       } finally {
+        notificationsFetchedKeys.add(fetchKey);
         notificationsInFlight = null;
         setNotificationsLoading(false);
       }
     };
 
     loadNotifications();
-  }, [user, showNavItems]);
+  }, [activeCardsSignature, user, showNavItems]);
 
   useEffect(() => {
     if (!showNavItems) return;

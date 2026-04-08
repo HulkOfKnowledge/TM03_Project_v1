@@ -14,8 +14,6 @@ import type {
   CreditAnalysisWebhookPayload,
   SpendingProbabilityRequest,
   SpendingProbabilityResponse,
-  CardChoiceRequest,
-  CardChoiceResponse,
 } from '@/types/credit-intelligence.types';
 
 export class CreditIntelligenceService {
@@ -85,25 +83,6 @@ export class CreditIntelligenceService {
       return response.data;
     } catch (error) {
       console.error('Spending probability request failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * MDP-style card recommendation for a merchant
-   */
-  async getCardChoiceForMerchant(
-    request: CardChoiceRequest
-  ): Promise<CardChoiceResponse> {
-    try {
-      const response = await this.client.post<CardChoiceResponse>(
-        '/card-choice',
-        request
-      );
-
-      return response.data;
-    } catch (error) {
-      console.error('Card choice request failed:', error);
       throw error;
     }
   }

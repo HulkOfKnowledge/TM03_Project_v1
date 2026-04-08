@@ -29,7 +29,7 @@ Creduman is a **credit guidance platform**, not a credit monitoring service. We 
 
 4. **Stochastic Decision Support (POC)**
    - **Markov Chain**: probability of next spending category from transaction transitions
-   - **MDP Card Choice**: recommend best card for a merchant by balancing rewards, utilization risk, APR, and due-date pressure
+   - **MDP Card Choice (Batch)**: evaluate many recent transactions in one call and rank better card choices by balancing rewards, utilization risk, APR, and due-date pressure
    - Designed to work in read-only mode on synthetic data now, and with Flinks transaction categories later
 
 ## 🏗️ Architecture
@@ -124,21 +124,35 @@ npm run start:python
 - `POST /api/v1/recommendations` - Payment recommendations
 - `POST /api/v1/transaction-insight` - Transaction-level insights
 - `POST /api/v1/spending-probability` - Markov-chain next-category probabilities
-- `POST /api/v1/card-choice` - MDP-style card recommendation at merchant
+- `POST /api/v1/card-choice-batch` - MDP-style batch recommendation over many recent transactions
+- `POST /api/v1/new-card-opportunities` - Scenario 2 external-card opportunities for current spend mix
 
 ### Stochastic decision outputs
 
-`POST /api/v1/card-choice` returns:
+`POST /api/v1/card-choice-batch` returns:
+
+- `results[]`: per-transaction evaluation payload
+  - `card_choice`: action values + counterfactual if an opportunity is found
+  - `skipped_code` / `skipped_reason`: explicit reason when a transaction cannot produce a recommendation
+
+`results[].card_choice` includes:
 
 - `action_values`: Q-value per card action
 - `counterfactual`: gain estimate if user switches from baseline card to recommended card
    - `estimated_incremental_reward` for the current purchase
    - `estimated_monthly_incremental_reward` and `estimated_annual_incremental_reward`
 
-`POST /api/credit-intelligence/card-choice` (Next.js route) also returns:
+`POST /api/v1/new-card-opportunities` returns:
 
 - `upgradeOpportunity`: phase-2 suggestion from `credit_card_offers`
    - "You spend a lot on category X; offer Y could add ~$Z/month"
+
+### Notifications pipeline (current)
+
+- Notifications service loads active cards + last 30 days of transactions
+- It calls `POST /api/v1/card-choice-batch` once for owned-card opportunities (scenario 1)
+- It calls `POST /api/v1/new-card-opportunities` once for external-card suggestions (scenario 2)
+- The merged notification summary is returned to the app in one response
 
 ### Flinks compatibility notes
 
@@ -210,7 +224,7 @@ curl -X POST "http://localhost:8000/api/v1/spending-probability" \
    -d '{
       "user_id": "test_user_1",
       "current_category": "groceries",
-      "lookback_days": 180,
+      "lookback_days": 30,
       "transactions": [
          {"id":"t1","card_id":"c1","date":"2026-02-01","description":"Sobeys","amount":120,"category":"groceries","merchant_name":"Sobeys","balance":900},
          {"id":"t2","card_id":"c1","date":"2026-02-02","description":"Shell","amount":60,"category":"gas","merchant_name":"Shell","balance":960},
@@ -219,18 +233,15 @@ curl -X POST "http://localhost:8000/api/v1/spending-probability" \
    }'
 ```
 
-### C) Direct API test for MDP + counterfactual (Python service)
+### C) Direct API test for MDP batch + counterfactual (Python service)
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/card-choice" \
+curl -X POST "http://localhost:8000/api/v1/card-choice-batch" \
    -H "Content-Type: application/json" \
    -H "X-API-Key: <YOUR_CREDIT_INTELLIGENCE_API_KEY>" \
    -d '{
       "user_id": "test_user_1",
-      "merchant_name": "Air Canada",
-      "merchant_category": "travel",
-      "estimated_amount": 350,
-      "lookback_days": 180,
+   "lookback_days": 30,
       "cards": [
          {
             "card_id":"card_a",
@@ -256,15 +267,20 @@ curl -X POST "http://localhost:8000/api/v1/card-choice" \
          }
       ],
       "transactions": [
-         {"id":"t1","card_id":"card_a","date":"2026-02-01","description":"Air Canada","amount":420,"category":"travel","merchant_name":"Air Canada","balance":1200}
+         {"id":"t1","card_id":"card_a","date":"2026-02-01","description":"Air Canada","amount":420,"category":"travel","merchant_name":"Air Canada","balance":1200},
+         {"id":"t2","card_id":"card_b","date":"2026-02-03","description":"Sobeys","amount":90,"category":"groceries","merchant_name":"Sobeys","balance":990}
+      ],
+      "recent_transactions": [
+         {"id":"t1","card_id":"card_a","date":"2026-02-01","description":"Air Canada","amount":420,"category":"travel","merchant_name":"Air Canada","balance":1200},
+         {"id":"t2","card_id":"card_b","date":"2026-02-03","description":"Sobeys","amount":90,"category":"groceries","merchant_name":"Sobeys","balance":990}
       ]
    }'
 ```
 
-### D) Phase-2 upgrade opportunity test (Next.js route)
+### D) Notifications integration test (Next.js route)
 
-Call `POST /api/credit-intelligence/card-choice` from an authenticated app session.
-The route computes `upgradeOpportunity` by comparing current card reward rates with rows in `credit_card_offers`.
+Call `GET /api/notifications?includeIntelligence=1` from an authenticated app session.
+The route computes owned-card switch opportunities (batch) and upgrade opportunities, then returns the merged notification summary.
 
 ## 🧪 Testing
 

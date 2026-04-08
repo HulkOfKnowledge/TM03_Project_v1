@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOTIFICATION_EVAL_LIMIT = 120;
-const NEW_CARD_OPPORTUNITIES_LOOKBACK_DAYS = 180;
+const NOTIFICATION_LOOKBACK_DAYS = 30;
 
 interface NotificationProviderContext {
   userId: string;
@@ -49,6 +49,17 @@ interface CardChoicePlannerPayload {
     estimated_monthly_incremental_reward?: number;
     estimated_annual_incremental_reward?: number;
   };
+}
+
+interface CardChoiceBatchResult {
+  transaction_id: string;
+  card_choice?: CardChoicePlannerPayload;
+  skipped_code?: string;
+  skipped_reason?: string;
+}
+
+interface CardChoiceBatchPayload {
+  results?: CardChoiceBatchResult[];
 }
 
 interface NewCardOpportunitiesPayload {
@@ -373,7 +384,7 @@ async function getRewardOptimizationNotifications(ctx: NotificationProviderConte
 
   const cardIds = candidateCards.map((card: any) => card.card_id);
   const minDate = new Date(ctx.now);
-  minDate.setDate(minDate.getDate() - NEW_CARD_OPPORTUNITIES_LOOKBACK_DAYS);
+  minDate.setDate(minDate.getDate() - NOTIFICATION_LOOKBACK_DAYS);
 
   const { data: txns, error: txError } = await supabase
     .from('card_transactions')
@@ -407,44 +418,58 @@ async function getRewardOptimizationNotifications(ctx: NotificationProviderConte
   const newCardOpportunityByKey = new Map<string, RewardNotification>();
   const pythonApiUrl = process.env.CREDIT_INTELLIGENCE_API_URL || 'http://localhost:8000';
   const pythonApiKey = process.env.CREDIT_INTELLIGENCE_API_KEY || '';
-  const candidateCardIdSet = new Set(candidateCards.map((card: any) => String(card.card_id)));
+  const transactionsById = new Map(transactions.map((txn: any) => [String(txn.id), txn]));
 
-  for (const txn of transactionsToEvaluate) {
-    const txnDate = new Date(txn.date);
-    if (Number.isNaN(txnDate.getTime())) continue;
-
-    const timeframe = bucketByTimeframe(txnDate, ctx.now);
-    if (!timeframe) continue;
-
-    const baselineCard = cardById.get(txn.card_id);
-    if (!baselineCard) continue;
-
-    const amount = Number(txn.debit ?? 0);
-    if (!Number.isFinite(amount) || amount <= 0) continue;
-
-    try {
-      const plannerResponse = await axios.post(
-        `${pythonApiUrl}/api/v1/card-choice`,
-        {
-          user_id: ctx.userId,
-          used_card_id: txn.card_id,
-          merchant_name: txn.description || 'Unknown merchant',
-          merchant_category: txn.raw_category,
-          estimated_amount: amount,
-          lookback_days: 180,
-          cards: candidateCards,
-          transactions: historyForPlanner,
+  try {
+    const plannerResponse = await axios.post(
+      `${pythonApiUrl}/api/v1/card-choice-batch`,
+      {
+        user_id: ctx.userId,
+        lookback_days: NOTIFICATION_LOOKBACK_DAYS,
+        cards: candidateCards,
+        transactions: historyForPlanner,
+        recent_transactions: transactionsToEvaluate.map((txn: any) => ({
+          id: txn.id,
+          card_id: txn.card_id,
+          date: txn.date,
+          description: txn.description,
+          amount: txn.debit ?? (txn.credit != null ? -txn.credit : 0),
+          category: txn.raw_category,
+          merchant_name: null,
+          balance: txn.balance,
+        })),
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': pythonApiKey,
         },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': pythonApiKey,
-          },
-          timeout: 30000,
-        }
-      );
+        timeout: 30000,
+      }
+    );
 
-      const data = (plannerResponse.data || {}) as CardChoicePlannerPayload;
+    const batchData = (plannerResponse.data || {}) as CardChoiceBatchPayload;
+    const batchResults = Array.isArray(batchData.results) ? batchData.results : [];
+
+    for (const result of batchResults) {
+      if (!result.card_choice) continue;
+
+      const txn = transactionsById.get(String(result.transaction_id));
+      if (!txn) continue;
+
+      const txnDate = new Date(txn.date);
+      if (Number.isNaN(txnDate.getTime())) continue;
+
+      const timeframe = bucketByTimeframe(txnDate, ctx.now);
+      if (!timeframe) continue;
+
+      const baselineCard = cardById.get(txn.card_id);
+      if (!baselineCard) continue;
+
+      const amount = Number(txn.debit ?? 0);
+      if (!Number.isFinite(amount) || amount <= 0) continue;
+
+      const data = result.card_choice;
       const merchant = txn.description || 'Unknown merchant';
       const category = String(data.merchant_category || txn.raw_category || 'other');
 
@@ -453,65 +478,43 @@ async function getRewardOptimizationNotifications(ctx: NotificationProviderConte
 
       if (recommendedCardId && recommendedCardId !== baselineCard.id && Number.isFinite(ownedIncremental) && ownedIncremental > 0) {
         const recommendedCard = cardById.get(recommendedCardId);
-        if (recommendedCard) {
-          const baselineReward = Number(data.counterfactual?.estimated_reward_baseline ?? 0);
-          const recommendedReward = Number(data.counterfactual?.estimated_reward_recommended ?? 0);
-          const baselineRatePct = amount > 0 ? Number(((baselineReward / amount) * 100).toFixed(2)) : 0;
-          const recommendedRatePct = amount > 0 ? Number(((recommendedReward / amount) * 100).toFixed(2)) : 0;
-          const monthlyOwned = Number(data.owned_card_opportunity?.estimated_monthly_incremental_reward ?? 0);
-          const annualOwned = Number(data.owned_card_opportunity?.estimated_annual_incremental_reward ?? (monthlyOwned * 12));
+        if (!recommendedCard) continue;
 
-          notifications.push(
-            buildOwnedCardNotification({
-              txn,
-              timeframe,
-              nowIso: ctx.now.toISOString(),
-              txnDateIso: txnDate.toISOString(),
-              amount,
-              merchant,
-              category,
-              baselineCardId: baselineCard.id,
-              baselineCardLabel: cardLabel(baselineCard),
-              recommendedCardId,
-              recommendedCardLabel: cardLabel(recommendedCard),
-              baselineRatePct,
-              recommendedRatePct,
-              incrementalReward: ownedIncremental,
-              monthlyIncrementalReward: monthlyOwned,
-              annualIncrementalReward: annualOwned,
-            }),
-          );
-        }
+        const baselineReward = Number(data.counterfactual?.estimated_reward_baseline ?? 0);
+        const recommendedReward = Number(data.counterfactual?.estimated_reward_recommended ?? 0);
+        const baselineRatePct = amount > 0 ? Number(((baselineReward / amount) * 100).toFixed(2)) : 0;
+        const recommendedRatePct = amount > 0 ? Number(((recommendedReward / amount) * 100).toFixed(2)) : 0;
+        const monthlyOwned = Number(data.owned_card_opportunity?.estimated_monthly_incremental_reward ?? 0);
+        const annualOwned = Number(data.owned_card_opportunity?.estimated_annual_incremental_reward ?? (monthlyOwned * 12));
+
+        notifications.push(
+          buildOwnedCardNotification({
+            txn,
+            timeframe,
+            nowIso: ctx.now.toISOString(),
+            txnDateIso: txnDate.toISOString(),
+            amount,
+            merchant,
+            category,
+            baselineCardId: baselineCard.id,
+            baselineCardLabel: cardLabel(baselineCard),
+            recommendedCardId,
+            recommendedCardLabel: cardLabel(recommendedCard),
+            baselineRatePct,
+            recommendedRatePct,
+            incrementalReward: ownedIncremental,
+            monthlyIncrementalReward: monthlyOwned,
+            annualIncrementalReward: annualOwned,
+          }),
+        );
       }
-
-    } catch (error) {
-      if (error instanceof AxiosError) {
-        const status = error.response?.status;
-        const detail = (error.response?.data as any)?.detail;
-        const code = typeof detail?.code === 'string' ? detail.code : '';
-
-        if (status === 422 && code === 'LOW_INCREMENTAL_REWARD') {
-          // Skip just this transaction; do not stop evaluating the rest.
-          continue;
-        }
-
-        if (status === 422 && code === 'NO_REWARD_DATA') {
-          const skippedCards = Array.isArray(detail?.skipped_cards)
-            ? detail.skipped_cards.map((cardId: unknown) => String(cardId))
-            : [];
-          const skippedAllCards = skippedCards.length > 0
-            && skippedCards.every((cardId: string) => candidateCardIdSet.has(cardId))
-            && skippedCards.length >= candidateCardIdSet.size;
-
-          if (skippedAllCards) {
-            console.warn('Notifications reward optimization skipped: no reward data for all active cards', {
-              userId: ctx.userId,
-              skippedCards,
-            });
-            break;
-          }
-        }
-      }
+    }
+  } catch (error) {
+    if (error instanceof AxiosError) {
+      console.warn('Notifications reward optimization batch skipped due to API error', {
+        userId: ctx.userId,
+        status: error.response?.status,
+      });
     }
   }
 
@@ -521,7 +524,7 @@ async function getRewardOptimizationNotifications(ctx: NotificationProviderConte
       `${pythonApiUrl}/api/v1/new-card-opportunities`,
       {
         user_id: ctx.userId,
-        lookback_days: 180,
+        lookback_days: NOTIFICATION_LOOKBACK_DAYS,
         cards: candidateCards,
         transactions: historyForPlanner,
       },

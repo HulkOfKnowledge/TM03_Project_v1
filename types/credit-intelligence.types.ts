@@ -137,14 +137,6 @@ export interface SpendingProbabilityResponse {
   computedAt: string;
 }
 
-export interface CardChoiceRequest {
-  merchantName: string;
-  merchantCategory?: string | null;
-  usedCardId?: string | null;
-  estimatedAmount: number;
-  lookbackDays?: number;
-}
-
 export interface CardActionValue {
   cardId: string;
   qValue: number;
@@ -194,25 +186,6 @@ export interface OwnedCardOpportunity {
     fr: string;
     ar: string;
   };
-}
-
-export interface CardChoiceResponse {
-  userId: string;
-  merchantName: string;
-  merchantCategory: string;
-  recommendedCardId: string;
-  policyReasoning: {
-    en: string;
-    fr: string;
-    ar: string;
-  };
-  actionValues: CardActionValue[];
-  counterfactual: CardChoiceCounterfactual;
-  ownedCardOpportunity?: OwnedCardOpportunity | null;
-  upgradeOpportunity?: UpgradeOpportunity | null;
-  newCardOpportunities?: UpgradeOpportunity[] | null;
-  upgradeOpportunities?: UpgradeOpportunity[] | null;
-  computedAt: string;
 }
 
 export interface NewCardOpportunitiesResponse {

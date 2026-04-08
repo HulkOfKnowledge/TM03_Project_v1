@@ -271,6 +271,34 @@ class CardChoiceResponse(BaseModel):
     computed_at: str
 
 
+class CardChoiceBatchRequest(BaseModel):
+    """Request for evaluating card-choice opportunities over multiple transactions in one call."""
+    user_id: str
+    lookback_days: int = Field(default=180, ge=30, le=730)
+    cards: List[CardDecisionCandidate]
+    transactions: List[StochasticTransactionData]
+    recent_transactions: List[StochasticTransactionData]
+
+
+class CardChoiceBatchItem(BaseModel):
+    """Per-transaction result from a batched card-choice evaluation."""
+    transaction_id: str
+    used_card_id: Optional[str] = None
+    merchant_name: str
+    merchant_category: Optional[str] = None
+    estimated_amount: float
+    card_choice: Optional[CardChoiceResponse] = None
+    skipped_code: Optional[str] = None
+    skipped_reason: Optional[str] = None
+
+
+class CardChoiceBatchResponse(BaseModel):
+    """Batch response for card-choice evaluations."""
+    user_id: str
+    results: List[CardChoiceBatchItem]
+    computed_at: str
+
+
 class NewCardOpportunitiesRequest(BaseModel):
     """Request for scenario 2: suggest external cards user does not currently own."""
     user_id: str
