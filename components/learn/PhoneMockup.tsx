@@ -174,7 +174,7 @@ export function PhoneMockup({ clickedItemId, onItemClick }: PhoneMockupProps) {
               {/* More Options */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <h4 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">More Options</h4>
-                <div className="relative z-20 space-y-2">
+                <div className="relative space-y-2">
                   <button className="flex w-full items-center justify-between rounded-lg bg-gray-100 dark:bg-gray-800 px-3 py-2.5 text-xs text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     <span className="flex items-center gap-2">
                       <div className="h-4 w-4 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700" />
