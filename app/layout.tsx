@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
-import { EmailConfirmationModal } from '@/components/auth/EmailConfirmationModal';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ThemeScript } from '@/components/ThemeScript';
 import { AuthProvider } from '@/hooks/useAuth';
@@ -61,7 +60,6 @@ export default function RootLayout({
             <AuthProvider>
               <CardProvider>
                 {children}
-                <EmailConfirmationModal />
               </CardProvider>
             </AuthProvider>
         </ThemeProvider>

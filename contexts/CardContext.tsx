@@ -5,7 +5,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import type { ConnectedCard } from '@/types/card.types';
 import { useUser } from '@/hooks/useAuth';
 import { 
@@ -33,11 +33,11 @@ export function CardProvider({ children }: { children: ReactNode }) {
   const [connectedCards, setConnectedCards] = useState<ConnectedCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<ConnectedCard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const activeUserIdRef = useRef<string | null>(null);
 
   // Load cards whenever auth state enters a signed-in session.
   useEffect(() => {
     if (authLoading) {
-      setIsLoading(true);
       return;
     }
 
@@ -45,12 +45,19 @@ export function CardProvider({ children }: { children: ReactNode }) {
       clearAllCardCaches();
       setConnectedCards([]);
       setSelectedCard(null);
+      activeUserIdRef.current = null;
       setIsLoading(false);
       return;
     }
 
+    // Avoid reloading cards when auth revalidates for the same user.
+    if (activeUserIdRef.current === user.id) {
+      return;
+    }
+
+    activeUserIdRef.current = user.id;
     void loadCards(true);
-  }, [user, authLoading]);
+  }, [user?.id, authLoading]);
 
   // Update selected card when cards change
   useEffect(() => {
