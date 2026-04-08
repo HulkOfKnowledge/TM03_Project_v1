@@ -68,8 +68,8 @@ const LEARN_SUB_NAV: SubNavItem[] = [
 ];
 
 const CARD_SUB_NAV: SubNavItem[] = [
-  { label: 'Card Dashboard', href: '/cards' },
   { label: 'Credit Analysis', href: '/cards/analysis' },
+  { label: 'My Cards', href: '/cards' },
   { label: 'Smart Forecast', href: '/cards/smart-forecast' },
   { label: 'Card Offers', href: '/cards/offers' },
 ];
