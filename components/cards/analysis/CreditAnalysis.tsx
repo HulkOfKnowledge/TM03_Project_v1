@@ -211,7 +211,7 @@ export function CreditAnalysis({ connectedCards, onAddCard }: CreditAnalysisProp
 
       {/* Spending Patterns */}
       <ChartSection
-        title="Spending Patterns"
+        title="Spending Rate"
         primaryValue={`$${chartMetrics.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         primaryLabel="Total spending"
         trend={{

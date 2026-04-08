@@ -25,6 +25,12 @@ export async function POST(request: NextRequest) {
     const lookbackDays = Number(body?.lookbackDays ?? 180);
     const currentCategory = typeof body?.currentCategory === 'string' ? body.currentCategory : null;
     const cardIdFilter = typeof body?.cardId === 'string' ? body.cardId : null;
+    const cardIdsFilter = Array.isArray(body?.cardIds)
+      ? body.cardIds.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+      : [];
+    const startDate = typeof body?.startDate === 'string' ? body.startDate : null;
+    const endDate = typeof body?.endDate === 'string' ? body.endDate : null;
+    const hasExplicitDateRange = Boolean(startDate && endDate);
 
     const minDate = new Date();
     minDate.setDate(minDate.getDate() - Math.max(30, Math.min(730, lookbackDays)));
@@ -50,7 +56,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const scopedCardIds = cardIdFilter ? cardIds.filter((id) => id === cardIdFilter) : cardIds;
+    let scopedCardIds = cardIdFilter ? cardIds.filter((id) => id === cardIdFilter) : cardIds;
+    if (cardIdsFilter.length > 0) {
+      const allowed = new Set(cardIdsFilter);
+      scopedCardIds = scopedCardIds.filter((id) => allowed.has(id));
+    }
+
     if (scopedCardIds.length === 0) {
       return NextResponse.json(
         createErrorResponse('VALIDATION_ERROR', 'Requested card does not belong to user'),
@@ -58,13 +69,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: txns, error: txError } = await supabase
+    let transactionsQuery = supabase
       .from('card_transactions')
       .select('id, card_id, date, description, debit, credit, raw_category, balance')
       .in('card_id', scopedCardIds)
-      .gte('date', minDate.toISOString().slice(0, 10))
       .order('date', { ascending: true })
       .limit(5000);
+
+    if (hasExplicitDateRange && startDate && endDate) {
+      transactionsQuery = transactionsQuery
+        .gte('date', startDate)
+        .lte('date', endDate);
+    } else {
+      transactionsQuery = transactionsQuery
+        .gte('date', minDate.toISOString().slice(0, 10));
+    }
+
+    const { data: txns, error: txError } = await transactionsQuery;
 
     if (txError) {
       return NextResponse.json(
@@ -79,7 +100,7 @@ export async function POST(request: NextRequest) {
       {
         user_id: user.id,
         current_category: currentCategory,
-        lookback_days: lookbackDays,
+        lookback_days: hasExplicitDateRange ? undefined : lookbackDays,
         transactions: (txns || []).map((txn: any) => ({
           id: txn.id,
           card_id: txn.card_id,

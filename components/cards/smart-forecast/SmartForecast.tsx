@@ -12,7 +12,7 @@ import {
 } from 'chart.js';
 import { useMemo, useState, useEffect } from 'react';
 import { Bar, Pie } from 'react-chartjs-2';
-import { Info, ChevronDown } from 'lucide-react';
+import { Info, ChevronDown, Sparkles, History, AlertTriangle } from 'lucide-react';
 import type { ConnectedCard, Transaction } from '@/types/card.types';
 import { useCreditAnalysis } from '@/hooks/useCreditAnalysis';
 import { useTheme } from '@/components/ThemeProvider';
@@ -36,6 +36,17 @@ interface SpendingProbabilityPayload {
   topCategory: string;
 }
 
+interface CategoryInsights {
+  topFiveInFilter: Array<{ category: string; amount: number }>;
+  anomaly: null | {
+    category: string;
+    averageMonthly: number;
+    monthToDate: number;
+    dayOfMonth: number;
+    baselineMonths: string[];
+  };
+}
+
 function toIsoDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
@@ -50,6 +61,11 @@ function daysInMonth(year: number, monthOneIndexed: number): number {
 
 function formatCurrency(amount: number): string {
   return `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function parseIsoDate(isoDate: string): Date {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Date(year, month - 1, day);
 }
 
 export function SmartForecast({ connectedCards }: SmartForecastProps) {
@@ -118,17 +134,34 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
       try {
         const entries = await Promise.all(
           connectedCards.map(async (card) => {
-            const response = await fetch(`/api/cards/${card.id}/transactions?limit=200`, {
-              method: 'GET',
-              credentials: 'include',
-            });
+            const pageSize = 200;
+            const maxRows = 2000;
+            let offset = 0;
+            let done = false;
+            const transactions: Transaction[] = [];
 
-            if (!response.ok) {
-              return [card.id, [] as Transaction[]] as const;
+            while (!done && offset < maxRows) {
+              const response = await fetch(`/api/cards/${card.id}/transactions?limit=${pageSize}&offset=${offset}`, {
+                method: 'GET',
+                credentials: 'include',
+              });
+
+              if (!response.ok) {
+                done = true;
+                break;
+              }
+
+              const payload = await response.json();
+              const page = (payload?.data?.transactions ?? []) as Transaction[];
+              transactions.push(...page);
+
+              if (page.length < pageSize) {
+                done = true;
+              } else {
+                offset += pageSize;
+              }
             }
 
-            const payload = await response.json();
-            const transactions = (payload?.data?.transactions ?? []) as Transaction[];
             return [card.id, transactions] as const;
           }),
         );
@@ -167,18 +200,36 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
     return scopedCardIds.flatMap((cardId) => transactionsByCard[cardId] ?? []);
   }, [scopedCardIds, transactionsByCard]);
 
-  const categoryInsights = useMemo(() => {
-    if (!scopedTransactions.length) {
+  const isHistoricalRange = useMemo(() => {
+    return dateFilter.endDate < today;
+  }, [dateFilter.endDate, today]);
+
+  const filteredScopedTransactions = useMemo(() => {
+    return scopedTransactions.filter((txn) => {
+      if (!txn.date || txn.amount <= 0) return false;
+      const date = txn.date.slice(0, 10);
+      return isWithin(date, dateFilter.startDate, dateFilter.endDate);
+    });
+  }, [scopedTransactions, dateFilter.startDate, dateFilter.endDate]);
+
+  const categoryInsights = useMemo<CategoryInsights>(() => {
+    if (!filteredScopedTransactions.length) {
       return {
-        topFiveThisMonth: [] as Array<{ category: string; amount: number }>,
-        anomaly: null as null | {
-          category: string;
-          averageMonthly: number;
-          monthToDate: number;
-          dayOfMonth: number;
-        },
+        topFiveInFilter: [],
+        anomaly: null,
       };
     }
+
+    const rangeTotals = new Map<string, number>();
+    for (const txn of filteredScopedTransactions) {
+      const category = inferTransactionCategory(txn.category, txn.description, txn.merchantName);
+      rangeTotals.set(category, (rangeTotals.get(category) || 0) + txn.amount);
+    }
+
+    const topFiveInFilter = Array.from(rangeTotals.entries())
+      .map(([category, amount]) => ({ category, amount: Number(amount.toFixed(2)) }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
 
     const now = new Date();
     const year = now.getFullYear();
@@ -188,6 +239,20 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
     const todayIso = toIsoDate(now);
     const dayOfMonth = now.getDate();
     const monthDays = daysInMonth(year, month);
+
+    const endDate = parseIsoDate(dateFilter.endDate);
+    const isCurrentMonthToDateFilter =
+      dateFilter.startDate === monthStartIso
+      && dateFilter.endDate === todayIso
+      && endDate.getFullYear() === year
+      && endDate.getMonth() + 1 === month;
+
+    if (!isCurrentMonthToDateFilter) {
+      return {
+        topFiveInFilter,
+        anomaly: null,
+      };
+    }
 
     const thisMonthTotals = new Map<string, number>();
     const perMonthCategoryTotals = new Map<string, Map<string, number>>();
@@ -209,19 +274,14 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
       monthMap.set(category, (monthMap.get(category) || 0) + txn.amount);
     }
 
-    const topFiveThisMonth = Array.from(thisMonthTotals.entries())
-      .map(([category, amount]) => ({ category, amount: Number(amount.toFixed(2)) }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
-
     const fullPastMonths = Array.from(perMonthCategoryTotals.keys())
       .filter((ym) => ym < monthIso)
       .sort()
-      .slice(-3);
+      .slice(-6);
 
-    let anomaly: { category: string; averageMonthly: number; monthToDate: number; dayOfMonth: number } | null = null;
+    let anomaly: CategoryInsights['anomaly'] = null;
 
-    if (fullPastMonths.length > 0) {
+    if (fullPastMonths.length >= 2) {
       for (const [category, monthToDate] of thisMonthTotals.entries()) {
         const pastValues = fullPastMonths.map((ym) => perMonthCategoryTotals.get(ym)?.get(category) || 0);
         const averageMonthly = pastValues.reduce((sum, value) => sum + value, 0) / fullPastMonths.length;
@@ -240,33 +300,50 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
               averageMonthly: Number(averageMonthly.toFixed(2)),
               monthToDate: Number(monthToDate.toFixed(2)),
               dayOfMonth,
+              baselineMonths: fullPastMonths,
             };
           }
         }
       }
     }
 
-    return { topFiveThisMonth, anomaly };
-  }, [scopedTransactions]);
+    return { topFiveInFilter, anomaly };
+  }, [filteredScopedTransactions, scopedTransactions, dateFilter.startDate, dateFilter.endDate]);
 
   useEffect(() => {
     let active = true;
 
     const runAiSignals = async () => {
-      if (!categoryInsights.topFiveThisMonth.length) {
+      if (isHistoricalRange) {
+        setSpendingProbability(null);
+        setAiLoading(false);
+        return;
+      }
+
+      if (!categoryInsights.topFiveInFilter.length) {
         setSpendingProbability(null);
         return;
       }
 
-      const topCategory = categoryInsights.topFiveThisMonth[0];
+      const topCategory = categoryInsights.topFiveInFilter[0];
       if (!topCategory) return;
 
       setAiLoading(true);
+
+      const cardScope =
+        viewMode === 'individual'
+          ? (selectedCardId ? [selectedCardId] : [])
+          : viewMode === 'compare'
+            ? Array.from(compareCardIds)
+            : [];
 
       const probabilityResult = await apiPost<SpendingProbabilityPayload>('/api/credit-intelligence/spending-probability', {
         lookbackDays: 180,
         currentCategory: topCategory.category,
         cardId: viewMode === 'individual' ? selectedCardId : undefined,
+        cardIds: viewMode === 'compare' ? cardScope : undefined,
+        startDate: dateFilter.startDate,
+        endDate: dateFilter.endDate,
       });
 
       if (!active) return;
@@ -279,29 +356,69 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
     return () => {
       active = false;
     };
-  }, [categoryInsights.topFiveThisMonth, selectedCardId, viewMode]);
+  }, [categoryInsights.topFiveInFilter, selectedCardId, compareCardIds, viewMode, dateFilter.startDate, dateFilter.endDate, isHistoricalRange]);
+
+  const historicalMonthlyBarData = useMemo(() => {
+    const monthlyTotals = new Map<string, number>();
+
+    for (const txn of filteredScopedTransactions) {
+      const ym = txn.date.slice(0, 7);
+      monthlyTotals.set(ym, (monthlyTotals.get(ym) || 0) + txn.amount);
+    }
+
+    const entries = Array.from(monthlyTotals.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-8);
+
+    const labels = entries.map(([ym]) => {
+      const [y, m] = ym.split('-').map(Number);
+      return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    });
+
+    const data = entries.map(([, total]) => Number(total.toFixed(2)));
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Monthly spend',
+          data,
+          backgroundColor: isDark ? 'rgba(20, 184, 166, 0.85)' : 'rgba(13, 148, 136, 0.85)',
+          borderRadius: 8,
+        },
+      ],
+    };
+  }, [filteredScopedTransactions, isDark]);
 
   if (loading) {
     return <SmartForecastSkeleton />;
   }
 
-  const topSpendingCategory = categoryInsights.topFiveThisMonth[0];
+  const topSpendingCategory = categoryInsights.topFiveInFilter[0];
+  const totalFilteredSpend = categoryInsights.topFiveInFilter.reduce((sum, item) => sum + item.amount, 0);
+  const showPredictionView = !isHistoricalRange;
   const probabilityLabel = spendingProbability?.topCategory
     ? formatCategoryLabel(spendingProbability.topCategory)
     : topSpendingCategory
       ? formatCategoryLabel(topSpendingCategory.category)
       : 'N/A';
 
-  const overspendNarrative = categoryInsights.anomaly
-    ? `Your normal spend for ${formatCategoryLabel(categoryInsights.anomaly.category)} is about ${formatCurrency(categoryInsights.anomaly.averageMonthly)}/month. It's day ${categoryInsights.anomaly.dayOfMonth} and you're already at ${formatCurrency(categoryInsights.anomaly.monthToDate)}. Might be time to slow down.`
-    : 'No early-month overspend anomaly detected right now. Spending pace looks controlled.';
+  const overspendSummary = categoryInsights.anomaly
+    ? `${formatCategoryLabel(categoryInsights.anomaly.category)} spending is running higher than usual this month.`
+    : 'Your spending pace looks normal.';
+
+  const baselineSummary = categoryInsights.anomaly
+    ? `Usual monthly spend: ${formatCurrency(categoryInsights.anomaly.averageMonthly)}. Current month so far: ${formatCurrency(categoryInsights.anomaly.monthToDate)}.`
+    : showPredictionView
+      ? 'Pace alerts compare this month against your recent monthly average.'
+      : 'Pace alerts are shown only for current month-to-date views.';
 
   const spendingPieData = {
-    labels: categoryInsights.topFiveThisMonth.map((item) => formatCategoryLabel(item.category)),
+    labels: categoryInsights.topFiveInFilter.map((item) => formatCategoryLabel(item.category)),
     datasets: [
       {
-        data: categoryInsights.topFiveThisMonth.map((item) => item.amount),
-        backgroundColor: palette.slice(0, Math.max(categoryInsights.topFiveThisMonth.length, 1)),
+        data: categoryInsights.topFiveInFilter.map((item) => item.amount),
+        backgroundColor: palette.slice(0, Math.max(categoryInsights.topFiveInFilter.length, 1)),
         borderWidth: 1,
         borderColor: isDark ? '#111827' : '#ffffff',
       },
@@ -346,17 +463,11 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
         </button>
       </div>
 
-      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
+      <div className="mb-6 rounded-2xl border border-cyan-100 bg-gradient-to-br from-white via-cyan-50/40 to-sky-100/30 p-4 shadow-sm dark:border-cyan-900/40 dark:from-gray-950 dark:via-gray-950 dark:to-cyan-950/20 sm:mb-8 sm:p-6">
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="text-base text-gray-700 dark:text-gray-300 sm:text-lg">Spending Intelligence</h2>
         </div>
         <div className="mb-4 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-
-        <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
-          <p>
-            Here are your top 5 spending categories for this month. Most likely next spend: {probabilityLabel}. {overspendNarrative}
-          </p>
-        </div>
 
         {transactionsLoading ? (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -366,7 +477,7 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
-              <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Top 5 Categories This Month</p>
+              <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Top 5 Categories In Selected Period</p>
               <div className="h-64 sm:h-80">
                 <Pie
                   key={`spending-pie-${resolvedTheme}-${viewMode}`}
@@ -396,36 +507,104 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
               </div>
             </div>
             <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
-              <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">AI Next Spend Likelihood</p>
+              <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                {showPredictionView ? 'Likely Next Spend (Ranked)' : 'Historical Monthly Spend Trend'}
+              </p>
               <div className="h-64 sm:h-80">
-                <Bar
-                  key={`spending-probability-bar-${resolvedTheme}-${viewMode}`}
-                  data={spendingProbabilityBarData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                      x: {
-                        ticks: { color: isDark ? '#9CA3AF' : '#6B7280' },
-                        grid: { display: false },
-                      },
-                      y: {
-                        ticks: {
-                          color: isDark ? '#9CA3AF' : '#6B7280',
-                          callback: (value: number | string) => `${value}%`,
+                {showPredictionView ? (
+                  <Bar
+                    key={`spending-probability-bar-${resolvedTheme}-${viewMode}`}
+                    data={spendingProbabilityBarData}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: { legend: { display: false } },
+                      indexAxis: 'y',
+                      scales: {
+                        x: {
+                          min: 0,
+                          max: 100,
+                          ticks: {
+                            color: isDark ? '#9CA3AF' : '#6B7280',
+                            callback: (value: number | string) => `${value}%`,
+                          },
+                          grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
                         },
-                        grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
+                        y: {
+                          ticks: {
+                            color: isDark ? '#9CA3AF' : '#6B7280',
+                          },
+                          grid: { display: false },
+                        },
                       },
-                    },
-                  }}
-                />
+                    }}
+                  />
+                ) : (
+                  <Bar
+                    key={`spending-history-bar-${resolvedTheme}-${viewMode}`}
+                    data={historicalMonthlyBarData}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: { legend: { display: false } },
+                      scales: {
+                        x: {
+                          ticks: { color: isDark ? '#9CA3AF' : '#6B7280' },
+                          grid: { display: false },
+                        },
+                        y: {
+                          ticks: {
+                            color: isDark ? '#9CA3AF' : '#6B7280',
+                            callback: (value: number | string) => formatCurrency(Number(value)),
+                          },
+                          grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
+                        },
+                      },
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {aiLoading && (
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-cyan-100 bg-white/80 p-4 dark:border-cyan-900/40 dark:bg-gray-900/70">
+            <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-400">
+              <Sparkles className="h-4 w-4" />
+              <p className="text-xs font-semibold uppercase tracking-wide">Spend Snapshot</p>
+            </div>
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              Total spend in this view: <span className="font-semibold">{formatCurrency(totalFilteredSpend)}</span>.
+            </p>
+            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+              Top category: <span className="font-semibold">{topSpendingCategory ? formatCategoryLabel(topSpendingCategory.category) : 'N/A'}</span>.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-sky-100 bg-white/80 p-4 dark:border-sky-900/40 dark:bg-gray-900/70">
+            <div className="flex items-center gap-2 text-sky-700 dark:text-sky-400">
+              <History className="h-4 w-4" />
+              <p className="text-xs font-semibold uppercase tracking-wide">Smart Read</p>
+            </div>
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              {showPredictionView
+                ? `Most likely next spend: ${probabilityLabel}.`
+                : 'You are viewing historical data, so this panel shows monthly spend trend instead of prediction.'}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-amber-100 bg-white/80 p-4 dark:border-amber-900/40 dark:bg-gray-900/70">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4" />
+              <p className="text-xs font-semibold uppercase tracking-wide">Pace Check</p>
+            </div>
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{overspendSummary}</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{baselineSummary}</p>
+          </div>
+        </div>
+
+        {showPredictionView && aiLoading && (
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Refreshing intelligence signals...</p>
         )}
       </div>
