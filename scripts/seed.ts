@@ -6,7 +6,7 @@ type DemoUser = {
   lastName: string;
   gender: 'female' | 'male';
   email: string;
-  password: string;
+  passwordEnvVar: 'KRISTI_DEMO_PASSWORD' | 'MARCUS_DEMO_PASSWORD';
   mobileNumber: string;
   preferredDashboard: 'learn' | 'card';
 };
@@ -17,7 +17,7 @@ const DEMO_USERS: DemoUser[] = [
     lastName: 'Mumbi',
     gender: 'female',
     email: 'kristi.mumbi.demo@creduman.app',
-    password: 'CredumanDemo2026!',
+    passwordEnvVar: 'KRISTI_DEMO_PASSWORD',
     mobileNumber: '+15145551001',
     preferredDashboard: 'learn',
   },
@@ -26,11 +26,19 @@ const DEMO_USERS: DemoUser[] = [
     lastName: 'Thomas',
     gender: 'male',
     email: 'marcus.thomas.demo@creduman.app',
-    password: 'CredumanDemo2026!',
+    passwordEnvVar: 'MARCUS_DEMO_PASSWORD',
     mobileNumber: '+15145551002',
     preferredDashboard: 'card',
   },
 ];
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value || !value.trim()) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
 
 async function findUserByEmail(admin: ReturnType<typeof createAdminClient>, email: string) {
   let page = 1;
@@ -58,12 +66,13 @@ async function findUserByEmail(admin: ReturnType<typeof createAdminClient>, emai
 }
 
 async function ensureDemoUser(admin: ReturnType<typeof createAdminClient>, user: DemoUser) {
+  const password = requireEnv(user.passwordEnvVar);
   let authUser = await findUserByEmail(admin, user.email);
 
   if (!authUser) {
     const { data, error } = await admin.auth.admin.createUser({
       email: user.email,
-      password: user.password,
+      password,
       email_confirm: true,
       user_metadata: {
         first_name: user.firstName,
@@ -81,7 +90,7 @@ async function ensureDemoUser(admin: ReturnType<typeof createAdminClient>, user:
     console.log(`Created auth user: ${user.email}`);
   } else {
     const { error } = await admin.auth.admin.updateUserById(authUser.id, {
-      password: user.password,
+      password,
       user_metadata: {
         first_name: user.firstName,
         surname: user.lastName,
@@ -120,14 +129,14 @@ async function ensureDemoUser(admin: ReturnType<typeof createAdminClient>, user:
   return {
     name: `${user.firstName} ${user.lastName}`,
     email: user.email,
-    password: user.password,
+    passwordEnvVar: user.passwordEnvVar,
   };
 }
 
 async function main() {
   loadEnvConfig(process.cwd());
   const admin = createAdminClient();
-  const seeded = [] as Array<{ name: string; email: string; password: string }>;
+  const seeded = [] as Array<{ name: string; email: string; passwordEnvVar: string }>;
 
   for (const user of DEMO_USERS) {
     const result = await ensureDemoUser(admin, user);
@@ -137,7 +146,7 @@ async function main() {
   console.log('');
   console.log('Demo users ready:');
   for (const user of seeded) {
-    console.log(`- ${user.name}: ${user.email} / ${user.password}`);
+    console.log(`- ${user.name}: ${user.email} (password from ${user.passwordEnvVar})`);
   }
 }
 
