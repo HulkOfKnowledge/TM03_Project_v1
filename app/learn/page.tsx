@@ -68,6 +68,7 @@ export default function LearnDashboard() {
   );
 
   const userName = profile?.first_name || user?.email?.split('@')[0] || 'there';
+  const showLearningPath = profile?.preferred_dashboard !== 'card';
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
@@ -88,16 +89,18 @@ export default function LearnDashboard() {
           </div>
 
           {/* Learning Path Section */}
-          <section className="mb-16">
-            <div className="md:bg-gray-100 dark:bg-gray-900 rounded-none md:rounded-[32px] p-3 md:p-8 md:p-12">
-              <LearningCarousel
-                items={learningPath}
-                onItemClick={handleContentClick}
-                isLoading={loading}
-                skeletonCount={3}
-              />
-            </div>
-          </section>
+          {showLearningPath && (
+            <section className="mb-16">
+              <div className="md:bg-gray-100 dark:bg-gray-900 rounded-none md:rounded-[32px] p-3 md:p-8 md:p-12">
+                <LearningCarousel
+                  items={learningPath}
+                  onItemClick={handleContentClick}
+                  isLoading={loading}
+                  skeletonCount={3}
+                />
+              </div>
+            </section>
+          )}
 
           {/* Beginner's Checklist */}
           {checklistOpen && (
