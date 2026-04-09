@@ -28,7 +28,8 @@ export function Navigation() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const isDark = useIsDarkMode();
-  const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
+  const userAvatar = profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
+  const dashboardHref = profile?.preferred_dashboard === 'card' ? '/cards/analysis' : '/learn';
   const displayName =
     profile?.first_name && profile?.surname
       ? `${profile.first_name} ${profile.surname}`
@@ -137,7 +138,7 @@ export function Navigation() {
                 <DropdownMenuSection>
                   <DropdownMenuItem
                     onClick={() => {
-                      router.push('/learn');
+                      router.push(dashboardHref);
                       setShowUserMenu(false);
                     }}
                     icon={<LayoutDashboard className="h-4 w-4" />}
@@ -234,7 +235,7 @@ export function Navigation() {
             {user ? (
               <>
                 <Link
-                  href="/learn"
+                  href={dashboardHref}
                   className="flex items-center gap-2 text-base font-medium text-muted-foreground hover:text-foreground py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >

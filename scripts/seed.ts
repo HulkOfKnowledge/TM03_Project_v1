@@ -9,6 +9,7 @@ type DemoUser = {
   passwordEnvVar: 'KRISTI_DEMO_PASSWORD' | 'MARCUS_DEMO_PASSWORD';
   mobileNumber: string;
   preferredDashboard: 'learn' | 'card';
+  avatarUrl: string;
 };
 
 const DEMO_USERS: DemoUser[] = [
@@ -20,6 +21,7 @@ const DEMO_USERS: DemoUser[] = [
     passwordEnvVar: 'KRISTI_DEMO_PASSWORD',
     mobileNumber: '+15145551001',
     preferredDashboard: 'learn',
+    avatarUrl: '/avatars/kristi.svg',
   },
   {
     firstName: 'Marcus',
@@ -29,6 +31,7 @@ const DEMO_USERS: DemoUser[] = [
     passwordEnvVar: 'MARCUS_DEMO_PASSWORD',
     mobileNumber: '+15145551002',
     preferredDashboard: 'card',
+    avatarUrl: '/avatars/marcus.svg',
   },
 ];
 
@@ -79,6 +82,7 @@ async function ensureDemoUser(admin: ReturnType<typeof createAdminClient>, user:
         surname: user.lastName,
         mobile_number: user.mobileNumber,
         gender: user.gender,
+        avatar_url: user.avatarUrl,
       },
     });
 
@@ -96,6 +100,7 @@ async function ensureDemoUser(admin: ReturnType<typeof createAdminClient>, user:
         surname: user.lastName,
         mobile_number: user.mobileNumber,
         gender: user.gender,
+        avatar_url: user.avatarUrl,
       },
     });
 
@@ -115,6 +120,7 @@ async function ensureDemoUser(admin: ReturnType<typeof createAdminClient>, user:
         first_name: user.firstName,
         surname: user.lastName,
         mobile_number: user.mobileNumber,
+        avatar_url: user.avatarUrl,
         preferred_language: 'en',
         onboarding_completed: true,
         preferred_dashboard: user.preferredDashboard,
