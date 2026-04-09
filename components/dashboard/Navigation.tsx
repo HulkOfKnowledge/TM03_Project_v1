@@ -211,35 +211,44 @@ export function Navigation() {
 
   // Navigation items - only shown after onboarding
   const navItems: NavItem[] = useMemo(
-    () => [
-      {
+    () => {
+      const homeItem: NavItem = {
         label: 'Home',
         href: '/home',
         icon: Home,
         active: pathname === '/home',
-      },
-      {
+      };
+
+      const learnItem: NavItem = {
         label: 'Learn',
         href: '#',
         icon: BookOpen,
         active: pathname?.startsWith('/learn/'),
         subNav: LEARN_SUB_NAV,
-      },
-      {
+      };
+
+      const cardsItem: NavItem = {
         label: 'Cards & Accounts',
         href: '#',
         icon: CreditCard,
         active: pathname === '/cards' || pathname?.startsWith('/cards'),
         subNav: CARD_SUB_NAV,
-      },
-      {
+      };
+
+      const profileItem: NavItem = {
         label: 'Profile',
         href: '/profile',
         icon: User,
         active: pathname === '/profile' || pathname?.startsWith('/profile'),
-      },
-    ],
-    [pathname],
+      };
+
+      const middleItems = profile?.preferred_dashboard === 'card'
+        ? [cardsItem, learnItem]
+        : [learnItem, cardsItem];
+
+      return [homeItem, ...middleItems, profileItem];
+    },
+    [pathname, profile?.preferred_dashboard],
   );
 
   // Show navigation items only if onboarding is completed
