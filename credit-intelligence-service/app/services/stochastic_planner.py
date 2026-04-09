@@ -37,6 +37,8 @@ from app.models.schemas import (
     ForecastCategoryMomentum,
     ForecastNextSpendPrediction,
     ForecastNextSpendProbability,
+    ForecastActionPlan,
+    ForecastActionItem,
 )
 from app.services.category_taxonomy import SHARED_CATEGORIES, infer_shared_category
 
@@ -506,6 +508,7 @@ class StochasticPlanner:
         anomaly = None
         forecast_snapshot = None
         next_spend_prediction = None
+        action_plan = None
 
         try:
             now = datetime.strptime(today_iso, "%Y-%m-%d")
@@ -617,6 +620,84 @@ class StochasticPlanner:
         except Exception:
             next_spend_prediction = None
 
+        try:
+            action_items: List[ForecastActionItem] = []
+            top_category_label = top_categories[0].category if top_categories else "your top category"
+
+            if forecast_snapshot and forecast_snapshot.status == "Risk":
+                action_items.append(
+                    ForecastActionItem(
+                        id="cap-top-category",
+                        priority="high",
+                        title=f"Set a weekly cap for {top_category_label}",
+                        description="Your month-end projection is running high. Set a short-term cap this week to slow the pace.",
+                        rationale=(
+                            f"Projected month-end is about ${forecast_snapshot.projected_month_end:.2f} "
+                            f"(range ${forecast_snapshot.projected_low:.2f}-${forecast_snapshot.projected_high:.2f})."
+                        ),
+                        action_type="spend_cap",
+                    )
+                )
+            elif forecast_snapshot and forecast_snapshot.status == "Watch":
+                action_items.append(
+                    ForecastActionItem(
+                        id="watch-top-category",
+                        priority="medium",
+                        title=f"Track {top_category_label} for the next 7 days",
+                        description="Your spending pace is above normal. Watch this category for one week.",
+                        rationale=(
+                            f"Projected month-end is about ${forecast_snapshot.projected_month_end:.2f} with {forecast_snapshot.confidence} confidence."
+                        ),
+                        action_type="review",
+                    )
+                )
+
+            if anomaly:
+                action_items.append(
+                    ForecastActionItem(
+                        id="anomaly-slowdown",
+                        priority="high" if forecast_snapshot and forecast_snapshot.status == "Risk" else "medium",
+                        title=f"Slow down {anomaly.category} spend",
+                        description="Your current spend in this category is above your usual monthly pattern.",
+                        rationale=(
+                            f"Current month-to-date: ${anomaly.month_to_date:.2f} vs usual monthly ${anomaly.average_monthly:.2f}."
+                        ),
+                        action_type="spend_cap",
+                    )
+                )
+
+            if forecast_snapshot and forecast_snapshot.mtd_spend > 0:
+                action_items.append(
+                    ForecastActionItem(
+                        id="utilization-payment",
+                        priority="medium",
+                        title="Make a small payment before statement close",
+                        description="An extra payment now can soften utilization pressure if spending remains elevated.",
+                        rationale="Lower reported balances typically helps keep utilization in a healthier range.",
+                        action_type="payment",
+                    )
+                )
+
+            if not action_items and top_categories:
+                action_items.append(
+                    ForecastActionItem(
+                        id="steady-state-review",
+                        priority="low",
+                        title="Keep current pace and review in 1 week",
+                        description="Your spending pace looks controlled. Continue monitoring your top category.",
+                        rationale=f"Top current category is {top_categories[0].category}.",
+                        action_type="review",
+                    )
+                )
+
+            if action_items:
+                action_plan = ForecastActionPlan(
+                    summary="Simple next steps based on your current spending pace.",
+                    items=action_items[:3],
+                )
+        except Exception:
+            action_plan = None
+
         return ForecastInsightsResponse(
             user_id=request.user_id,
             start_date=start_date,
@@ -627,6 +708,7 @@ class StochasticPlanner:
             monthly_trend=monthly_trend,
             forecast_snapshot=forecast_snapshot,
             next_spend_prediction=next_spend_prediction,
+            action_plan=action_plan,
             computed_at=datetime.utcnow().isoformat(),
         )
 

@@ -7,9 +7,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { ChartOptions } from 'chart.js';
 import { useTheme } from '@/components/ThemeProvider';
-import { cardService } from '@/services/card.service';
 import { fetchCardMetrics } from '@/lib/api/cards-client';
-import type { ConnectedCard, CreditAnalysisData, CardMetricsResponse } from '@/types/card.types';
+import type { ConnectedCard, CardMetricsResponse } from '@/types/card.types';
 import {
   getDatesInRange,
   fmtDayLabel,
@@ -44,22 +43,9 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
 
   // Data state
   const [metricsData, setMetricsData] = useState<CardMetricsResponse | null>(null);
-  const [analysisData, setAnalysisData] = useState<CreditAnalysisData | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
-  const [loadingAnalysis, setLoadingAnalysis] = useState(true);
 
   const cardIdKey = connectedCards.map(c => c.id).join(',');
-
-  useEffect(() => {
-    let active = true;
-    setLoadingAnalysis(true);
-    cardService.getCreditAnalysisData().then(data => {
-      if (!active) return;
-      setAnalysisData(data);
-      setLoadingAnalysis(false);
-    });
-    return () => { active = false; };
-  }, [cardIdKey]); 
 
   // Derived date range 
   const dateFilter = useMemo(() => {
@@ -335,9 +321,8 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
     compareCardIds, setCompareCardIds,
     palette,
     // loading
-    loading: loadingMetrics || loadingAnalysis,
+    loading: loadingMetrics,
     // data
-    analysisData,
     metricsData,
     filteredMetrics,
     // chart

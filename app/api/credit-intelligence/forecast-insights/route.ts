@@ -184,6 +184,21 @@ export async function POST(request: NextRequest) {
               : [],
           }
         : null,
+      actionPlan: response.data.action_plan
+        ? {
+            summary: response.data.action_plan.summary,
+            items: Array.isArray(response.data.action_plan.items)
+              ? response.data.action_plan.items.map((item: any) => ({
+                  id: item.id,
+                  priority: item.priority,
+                  title: item.title,
+                  description: item.description,
+                  rationale: item.rationale,
+                  actionType: item.action_type,
+                }))
+              : [],
+          }
+        : null,
       computedAt: response.data.computed_at,
     };
 

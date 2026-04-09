@@ -362,6 +362,20 @@ class ForecastNextSpendPrediction(BaseModel):
     probabilities: List[ForecastNextSpendProbability]
 
 
+class ForecastActionItem(BaseModel):
+    id: str
+    priority: Literal["high", "medium", "low"]
+    title: str
+    description: str
+    rationale: str
+    action_type: Literal["spend_cap", "payment", "review"]
+
+
+class ForecastActionPlan(BaseModel):
+    summary: str
+    items: List[ForecastActionItem]
+
+
 class ForecastInsightsRequest(BaseModel):
     user_id: str
     transactions: List[StochasticTransactionData]
@@ -380,6 +394,7 @@ class ForecastInsightsResponse(BaseModel):
     monthly_trend: List[ForecastMonthlyPoint]
     forecast_snapshot: Optional[ForecastSnapshot] = None
     next_spend_prediction: Optional[ForecastNextSpendPrediction] = None
+    action_plan: Optional[ForecastActionPlan] = None
     computed_at: str
 
 

@@ -19,14 +19,13 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { Info, SlidersHorizontal, ChevronDown, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ConnectedCard } from '@/types/card.types';
 import { useCreditAnalysis } from '@/hooks/useCreditAnalysis';
 import { useTheme } from '@/components/ThemeProvider';
 import { MetricCard } from './MetricCard';
 import { ChartSection } from './ChartSection';
 import { ChartSettingsModal } from './ChartSettingsModal';
-import { RecommendedActions } from './RecommendedActions';
 import { CreditAnalysisSkeleton } from './CreditAnalysisSkeleton';
 import { PaymentRecommendationModal } from '../PaymentRecommendationModal';
 
@@ -37,9 +36,32 @@ interface CreditAnalysisProps {
   onAddCard: () => void;
 }
 
+interface ForecastActionPlan {
+  summary: string;
+  items: Array<{
+    id: string;
+    priority: 'high' | 'medium' | 'low';
+    title: string;
+    description: string;
+    rationale: string;
+    actionType: 'spend_cap' | 'payment' | 'review';
+  }>;
+}
+
+interface ForecastInsightsPayload {
+  actionPlan: ForecastActionPlan | null;
+}
+
+interface ApiEnvelope<T> {
+  success: boolean;
+  data?: T;
+}
+
 export function CreditAnalysis({ connectedCards, onAddCard }: CreditAnalysisProps) {
   const [showPaymentRec, setShowPaymentRec] = useState(false);
   const [showChartSettings, setShowChartSettings] = useState(false);
+  const [smartActionPlan, setSmartActionPlan] = useState<ForecastActionPlan | null>(null);
+  const [loadingSmartActions, setLoadingSmartActions] = useState(false);
   const { resolvedTheme } = useTheme();
 
   const {
@@ -56,13 +78,59 @@ export function CreditAnalysis({ connectedCards, onAddCard }: CreditAnalysisProp
     palette,
     filteredMetrics,
     loading,
-    analysisData,
     utilizationChartData,
     utilizationChartOptions,
     spendingChartData,
     spendingChartOptions,
     chartMetrics,
   } = useCreditAnalysis(connectedCards);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadSmartActions = async () => {
+      if (!connectedCards.length) {
+        setSmartActionPlan(null);
+        return;
+      }
+
+      setLoadingSmartActions(true);
+
+      try {
+        const response = await fetch('/api/credit-intelligence/forecast-insights', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            startDate: dateFilter.startDate,
+            endDate: dateFilter.endDate,
+            cardId: viewMode === 'individual' ? selectedCardId : undefined,
+            cardIds: viewMode === 'compare' ? Array.from(compareCardIds) : undefined,
+          }),
+        });
+
+        const result = (await response.json()) as ApiEnvelope<ForecastInsightsPayload>;
+        if (!active) return;
+
+        if (!response.ok || !result.success || !result.data) {
+          setSmartActionPlan(null);
+        } else {
+          setSmartActionPlan(result.data.actionPlan ?? null);
+        }
+      } catch {
+        if (!active) return;
+        setSmartActionPlan(null);
+      } finally {
+        if (active) setLoadingSmartActions(false);
+      }
+    };
+
+    loadSmartActions();
+
+    return () => {
+      active = false;
+    };
+  }, [connectedCards, dateFilter.startDate, dateFilter.endDate, viewMode, selectedCardId, compareCardIds]);
 
   const handleCompareToggle = (cardId: string) =>
     setCompareCardIds(prev => {
@@ -223,8 +291,45 @@ export function CreditAnalysis({ connectedCards, onAddCard }: CreditAnalysisProp
         <Line key={`spend-${resolvedTheme}`} data={spendingChartData} options={spendingChartOptions} />
       </ChartSection>
 
-      {/* Recommended Actions */}
-      <RecommendedActions insights={analysisData?.mlInsights?.insights} />
+      {/* Smart Actions */}
+      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="text-base text-gray-700 dark:text-gray-300 sm:text-lg">Smart Action Plan</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">next best steps</p>
+        </div>
+
+        {loadingSmartActions ? (
+          <p className="text-sm text-gray-600 dark:text-gray-400">Building your action plan...</p>
+        ) : smartActionPlan?.items?.length ? (
+          <>
+            <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">{smartActionPlan.summary}</p>
+            <div className="space-y-2">
+              {smartActionPlan.items.map((item, index) => {
+                const badgeTone = item.priority === 'high'
+                  ? 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400'
+                  : item.priority === 'medium'
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+
+                return (
+                  <div key={item.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{index + 1}. {item.title}</p>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeTone}`}>
+                        {item.priority}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{item.description}</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Why: {item.rationale}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-gray-600 dark:text-gray-400">No immediate action needed right now. Your spending trend is stable.</p>
+        )}
+      </div>
 
       {/* Chart Settings Modal */}
       <ChartSettingsModal
