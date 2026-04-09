@@ -29,6 +29,15 @@ export function Navigation() {
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const isDark = useIsDarkMode();
   const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
+  const displayName =
+    profile?.first_name && profile?.surname
+      ? `${profile.first_name} ${profile.surname}`
+      : profile?.first_name ||
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        user?.user_metadata?.first_name ||
+        user?.email?.split('@')[0] ||
+        'User';
 
   // Close one menu when opening another
   const handleUserMenuToggle = () => {
@@ -114,14 +123,14 @@ export function Navigation() {
                       </div>
                     )}
                     <span className="text-sm font-medium">
-                      {user?.user_metadata?.full_name || 'User'}
+                      {displayName}
                     </span>
                   </button>
                 }
               >
                 <DropdownMenuHeader>
                   <p className="text-sm font-medium">
-                    {user?.user_metadata?.full_name || 'User'}
+                    {displayName}
                   </p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </DropdownMenuHeader>
