@@ -95,7 +95,7 @@ export default function OnboardingPage() {
       router.push(
         profile.preferred_dashboard === 'card'
           ? '/cards'
-          : '/learn'
+          : '/home'
       );
       return;
     }
@@ -732,7 +732,7 @@ export default function OnboardingPage() {
         message="Your account is all set up. Taking you to your dashboard..."
         redirectTo={
           accountSetup.primaryGoal === 'learn_credit'
-            ? '/learn'
+            ? '/home'
             : '/cards'
         }
       />

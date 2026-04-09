@@ -49,7 +49,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protected routes - require authentication (but NOT email confirmation)
-  const protectedRoutes = ['/learn', '/cards', '/onboarding'];
+  const protectedRoutes = ['/home', '/learn', '/cards', '/onboarding'];
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
@@ -62,6 +62,7 @@ export async function updateSession(request: NextRequest) {
 
   // Check onboarding status for protected routes
   if (user && (request.nextUrl.pathname.startsWith('/onboarding') || 
+               request.nextUrl.pathname.startsWith('/home') ||
                request.nextUrl.pathname.startsWith('/learn') ||
                request.nextUrl.pathname.startsWith('/cards'))) {
     const { data: profile } = await supabase
@@ -74,12 +75,13 @@ export async function updateSession(request: NextRequest) {
     if (request.nextUrl.pathname.startsWith('/onboarding') && profile?.onboarding_completed) {
       const destination = profile?.preferred_dashboard === 'card'
         ? '/cards' 
-        : '/learn';
+        : '/home';
       return NextResponse.redirect(new URL(destination, request.url));
     }
 
     // If accessing dashboards without completing onboarding, redirect to onboarding
-    if ((request.nextUrl.pathname.startsWith('/learn') || 
+        if ((request.nextUrl.pathname.startsWith('/home') ||
+          request.nextUrl.pathname.startsWith('/learn') || 
          request.nextUrl.pathname.startsWith('/cards')) && 
         !profile?.onboarding_completed) {
       return NextResponse.redirect(new URL('/onboarding', request.url));
@@ -106,7 +108,7 @@ export async function updateSession(request: NextRequest) {
 
     const destination = profile?.preferred_dashboard === 'card' 
       ? '/cards' 
-      : '/learn';
+      : '/home';
     return NextResponse.redirect(new URL(destination, request.url));
   }
 

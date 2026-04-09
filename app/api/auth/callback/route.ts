@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       // Redirect to preferred dashboard
       const dashboard = existingProfile.preferred_dashboard === 'card' 
         ? '/cards' 
-        : '/learn';
+        : '/home';
       
       return NextResponse.redirect(`${requestUrl.origin}${dashboard}`);
 

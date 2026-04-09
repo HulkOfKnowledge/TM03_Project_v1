@@ -214,9 +214,9 @@ export function Navigation() {
     () => [
       {
         label: 'Home',
-        href: '/learn',
+        href: '/home',
         icon: Home,
-        active: pathname === '/learn',
+        active: pathname === '/home',
       },
       {
         label: 'Learn',
@@ -395,7 +395,7 @@ export function Navigation() {
         <div className="container mx-auto px-4 md:px-6">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link href={showNavItems ? '/learn' : '/'} className="flex items-center">
+            <Link href={showNavItems ? '/home' : '/'} className="flex items-center">
               <Image
                 src={isDark ? '/Logo.svg' : '/Logo-dark.svg'}
                 alt="Creduman Logo"
@@ -561,17 +561,17 @@ export function Navigation() {
                       {/* Switch Dashboard */}
                       <DropdownMenuItem
                         onClick={() => {
-                          const targetDashboard = pathname?.includes('learn') ? '/cards' : '/learn';
+                          const targetDashboard = pathname?.startsWith('/cards') ? '/home' : '/cards';
                           router.push(targetDashboard);
                           setShowUserMenu(false);
                         }}
                         icon={
-                          pathname?.includes('learn') ? 
+                          pathname?.startsWith('/cards') ? 
                           <CreditCard className="h-4 w-4" /> : 
                           <BookOpen className="h-4 w-4" />
                         }
                       >
-                        {pathname?.includes('learn') ? 'Card Dashboard' : 'Learn Dashboard'}
+                        {pathname?.startsWith('/cards') ? 'Learn Dashboard' : 'Card Dashboard'}
                       </DropdownMenuItem>
                     </DropdownMenuSection>
                   )}

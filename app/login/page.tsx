@@ -84,7 +84,7 @@ function LoginForm() {
       const profile = result?.data?.profile;
 
       // Determine redirect destination
-      let destination = '/learn';
+      let destination = '/home';
       
       if (!profile?.onboarding_completed) {
         destination = '/onboarding';

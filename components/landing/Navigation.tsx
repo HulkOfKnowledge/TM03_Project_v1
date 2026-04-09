@@ -29,7 +29,7 @@ export function Navigation() {
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const isDark = useIsDarkMode();
   const userAvatar = profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
-  const dashboardHref = profile?.preferred_dashboard === 'card' ? '/cards/analysis' : '/learn';
+  const dashboardHref = profile?.preferred_dashboard === 'card' ? '/cards/analysis' : '/home';
   const displayName =
     profile?.first_name && profile?.surname
       ? `${profile.first_name} ${profile.surname}`

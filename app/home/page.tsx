@@ -1,0 +1,190 @@
+/**
+ * Learn Dashboard Page (Home)
+ */
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { X } from 'lucide-react';
+import { Footer } from '@/components/landing/Footer';
+import { Navigation } from '@/components/dashboard/Navigation';
+import { LearningCarousel } from '@/components/learn/LearningCarousel';
+import { ChecklistItem } from '@/components/learn/ChecklistItem';
+import { ChecklistSkeleton } from '@/components/learn/ChecklistSkeleton';
+import { TestimonialCarousel } from '@/components/learn/TestimonialCarousel';
+import { TestimonialSkeleton } from '@/components/learn/TestimonialSkeleton';
+import { CardOverviewSection } from '@/components/learn/CardOverviewSection';
+import { learnService } from '@/services/learn.service';
+import { useUser } from '@/hooks/useAuth';
+import { useCard } from '@/contexts/CardContext';
+import { createContentNavigationHandler } from '@/lib/learn-navigation';
+import type {
+  LearningContent,
+  ChecklistItem as ChecklistItemType,
+  Testimonial,
+} from '@/types/learn.types';
+
+// ==================== Main Page Component ====================
+export default function LearnDashboard() {
+  const router = useRouter();
+  const { user, profile } = useUser();
+  const { connectedCards } = useCard();
+  const [checklistOpen, setChecklistOpen] = useState(true);
+  const [learningPath, setLearningPath] = useState<LearningContent[]>([]);
+  const [recommendedContent, setRecommendedContent] = useState<LearningContent[]>([]);
+  const [checklistItems, setChecklistItems] = useState<ChecklistItemType[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [user?.id]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const data = await learnService.getDashboardData();
+      setLearningPath(data.learningPath);
+      setRecommendedContent(data.recommendedContent);
+      setChecklistItems(data.checklistItems);
+      setTestimonials(data.testimonials);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContentClick = createContentNavigationHandler(
+    router,
+    async (content) => {
+      // Mark content as accessed if user is logged in
+      if (user?.id) {
+        await learnService.markContentCompleted(user.id, content.id);
+      }
+    }
+  );
+
+  const userName = profile?.first_name || user?.email?.split('@')[0] || 'there';
+  const showLearningPath = profile?.preferred_dashboard !== 'card';
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-black">
+      <Navigation />
+
+      {/* Main Content */}
+      <main className="pt-28 lg:pt-40 pb-16">
+        <div className="container mx-auto px-4 md:px-6">
+
+          {/* Welcome Section */}
+          <div className="mb-12">
+            <h1 className="text-3xl md:text-4xl font-bold text-brand mb-3">
+              Welcome back, {userName} <span className="hidden md:inline">👋</span>
+            </h1>
+            <p className="text-base text-gray-600 dark:text-gray-400">
+              Here's your financial path today. We're guiding you step by step.
+            </p>
+          </div>
+
+          {/* Learning Path Section */}
+          {showLearningPath && (
+            <section className="mb-16">
+              <div className="md:bg-gray-100 dark:bg-gray-900 rounded-none md:rounded-[32px] p-3 md:p-8 md:p-12">
+                <LearningCarousel
+                  items={learningPath}
+                  onItemClick={handleContentClick}
+                  isLoading={loading}
+                  skeletonCount={3}
+                />
+              </div>
+            </section>
+          )}
+
+          {/* Beginner's Checklist */}
+          {checklistOpen && (
+            <section className="mb-16 hidden">
+              <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-10 pt-12 pr-12 md:pt-8 md:pr-8 relative">
+                <button
+                  onClick={() => setChecklistOpen(false)}
+                  className="absolute top-4 right-4 md:top-6 md:right-6 h-10 w-10 rounded-full bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 flex items-center justify-center transition-colors"
+                  aria-label="Close checklist"
+                >
+                  <X className="h-5 w-5 text-gray-700 dark:text-white" />
+                </button>
+
+                <div className="grid lg:grid-cols-[1fr,400px] gap-8">
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-brand mb-3">
+                      Beginner's Checklist
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400 mb-8">
+                      Here's your financial path today. We're guiding you step by step.
+                    </p>
+                    {loading ? (
+                      <ChecklistSkeleton />
+                    ) : (
+                      <div className="space-y-6">
+                        {checklistItems.map((item) => (
+                          <ChecklistItem key={item.id} item={item} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Decorative Element */}
+                  <div className="hidden lg:flex items-center justify-center">
+                    <div className="w-full h-full bg-gray-200 dark:bg-white/5 rounded-3xl" />
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Card Overview Section */}
+          <CardOverviewSection
+            cards={connectedCards}
+            onAddCard={() => router.push('/cards')}
+          />
+
+          {/* Recommended for you */}
+          <section className="mb-16">
+            <div className="flex items-center justify-between mb-8 px-4 md:px-0">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-brand mb-2">
+                  Recommended for you
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Learn all you need to know about Credit in Canada
+                </p>
+              </div>
+              <Link
+                href="/learn/learning-space"
+                className="hidden md:inline-flex px-6 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-black dark:text-white font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                View all
+              </Link>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-white/10 pt-12" />
+
+            <LearningCarousel
+              items={recommendedContent}
+              onItemClick={handleContentClick}
+              isLoading={loading}
+              skeletonCount={3}
+            />
+          </section>
+
+          {/* Testimonials Section */}
+          <section className="mb-16">
+            {loading ? <TestimonialSkeleton /> : <TestimonialCarousel testimonials={testimonials} />}
+          </section>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <Footer />
+    </div>
+  );
+}
