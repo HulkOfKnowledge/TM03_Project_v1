@@ -4,7 +4,7 @@
  * All metric calculations are performed server-side via GET /api/cards/metrics.
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { ChartOptions } from 'chart.js';
 import { useTheme } from '@/components/ThemeProvider';
 import { fetchCardMetrics } from '@/lib/api/cards-client';
@@ -44,6 +44,7 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
   // Data state
   const [metricsData, setMetricsData] = useState<CardMetricsResponse | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
+  const hasFetchedOnceRef = useRef(false);
 
   const cardIdKey = connectedCards.map(c => c.id).join(',');
 
@@ -71,14 +72,33 @@ export function useCreditAnalysis(connectedCards: ConnectedCard[]) {
 
   // Fetch metrics from the single-source-of-truth backend endpoint (after dateFilter is declared)
   useEffect(() => {
-    if (!connectedCards.length) { setLoadingMetrics(false); return; }
-    let active = true;
-    setLoadingMetrics(true);
-    fetchCardMetrics(dateFilter.startDate, dateFilter.endDate).then(data => {
-      if (!active) return;
-      setMetricsData(data);
+    if (!connectedCards.length) {
       setLoadingMetrics(false);
-    });
+      setMetricsData(null);
+      hasFetchedOnceRef.current = false;
+      return;
+    }
+
+    let active = true;
+
+    // Keep existing charts visible while refreshing filters after first load.
+    setLoadingMetrics(!hasFetchedOnceRef.current);
+
+    fetchCardMetrics(dateFilter.startDate, dateFilter.endDate)
+      .then(data => {
+        if (!active) return;
+        setMetricsData(data);
+      })
+      .catch(() => {
+        if (!active) return;
+        // Preserve existing metrics if a refresh request fails.
+      })
+      .finally(() => {
+        if (!active) return;
+        hasFetchedOnceRef.current = true;
+        setLoadingMetrics(false);
+      });
+
     return () => { active = false; };
   }, [cardIdKey, dateFilter.startDate, dateFilter.endDate]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -89,6 +89,7 @@ export function ChartSettingsModal({
             <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Adjust view and date range</p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300"
           >
@@ -112,6 +113,7 @@ export function ChartSettingsModal({
               {(['month', 'year', 'range'] as FilterType[]).map((type) => (
                 <button
                   key={type}
+                  type="button"
                   onClick={() => onFilterTypeChange(type)}
                   className={filterType === type ? pillActive : pillInactive}
                 >
@@ -188,12 +190,14 @@ export function ChartSettingsModal({
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => onViewModeChange('consolidated')}
                 className={viewMode === 'consolidated' ? pillActive : pillInactive}
               >
                 All Cards
               </button>
               <button
+                type="button"
                 onClick={() => onViewModeChange('individual')}
                 className={viewMode === 'individual' ? pillActive : pillInactive}
               >
@@ -201,6 +205,7 @@ export function ChartSettingsModal({
               </button>
               {connectedCards.length > 1 && (
                 <button
+                  type="button"
                   onClick={() => onViewModeChange('compare')}
                   className={viewMode === 'compare' ? pillActive : pillInactive}
                 >
@@ -223,6 +228,7 @@ export function ChartSettingsModal({
                   return (
                     <button
                       key={card.id}
+                      type="button"
                       onClick={() => onCardChange(card.id)}
                       className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                         selected
@@ -266,6 +272,7 @@ export function ChartSettingsModal({
                   return (
                     <button
                       key={card.id}
+                      type="button"
                       onClick={() => onCompareToggle(card.id)}
                       className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                         active
@@ -303,6 +310,7 @@ export function ChartSettingsModal({
         {/* Footer */}
         <div className="flex-shrink-0 border-t border-gray-100 px-5 py-4 dark:border-gray-800">
           <button
+            type="button"
             onClick={onClose}
             className="w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 active:bg-indigo-800"
           >
