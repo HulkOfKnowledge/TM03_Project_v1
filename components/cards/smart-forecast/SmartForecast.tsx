@@ -12,7 +12,7 @@ import {
 } from 'chart.js';
 import { useMemo, useState, useEffect } from 'react';
 import { Bar, Pie } from 'react-chartjs-2';
-import { Info, ChevronDown, Sparkles, History, AlertTriangle } from 'lucide-react';
+import { Info, ChevronDown, Sparkles, History, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { ConnectedCard } from '@/types/card.types';
 import { useCreditAnalysis } from '@/hooks/useCreditAnalysis';
 import { useTheme } from '@/components/ThemeProvider';
@@ -51,6 +51,13 @@ interface ForecastInsightsPayload {
     dayOfMonth: number;
     baselineMonths: string[];
   };
+  categoryMomentum: Array<{
+    category: string;
+    currentAmount: number;
+    previousAmount: number;
+    changePct: number;
+    direction: 'Rising' | 'Stable' | 'Cooling';
+  }>;
   monthlyTrend: Array<{ month: string; total: number }>;
   forecastSnapshot: ForecastSnapshot | null;
   nextSpendPrediction: {
@@ -62,6 +69,49 @@ interface ForecastInsightsPayload {
 
 function formatCurrency(amount: number): string {
   return `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function parseIsoDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function toIsoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatShortDate(iso: string): string {
+  const d = parseIsoDate(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatDateRange(startIso: string, endIso: string): string {
+  const start = parseIsoDate(startIso);
+  const end = parseIsoDate(endIso);
+  const sameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
+
+  if (sameMonth) {
+    const month = start.toLocaleDateString('en-US', { month: 'short' });
+    return `${month} ${start.getDate()}-${end.getDate()}`;
+  }
+
+  return `${formatShortDate(startIso)}-${formatShortDate(endIso)}`;
+}
+
+function getMomentumDisplayLabel(direction: 'Rising' | 'Stable' | 'Cooling'): string {
+  if (direction === 'Rising') return 'Spending More';
+  if (direction === 'Cooling') return 'Spending Less';
+  return 'About Same';
+}
+
+function getMomentumPlainLanguage(changePct: number, direction: 'Rising' | 'Stable' | 'Cooling'): string {
+  if (direction === 'Rising') {
+    return `You are spending ${Math.abs(changePct).toFixed(1)}% more than the previous period.`;
+  }
+  if (direction === 'Cooling') {
+    return `You are spending ${Math.abs(changePct).toFixed(1)}% less than the previous period.`;
+  }
+  return 'Your spending is close to the previous period.';
 }
 
 export function SmartForecast({ connectedCards }: SmartForecastProps) {
@@ -180,6 +230,48 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
     };
   }, [forecastInsights, isDark]);
 
+  const momentumPeriods = useMemo(() => {
+    const currentStart = dateFilter.startDate;
+    const currentEnd = dateFilter.endDate;
+
+    const todayDate = parseIsoDate(today);
+    const currentStartDate = parseIsoDate(currentStart);
+    const currentEndDate = parseIsoDate(currentEnd);
+
+    const isCurrentMtd =
+      currentStartDate.getDate() === 1
+      && currentEnd === today
+      && currentStartDate.getFullYear() === todayDate.getFullYear()
+      && currentStartDate.getMonth() === todayDate.getMonth();
+
+    if (isCurrentMtd) {
+      const prevMonth = todayDate.getMonth() === 0 ? 11 : todayDate.getMonth() - 1;
+      const prevYear = todayDate.getMonth() === 0 ? todayDate.getFullYear() - 1 : todayDate.getFullYear();
+      const prevMonthDays = new Date(prevYear, prevMonth + 1, 0).getDate();
+      const prevEndDay = Math.min(todayDate.getDate(), prevMonthDays);
+
+      const prevStartIso = toIsoDate(new Date(prevYear, prevMonth, 1));
+      const prevEndIso = toIsoDate(new Date(prevYear, prevMonth, prevEndDay));
+
+      return {
+        currentRangeLabel: formatDateRange(currentStart, currentEnd),
+        compareRangeLabel: formatDateRange(prevStartIso, prevEndIso),
+      };
+    }
+
+    const periodDays = Math.max(
+      Math.floor((currentEndDate.getTime() - currentStartDate.getTime()) / (24 * 60 * 60 * 1000)) + 1,
+      1,
+    );
+    const prevEndDate = new Date(currentStartDate.getTime() - 24 * 60 * 60 * 1000);
+    const prevStartDate = new Date(prevEndDate.getTime() - (periodDays - 1) * 24 * 60 * 60 * 1000);
+
+    return {
+      currentRangeLabel: formatDateRange(currentStart, currentEnd),
+      compareRangeLabel: formatDateRange(toIsoDate(prevStartDate), toIsoDate(prevEndDate)),
+    };
+  }, [dateFilter.startDate, dateFilter.endDate, today]);
+
   const showPredictionView = !isHistoricalRange;
   const forecastSnapshot: ForecastSnapshot | null = forecastInsights?.forecastSnapshot ?? null;
 
@@ -189,6 +281,7 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
 
   const topCategories = forecastInsights?.topCategories ?? [];
   const anomaly = forecastInsights?.anomaly ?? null;
+  const categoryMomentum = forecastInsights?.categoryMomentum ?? [];
   const nextSpendPrediction = forecastInsights?.nextSpendPrediction ?? null;
   const topSpendingCategory = topCategories[0];
   const totalFilteredSpend = topCategories.reduce((sum, item) => sum + item.amount, 0);
@@ -264,12 +357,12 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
         </div>
         <div className="mb-4 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
 
-        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
                 <Sparkles className="h-4 w-4" />
-                <p className="text-xs font-semibold uppercase tracking-wide">Forecast Timeline</p>
+                <p className="text-xs font-semibold uppercase tracking-wide">Month Outlook</p>
               </div>
               {forecastSnapshot && (
                 <span
@@ -306,19 +399,6 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
 
           <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
             <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
-              <Sparkles className="h-4 w-4" />
-              <p className="text-xs font-semibold uppercase tracking-wide">Spend Snapshot</p>
-            </div>
-            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-              Total spend in this view: <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(totalFilteredSpend)}</span>.
-            </p>
-            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-              Top category: <span className="font-semibold text-gray-900 dark:text-white">{topSpendingCategory ? formatCategoryLabel(topSpendingCategory.category) : 'N/A'}</span>.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
-            <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
               <History className="h-4 w-4" />
               <p className="text-xs font-semibold uppercase tracking-wide">Smart Read</p>
             </div>
@@ -326,6 +406,9 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
               {showPredictionView
                 ? `Most likely next spend: ${probabilityLabel}.`
                 : 'Viewing past data: this section shows historical monthly trend instead of prediction.'}
+            </p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Top category now: {topSpendingCategory ? formatCategoryLabel(topSpendingCategory.category) : 'N/A'}
             </p>
           </div>
 
@@ -348,6 +431,7 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
               <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Top 5 Categories In Selected Period</p>
+              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Total in selected period: {formatCurrency(totalFilteredSpend)}</p>
               <div className="h-64 sm:h-80">
                 <Pie
                   key={`spending-pie-${resolvedTheme}-${viewMode}`}
@@ -440,6 +524,58 @@ export function SmartForecast({ connectedCards }: SmartForecastProps) {
 
         {showPredictionView && insightsLoading && (
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Refreshing intelligence signals...</p>
+        )}
+      </div>
+
+      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 sm:mb-8 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h3 className="text-base text-gray-700 dark:text-gray-300 sm:text-lg">Category Momentum</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{momentumPeriods.currentRangeLabel} vs {momentumPeriods.compareRangeLabel}</p>
+        </div>
+        <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
+          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">How to read this</p>
+          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+            This compares {momentumPeriods.currentRangeLabel} with {momentumPeriods.compareRangeLabel}. “Spending More” means the category increased, “Spending Less” means it decreased, and “About Same” means little change.
+          </p>
+        </div>
+        {categoryMomentum.length > 0 ? (
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {categoryMomentum.slice(0, 6).map((item) => {
+              const isRising = item.direction === 'Rising';
+              const isCooling = item.direction === 'Cooling';
+              const tone = isRising
+                ? 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-950/30'
+                : isCooling
+                  ? 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-950/30'
+                  : 'text-gray-700 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
+
+              return (
+                <div key={item.category} className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">{formatCategoryLabel(item.category)}</p>
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${tone}`}>
+                      {isRising ? <TrendingUp className="h-3 w-3" /> : isCooling ? <TrendingDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                      {getMomentumDisplayLabel(item.direction)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Now {formatCurrency(item.currentAmount)} • Before {formatCurrency(item.previousAmount)}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Change: {item.changePct >= 0 ? '+' : ''}{item.changePct.toFixed(1)}%
+                  </p>
+                  <p className="mt-1 text-xs text-gray-700 dark:text-gray-300">
+                    {getMomentumPlainLanguage(item.changePct, item.direction)}
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    {momentumPeriods.currentRangeLabel} vs {momentumPeriods.compareRangeLabel}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-600 dark:text-gray-400">Not enough prior-period data to compute momentum yet.</p>
         )}
       </div>
 

@@ -34,6 +34,7 @@ from app.models.schemas import (
     ForecastAnomaly,
     ForecastMonthlyPoint,
     ForecastSnapshot,
+    ForecastCategoryMomentum,
     ForecastNextSpendPrediction,
     ForecastNextSpendProbability,
 )
@@ -434,6 +435,74 @@ class StochasticPlanner:
             for ym, total in sorted(monthly_totals.items(), key=lambda item: item[0])[-8:]
         ]
 
+        category_momentum: List[ForecastCategoryMomentum] = []
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            today_dt = datetime.strptime(today_iso, "%Y-%m-%d")
+
+            # For the default current month-to-date view, compare against the same
+            # day span in the previous month (e.g., Apr 1-8 vs Mar 1-8).
+            is_current_mtd = (
+                start_dt.year == today_dt.year
+                and start_dt.month == today_dt.month
+                and start_dt.day == 1
+                and end_dt.date() == today_dt.date()
+            )
+
+            if is_current_mtd:
+                if today_dt.month == 1:
+                    prev_year = today_dt.year - 1
+                    prev_month = 12
+                else:
+                    prev_year = today_dt.year
+                    prev_month = today_dt.month - 1
+
+                prev_month_days = self._days_in_month(prev_year, prev_month)
+                prev_day = min(today_dt.day, prev_month_days)
+                prev_start_dt = datetime(prev_year, prev_month, 1)
+                prev_end_dt = datetime(prev_year, prev_month, prev_day)
+            else:
+                period_days = max((end_dt - start_dt).days + 1, 1)
+                prev_end_dt = start_dt - timedelta(days=1)
+                prev_start_dt = prev_end_dt - timedelta(days=period_days - 1)
+
+            prev_totals: Dict[str, float] = defaultdict(float)
+            for txn in txns:
+                if txn.amount <= 0:
+                    continue
+                d = txn.date
+                if prev_start_dt <= d <= prev_end_dt:
+                    prev_totals[txn.category] += txn.amount
+
+            for item in top_categories:
+                current_amount = float(item.amount)
+                previous_amount = float(round(prev_totals.get(item.category, 0.0), 2))
+                if previous_amount > 0:
+                    change_pct = ((current_amount - previous_amount) / previous_amount) * 100
+                elif current_amount > 0:
+                    change_pct = 100.0
+                else:
+                    change_pct = 0.0
+
+                direction = "Stable"
+                if change_pct >= 15:
+                    direction = "Rising"
+                elif change_pct <= -15:
+                    direction = "Cooling"
+
+                category_momentum.append(
+                    ForecastCategoryMomentum(
+                        category=item.category,
+                        current_amount=round(current_amount, 2),
+                        previous_amount=round(previous_amount, 2),
+                        change_pct=round(change_pct, 1),
+                        direction=direction,
+                    )
+                )
+        except Exception:
+            category_momentum = []
+
         anomaly = None
         forecast_snapshot = None
         next_spend_prediction = None
@@ -554,6 +623,7 @@ class StochasticPlanner:
             end_date=end_date,
             top_categories=top_categories,
             anomaly=anomaly,
+            category_momentum=category_momentum,
             monthly_trend=monthly_trend,
             forecast_snapshot=forecast_snapshot,
             next_spend_prediction=next_spend_prediction,

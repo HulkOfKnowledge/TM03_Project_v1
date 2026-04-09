@@ -343,6 +343,14 @@ class ForecastSnapshot(BaseModel):
     month_days: int
 
 
+class ForecastCategoryMomentum(BaseModel):
+    category: str
+    current_amount: float
+    previous_amount: float
+    change_pct: float
+    direction: Literal["Rising", "Stable", "Cooling"]
+
+
 class ForecastNextSpendProbability(BaseModel):
     category: str
     probability: float
@@ -368,6 +376,7 @@ class ForecastInsightsResponse(BaseModel):
     end_date: str
     top_categories: List[ForecastCategoryTotal]
     anomaly: Optional[ForecastAnomaly] = None
+    category_momentum: List[ForecastCategoryMomentum]
     monthly_trend: List[ForecastMonthlyPoint]
     forecast_snapshot: Optional[ForecastSnapshot] = None
     next_spend_prediction: Optional[ForecastNextSpendPrediction] = None

@@ -145,6 +145,15 @@ export async function POST(request: NextRequest) {
             baselineMonths: response.data.anomaly.baseline_months,
           }
         : null,
+      categoryMomentum: Array.isArray(response.data.category_momentum)
+        ? response.data.category_momentum.map((item: any) => ({
+            category: item.category,
+            currentAmount: item.current_amount,
+            previousAmount: item.previous_amount,
+            changePct: item.change_pct,
+            direction: item.direction,
+          }))
+        : [],
       monthlyTrend: Array.isArray(response.data.monthly_trend)
         ? response.data.monthly_trend.map((item: any) => ({
             month: item.month,
